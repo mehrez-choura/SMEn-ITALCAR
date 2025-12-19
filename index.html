@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestion Facturation STEG (MT & BT)</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script>window.process = { env: { NODE_ENV: 'production' } };</script>
     <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
@@ -16,19 +17,24 @@
         body { font-family: 'Inter', sans-serif; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         
-        /* Style pour l'impression */
+        /* Style pour l'impression (Cache tout sauf le ticket) */
         @media print {
             body * { visibility: hidden; }
             #ticket-section, #ticket-section * { visibility: visible; }
             #ticket-section { position: absolute; left: 0; top: 0; width: 100%; border: none; box-shadow: none; }
-            header, form, .config-zone, .history-zone { display: none; }
+            header, form, .config-zone, .history-zone, button { display: none !important; }
         }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
-    <div id="root">Chargement de l'application...</div>
+    <div id="root">
+        <div style="height: 100vh; display: flex; align-items: center; justify-content: center; color: #64748b;">
+            Chargement de l'application...
+        </div>
+    </div>
 
     <script type="text/babel">
+        // 2. ADAPTATION DU CODE (Suppression des imports)
         const { useState, useEffect } = React;
         const { 
             Zap, Activity, Save, History, TrendingUp, AlertTriangle, Factory, CheckCircle2,
@@ -36,19 +42,20 @@
             FileText, Calculator, AlertCircle, Eye, Hash, BookOpen, Sun, Battery, MousePointerClick, Info
         } = window.lucideReact;
 
+        // 3. VOTRE APPLICATION REACT
         const App = () => {
             // --- État de l'application ---
             const [currentSite, setCurrentSite] = useState(1);
             
-            // AJOUT: Persistance des données (LocalStorage)
+            // SYSTEME DE SAUVEGARDE AUTOMATIQUE
             const [logs, setLogs] = useState(() => {
-                const saved = localStorage.getItem('steg_logs_v2'); // v2 pour éviter conflit avec l'ancienne version
+                const saved = localStorage.getItem('steg_logs_v3'); // v3 pour la nouvelle version
                 return saved ? JSON.parse(saved) : [];
             });
 
-            // Sauvegarde automatique
+            // Sauvegarder à chaque modification de l'historique
             useEffect(() => {
-                localStorage.setItem('steg_logs_v2', JSON.stringify(logs));
+                localStorage.setItem('steg_logs_v3', JSON.stringify(logs));
             }, [logs]);
 
             const [showHelp, setShowHelp] = useState(false);
@@ -62,22 +69,28 @@
                 { id: 4, name: "BT 1 - Showroom Lac", code: "SHR-001", type: "BT" }
             ];
 
-            // Configuration Globale
+            // Configuration Globale (Prix & Taxes)
             const [globalConfig, setGlobalConfig] = useState({
+                // MT Params
                 unitPriceKwh: 0.291,    // MT
                 powerUnitPrice: 5.000,  // MT
+                // BT Params
                 unitPriceKwhBT: 0.391,  // BT
                 fixedFeesBT: 115.500,   // Redevance Fixe BT
                 servicesBT: 0.000,      // Services BT
                 fteGazBT: 0.000,        // FTE Gaz BT
+                
+                // Taxes Communes
                 vatRate: 19,            
                 rtt: 3.500,             
                 municipalTaxRate: 0.010, // MT Surtaxe
+                
+                // Taxes Variables BT
                 taxCLRate: 0.005,       // Contribution CL (BT)
                 taxFTERate: 0.005       // FTE Electricité (BT)
             });
 
-            // Configuration Spécifique
+            // Configuration Spécifique par Site
             const [siteConfigs, setSiteConfigs] = useState({
                 1: { subscribedPower: 250, emptyLosses: 1300 }, // Mégrine
                 2: { subscribedPower: 70, emptyLosses: 670 },   // El Khadhra
@@ -87,11 +100,13 @@
 
             const [isConfigUnlocked, setIsConfigUnlocked] = useState(false);
 
+            // Date actuelle
             const getCurrentMonth = () => {
                 const now = new Date();
                 return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
             };
 
+            // Données de formulaire
             const [formData, setFormData] = useState({
                 1: { lastIndex: 14500, newIndex: '', cosPhi: '', reactiveCons: '', maxPower: '', date: getCurrentMonth(), manualLastIndex: false, lateFees: '', relanceFees: '', adjustment: '' },
                 2: { lastIndex: 28900, newIndex: '', cosPhi: '', reactiveCons: '', maxPower: '', date: getCurrentMonth(), manualLastIndex: false, lateFees: '', relanceFees: '', adjustment: '' },
@@ -102,6 +117,7 @@
             const [notification, setNotification] = useState(null);
 
             // --- Helpers Logic ---
+
             const formatInputDisplay = (val) => {
                 if (val === '' || val === undefined || val === null) return '';
                 const cleanVal = val.toString().replace(/[^0-9.-]/g, ''); 
@@ -117,24 +133,24 @@
                 const siteLogs = logs.filter(l => l.siteId === currentSite).sort((a, b) => b.id - a.id);
                 
                 if (siteLogs.length > 0) {
-                    const lastLog = siteLogs[0];
-                    const currentSiteType = SITES.find(s => s.id === currentSite).type;
-                    
-                    setFormData(prev => ({
-                        ...prev,
-                        [currentSite]: {
-                        ...prev[currentSite],
-                        lastIndex: lastLog.newIndex, 
-                        // Si BT, on met aussi à jour l'index PV et le solde précédent
-                        ...(currentSiteType === 'BT' ? {
-                            lastIndexPv: lastLog.newIndexPv,
-                            previousBalance: lastLog.newCarryOver // Le solde N devient N-1
-                        } : {}),
-                        manualLastIndex: false
-                        }
-                    }));
+                const lastLog = siteLogs[0];
+                const currentSiteType = SITES.find(s => s.id === currentSite).type;
+                
+                setFormData(prev => ({
+                    ...prev,
+                    [currentSite]: {
+                    ...prev[currentSite],
+                    lastIndex: lastLog.newIndex, 
+                    // Si BT, on met aussi à jour l'index PV et le solde précédent
+                    ...(currentSiteType === 'BT' ? {
+                        lastIndexPv: lastLog.newIndexPv,
+                        previousBalance: lastLog.newCarryOver // Le solde N devient N-1
+                    } : {}),
+                    manualLastIndex: false
+                    }
+                }));
                 }
-            }, [currentSite]); // Retiré 'logs' des dépendances pour éviter boucle infinie au chargement initial si logs change
+            }, [currentSite]); // Optimisation: déclenchement uniquement au changement de site
 
             const handleInputChange = (field, value) => {
                 const cleanValue = ['lastIndex', 'newIndex', 'lastIndexPv', 'newIndexPv', 'previousBalance'].includes(field) 
@@ -165,7 +181,7 @@
                 }));
             };
 
-            // --- MOTEUR DE CALCUL ---
+            // --- MOTEUR DE CALCUL UNIFIÉ ---
             const calculateMetrics = () => {
                 const site = SITES.find(s => s.id === currentSite);
                 const data = formData[currentSite];
@@ -238,7 +254,7 @@
                     };
                 } 
                 
-                // === LOGIQUE MT ===
+                // === LOGIQUE MT (Moyenne Tension - Standard) ===
                 else {
                     const cosPhi = parseFloat(data.cosPhi) || 1;
                     const maxPower = parseFloat(data.maxPower) || 0;
@@ -295,9 +311,9 @@
                         adjustmentType,
                         cosPhiAdjustmentAmount,
                         total1_TTC,
-                        total1_HT,
+                        total1_HT, // Ajouté pour affichage détaillé
                         powerPremium,
-                        total2_HT,
+                        total2_HT, // Ajouté pour affichage détaillé
                         total2_TTC,
                         municipalTax,
                         netToPay,
@@ -338,9 +354,8 @@
                     ...metrics
                 };
 
-                // Sauvegarde directe
-                const updatedLogs = [newLog, ...logs];
-                setLogs(updatedLogs);
+                const newLogs = [newLog, ...logs];
+                setLogs(newLogs);
                 
                 setFormData(prev => ({
                     ...prev,
@@ -357,7 +372,7 @@
                     }
                 }));
                 
-                setNotification({ msg: "Relevé validé et sauvegardé !", type: 'success' });
+                setNotification({ msg: "Relevé validé avec succès !", type: 'success' });
                 setTimeout(() => setNotification(null), 3000);
             };
 
@@ -373,7 +388,6 @@
             const currentSiteObj = SITES.find(s => s.id === currentSite);
             const isBT = currentSiteObj.type === 'BT';
 
-            // --- RENDER ---
             return (
                 <div className="min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-blue-200 pb-20">
                 
@@ -403,38 +417,28 @@
                     </div>
                 </header>
 
-                {/* MODALS AIDE ET GUIDE ICI (Simplifiés pour lisibilité du code complet) */}
-                {/* Guide Utilisation */}
+                {/* MODALS */}
                 {showUserGuide && (
                     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowUserGuide(false)}>
-                    <div className="bg-white rounded-2xl max-w-4xl w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
-                            <h2 className="text-xl font-bold text-slate-800 flex items-center"><BookOpen className="mr-2 text-blue-600" /> Guide Rapide</h2>
-                            <button onClick={() => setShowUserGuide(false)} className="text-slate-400 hover:text-slate-600 font-bold bg-slate-100 px-3 py-1 rounded">Fermer</button>
+                        <div className="bg-white rounded-2xl max-w-2xl p-6 shadow-2xl relative">
+                            <button onClick={() => setShowUserGuide(false)} className="absolute top-4 right-4">✕</button>
+                            <h2 className="text-xl font-bold text-slate-800 mb-4">Guide Rapide</h2>
+                            <ul className="list-disc ml-5 space-y-2 text-sm text-slate-700">
+                                <li>Sélectionnez le site (MT ou BT).</li>
+                                <li>Entrez les nouveaux index (Actif pour MT, Réseau + PV pour BT).</li>
+                                <li>Validez pour sauvegarder l'historique.</li>
+                                <li>Utilisez "Imprimer" en bas du ticket pour générer un PDF.</li>
+                            </ul>
                         </div>
-                        <div className="space-y-4 text-sm text-slate-700">
-                           <p><strong>1. Sélectionnez le site</strong> (Mégrine, El Khadhra, Naassen, Showroom).</p>
-                           <p><strong>2. Entrez les index :</strong></p>
-                           <ul className="list-disc ml-6">
-                             <li>Pour MT : Index Actif (1.8.0), Cos φ et Puissance Max (1.6.0).</li>
-                             <li>Pour BT : Index Réseau (1.8.0) et Index Photovoltaïque (2.8.0).</li>
-                           </ul>
-                           <p><strong>3. Validez :</strong> Le calcul est automatique et l'historique est sauvegardé dans votre navigateur.</p>
-                           <p className="bg-yellow-50 p-2 border border-yellow-200 rounded text-yellow-800">
-                             <strong>Note sur la sauvegarde :</strong> Vos données sont stockées localement dans ce navigateur. Si vous changez d'ordinateur ou effacez le cache, elles seront perdues.
-                           </p>
-                        </div>
-                    </div>
                     </div>
                 )}
-                
-                {/* Modal Cos Phi */}
+
                 {showHelp && (
                     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowHelp(false)}>
-                        <div className="bg-white rounded-2xl max-w-2xl p-6 shadow-2xl relative">
+                         <div className="bg-white rounded-2xl max-w-2xl p-6 shadow-2xl relative">
                             <button onClick={() => setShowHelp(false)} className="absolute top-4 right-4">✕</button>
                             <h2 className="text-xl font-bold text-blue-900 mb-4">Règle Cos φ</h2>
-                            <p className="text-sm text-slate-600">Bonification si > 0.90. Pénalité si < 0.80.</p>
+                            <p className="text-sm">Zone neutre : 0.80 à 0.90. <br/>Bonification > 0.90. Pénalité < 0.80.</p>
                         </div>
                     </div>
                 )}
