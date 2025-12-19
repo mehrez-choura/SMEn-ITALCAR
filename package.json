@@ -1,0 +1,11 @@
+{
+  "name": "m-lev-simulation",
+  "version": "1.0.0",
+  "description": "Simulation M-LEV - Bilan & Cycles",
+  "scripts": {
+    "start": "npx serve ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
