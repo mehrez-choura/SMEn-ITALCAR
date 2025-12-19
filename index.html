@@ -1,1650 +1,597 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulation Ascenseur Magnétique</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <!-- FontAwesome for the inner iframe validation tool -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+import React, { useState } from 'react';
+import { 
+  Zap, 
+  Activity, 
+  Save, 
+  History, 
+  TrendingUp, 
+  AlertTriangle, 
+  Factory, 
+  CheckCircle2,
+  BarChart3,
+  Settings,
+  Lock,
+  Unlock,
+  Calendar,
+  DollarSign,
+  TrendingDown
+} from 'lucide-react';
+
+const App = () => {
+  // --- État de l'application ---
+  const [currentSite, setCurrentSite] = useState(1);
+  const [logs, setLogs] = useState([]);
+  
+  // Configuration globale et Tarification
+  // Note: Les valeurs sont stockées comme nombres ou chaînes pour faciliter l'édition
+  const [config, setConfig] = useState({
+    minCosPhi: 0.80, // Seuil bas pénalité (généralement 0.8)
+    unitPriceKwh: 0.220, // Prix unitaire consommation (en DT ou Millimes convertis)
+    powerUnitPrice: 5.500, // Prix unitaire puissance (par kVA)
+    subscribedPower: 630, // Puissance souscrite (kVA)
+    vatRate: 19, // TVA (%)
+    rtt: 7.000, // RTT (DT)
+  });
+  const [isConfigUnlocked, setIsConfigUnlocked] = useState(false);
+
+  // Date actuelle par défaut pour le formulaire
+  const getCurrentMonth = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  };
+
+  // Données initiales des formulaires
+  const [formData, setFormData] = useState({
+    1: { lastIndex: 14500, newIndex: '', cosPhi: '', reactiveCons: '', maxPower: '', date: getCurrentMonth(), manualLastIndex: false },
+    2: { lastIndex: 28900, newIndex: '', cosPhi: '', reactiveCons: '', maxPower: '', date: getCurrentMonth(), manualLastIndex: false },
+    3: { lastIndex: 56200, newIndex: '', cosPhi: '', reactiveCons: '', maxPower: '', date: getCurrentMonth(), manualLastIndex: false },
+  });
+
+  const [notification, setNotification] = useState(null);
+
+  // --- Constantes ---
+  const SITES = [
+    { id: 1, name: "MT 1 - Mégrine", code: "MEG-001" },
+    { id: 2, name: "MT 2 - El Khadhra", code: "ELK-002" },
+    { id: 3, name: "MT 3 - Naassen", code: "NAS-003" }
+  ];
+
+  // --- Gestionnaires d'événements ---
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => {
+      const isManualOverride = field === 'lastIndex';
+      return {
+        ...prev,
+        [currentSite]: {
+          ...prev[currentSite],
+          [field]: value,
+          manualLastIndex: isManualOverride ? true : prev[currentSite].manualLastIndex
+        }
+      };
+    });
+  };
+
+  const handleConfigChange = (field, value) => {
+    // Modification directe sans parseFloat forcé pour éviter NaN et problèmes de saisie (ex: "0.")
+    setConfig(prev => ({ ...prev, [field]: value }));
+  };
+
+  const calculateMetrics = () => {
+    const currentData = formData[currentSite];
     
-    <style>
-        body { 
-            font-family: 'Inter', system-ui, -apple-system, sans-serif; 
-            background-color: #0f172a; 
-            color: white; 
-        }
-        canvas { display: block; }
-        .modal { background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); }
-        
-        /* Scrollbar custom */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #1e293b; }
-        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
-        
-        /* Input number custom arrows */
-        input[type=number]::-webkit-inner-spin-button { opacity: 1; }
-        
-        /* Style amélioré pour les inputs */
-        .input-group { 
-            margin-bottom: 1rem; 
-            position: relative;
-        }
-        
-        .input-field { 
-            width: 100%; 
-            background-color: rgba(30, 41, 59, 0.6); /* Slate 800 semi-transparent */
-            border: 1px solid #334155; 
-            border-radius: 0.5rem; 
-            padding: 0.5rem 0.75rem; 
-            font-size: 0.85rem; 
-            font-weight: 500;
-            color: #f1f5f9; 
-            text-align: right;
-            transition: all 0.2s ease;
-            box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
-        }
-        
-        .input-field:focus { 
-            border-color: #60a5fa; /* Blue 400 */
-            outline: none; 
-            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15); 
-            background-color: rgba(30, 41, 59, 0.9);
-        }
-        
-        .input-label { 
-            display: block; 
-            font-size: 0.7rem; 
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: #94a3b8; 
-            margin-bottom: 0.35rem; 
-            font-weight: 600;
-        }
+    // Parsing sécurisé des données du formulaire
+    const newIdx = parseFloat(currentData.newIndex) || 0;
+    const oldIdx = parseFloat(currentData.lastIndex) || 0;
+    const cosPhi = parseFloat(currentData.cosPhi) || 1;
+    const maxPower = parseFloat(currentData.maxPower) || 0;
 
-        /* Style pour les blocs Hardware "Read-only" */
-        .hardware-block {
-            background-color: rgba(30, 41, 59, 0.4);
-            border: 1px solid #334155;
-            border-radius: 0.5rem;
-            padding: 0.75rem;
-            margin-bottom: 0.75rem;
-        }
-        .hardware-title {
-            color: #93c5fd; /* Blue 300 */
-            font-size: 0.75rem;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-            padding-bottom: 0.25rem;
-            margin-bottom: 0.5rem;
-        }
-        .spec-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start; 
-            font-size: 0.75rem;
-            margin-bottom: 0.35rem;
-            line-height: 1.2;
-        }
-        .spec-label { color: #cbd5e1; min-width: 40%; }
-        .spec-value { color: #fff; font-family: 'ui-monospace', 'SFMono-Regular', Menlo, monospace; text-align: right; }
-        .tech-note { display: block; font-size: 0.65rem; color: #64748b; font-style: italic; margin-top: 2px; }
-        
-        /* Animation Simulation en cours */
-        @keyframes pulse-text {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        .animate-text-pulse { animation: pulse-text 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    // Parsing sécurisé de la configuration (au cas où c'est une chaîne vide pendant l'édition)
+    const cfgUnitPrice = parseFloat(config.unitPriceKwh) || 0;
+    const cfgPowerPrice = parseFloat(config.powerUnitPrice) || 0;
+    const cfgSubscribedPower = parseFloat(config.subscribedPower) || 0;
+    
+    // 1. Consommation Active
+    const activeConsumption = newIdx > oldIdx ? newIdx - oldIdx : 0;
+    
+    // 2. Coûts de base HT
+    const energyCost = activeConsumption * cfgUnitPrice;
+    const powerCost = cfgSubscribedPower * cfgPowerPrice; // Prime fixe sur puissance souscrite
+    const baseTotalHT = energyCost + powerCost;
 
-    </style>
-</head>
-<body class="h-screen flex flex-col overflow-hidden">
+    // 3. Calcul Bonification (Cos φ > 0.9)
+    let bonificationCoef = 0;
+    let bonificationAmount = 0;
+    
+    if (cosPhi > 0.9 && cosPhi <= 1) {
+      // Formule dérivée de votre demande: 
+      // 1.00 -> 0.05 | 0.91 -> 0.005
+      // C'est une fonction linéaire : K = (CosPhi - 0.9) / 2
+      bonificationCoef = (cosPhi - 0.9) / 2;
+      bonificationAmount = baseTotalHT * bonificationCoef;
+    }
 
-    <!-- Header -->
-    <header class="bg-slate-900 border-b border-slate-700 p-4 flex justify-between items-center shrink-0 shadow-lg z-20">
-        <div>
-            <h1 class="text-xl font-bold text-blue-400 flex items-center gap-2 tracking-tight">
-                <span class="inline-block w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]"></span>
-                SIMULATION ASCENSEUR MAGNÉTIQUE
-            </h1>
-        </div>
-        
-        <div class="flex items-center gap-4">
-            <div class="text-right hidden sm:block mr-2">
-                <div class="text-[10px] uppercase tracking-wider text-slate-500 font-bold">État du Système</div>
-                <div class="text-xs font-mono text-blue-300 font-bold">PRÊT À SIMULER</div>
+    // 4. Vérification Puissance
+    const isPowerOverrun = maxPower > cfgSubscribedPower;
+    const powerOverrunVal = isPowerOverrun ? maxPower - cfgSubscribedPower : 0;
+
+    // 5. Tan Phi (pour info)
+    let tanPhi = 0;
+    if(cosPhi > 0 && cosPhi <= 1) {
+      tanPhi = Math.tan(Math.acos(cosPhi));
+    }
+
+    return { 
+      activeConsumption, 
+      tanPhi, 
+      bonificationAmount, 
+      bonificationCoef,
+      isPowerOverrun,
+      powerOverrunVal,
+      estimatedBillHT: baseTotalHT - bonificationAmount
+    };
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const metrics = calculateMetrics();
+    const currentData = formData[currentSite];
+
+    if (!currentData.newIndex || !currentData.cosPhi || !currentData.maxPower) {
+      showNotification("Veuillez remplir tous les champs obligatoires.", "error");
+      return;
+    }
+
+    const newLog = {
+      id: Date.now(),
+      recordDate: currentData.date, // Date sélectionnée (Mois/Année)
+      timestamp: new Date().toLocaleTimeString('fr-FR'),
+      siteId: currentSite,
+      siteName: SITES.find(s => s.id === currentSite).name,
+      lastIndexUsed: currentData.lastIndex,
+      ...currentData,
+      ...metrics
+    };
+
+    setLogs([newLog, ...logs]);
+    
+    // Mise à jour automatique cycle n-1
+    setFormData(prev => ({
+      ...prev,
+      [currentSite]: {
+        ...prev[currentSite],
+        lastIndex: currentData.newIndex,
+        newIndex: '',
+        cosPhi: '', 
+        reactiveCons: '',
+        maxPower: '',
+        manualLastIndex: false
+      }
+    }));
+    
+    showNotification("Relevé enregistré avec succès.", "success");
+  };
+
+  const showNotification = (msg, type) => {
+    setNotification({ msg, type });
+    setTimeout(() => setNotification(null), 4000);
+  };
+
+  const metrics = calculateMetrics();
+  // Helpers pour l'affichage monétaire
+  const formatMoney = (amount) => amount.toLocaleString('fr-TN', { style: 'currency', currency: 'TND', minimumFractionDigits: 3 });
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-blue-200">
+      
+      {/* Header */}
+      <header className="bg-gradient-to-r from-blue-900 to-slate-900 text-white shadow-lg sticky top-0 z-20">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center">
+          <div className="flex items-center space-x-3 mb-2 md:mb-0">
+            <div className="p-2 bg-yellow-500 rounded-lg text-blue-900 shadow-lg shadow-yellow-500/20">
+              <Zap size={24} strokeWidth={2.5} />
             </div>
-            
-            <!-- NOUVEAU : Bouton Validation Magnétique -->
-            <button onclick="openMagVal()" class="bg-indigo-600 hover:bg-indigo-500 text-white p-2 px-3 rounded-lg border border-indigo-400/30 transition shadow-lg flex items-center gap-2" title="Validation Magnétique">
-                <span>🧲</span> <span class="text-xs font-bold hidden md:inline">Validation Magnétique</span>
-            </button>
-
-            <!-- Bouton Aide -->
-            <button onclick="openHelpModal()" class="bg-slate-800 hover:bg-slate-700 text-blue-400 hover:text-white p-2 rounded-lg border border-slate-700 transition shadow-lg group relative" title="Guide d'utilisation">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                <span class="absolute top-0 right-0 -mt-1 -mr-1 flex h-3 w-3">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
-                </span>
-            </button>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">Gestion Énergie MT</h1>
+              <div className="flex items-center space-x-2 text-xs text-blue-200">
+                <span className="bg-blue-800 px-1.5 py-0.5 rounded border border-blue-700">STEG</span>
+                <span>v2.1 Bonification & Taxes</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <div className="hidden md:block text-right">
+              <p className="text-xs text-blue-300 font-bold uppercase">Puissance Souscrite</p>
+              <p className="text-lg font-mono font-bold leading-none">{config.subscribedPower} kVA</p>
+            </div>
+            <div className="h-8 w-px bg-blue-800 hidden md:block"></div>
+             <div className="flex items-center bg-blue-800/50 px-4 py-2 rounded-full border border-blue-700">
+                <Activity size={16} className="mr-2 text-emerald-400" />
+                <span className="text-xs font-medium uppercase tracking-wider">Connecté</span>
+              </div>
+          </div>
         </div>
-    </header>
+      </header>
 
-    <!-- Main Content -->
-    <div class="flex-1 flex overflow-hidden">
+      <main className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 xl:grid-cols-3 gap-8">
         
-        <!-- Sidebar: Configuration -->
-        <div class="w-80 bg-slate-800 flex flex-col border-r border-slate-700 shrink-0 z-10 shadow-2xl overflow-y-auto custom-scrollbar">
+        {/* Colonne Gauche : Saisie */}
+        <div className="xl:col-span-2 space-y-6">
+          
+          {/* Onglets Sites */}
+          <div className="grid grid-cols-3 gap-3">
+            {SITES.map((site) => (
+              <button
+                key={site.id}
+                onClick={() => setCurrentSite(site.id)}
+                className={`relative p-3 rounded-xl border-2 transition-all duration-200 flex flex-col items-center justify-center
+                  ${currentSite === site.id 
+                    ? 'border-blue-600 bg-white shadow-md text-blue-800' 
+                    : 'border-slate-200 bg-slate-100 text-slate-500 hover:bg-white hover:border-slate-300'
+                  }`}
+              >
+                <span className="font-bold text-sm text-center">{site.name}</span>
+                <span className="text-[10px] text-slate-400">{site.code}</span>
+                {currentSite === site.id && (
+                  <div className="absolute -bottom-1 w-12 h-1 bg-blue-600 rounded-t-full"></div>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Formulaire */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative">
             
-            <div class="p-5 flex-1">
-                <h2 class="text-xs font-bold text-blue-400 uppercase mb-5 tracking-widest border-b border-blue-500/30 pb-2">
-                    1. Données de Simulation
-                </h2>
+            {/* Barre de Titre & Date */}
+            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-center gap-4">
+              <h2 className="text-lg font-bold text-slate-700 flex items-center">
+                <BarChart3 className="mr-2 text-blue-600" size={20} />
+                Nouveau Relevé
+              </h2>
+              
+              <div className="flex items-center bg-white border border-slate-200 rounded-lg px-3 py-1.5 shadow-sm">
+                <Calendar size={16} className="text-slate-400 mr-2" />
+                <input 
+                  type="month"
+                  value={formData[currentSite].date}
+                  onChange={(e) => handleInputChange('date', e.target.value)}
+                  className="text-sm font-semibold text-slate-700 bg-transparent outline-none cursor-pointer"
+                />
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6 space-y-8">
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 
-                <div class="space-y-5 mb-8">
-                    <!-- Mode de Mission -->
+                {/* BLOC 1 : ÉNERGIE ACTIVE */}
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <div className="h-6 w-1 bg-blue-500 rounded-full"></div>
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Compteur Actif (kWh)
+                    </label>
+                  </div>
+                  
+                  <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-blue-100 rounded-bl-full -mr-8 -mt-8 opacity-50"></div>
+
+                    {/* Ancien Index */}
                     <div>
-                        <label class="input-label">Type de Cycle</label>
-                        <div class="flex bg-slate-900/50 rounded-lg p-1 border border-slate-700">
-                            <button id="btn_up" onclick="setMission('up')" class="flex-1 py-1.5 text-xs font-bold rounded-md bg-blue-600 text-white shadow-md transition-all duration-200">MONTÉE</button>
-                            <button id="btn_updown" onclick="setMission('up_down')" class="flex-1 py-1.5 text-xs font-bold rounded-md text-slate-400 hover:text-white transition-all duration-200">ALLER-RETOUR</button>
-                        </div>
-                        <input type="hidden" id="mission_type" value="up">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs font-bold text-slate-500">Ancien Index (N-1)</span>
+                        {formData[currentSite].manualLastIndex && (
+                          <span className="text-[9px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold uppercase">
+                            Modifié
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="number"
+                        className={`w-full px-3 py-2 font-mono text-sm border rounded transition-colors
+                          ${formData[currentSite].manualLastIndex 
+                            ? 'bg-orange-50 border-orange-300 text-orange-800' 
+                            : 'bg-white border-slate-300 text-slate-600'}`}
+                        value={formData[currentSite].lastIndex}
+                        onChange={(e) => handleInputChange('lastIndex', e.target.value)}
+                      />
                     </div>
 
-                    <!-- Pause input -->
-                    <div id="pause_container" class="hidden transition-all duration-300">
-                        <div class="input-group">
-                            <label class="input-label text-red-400">Temps de Pause (s)</label>
-                            <input type="number" id="t_pause" value="5.0" step="0.5" class="input-field border-red-900/50 focus:border-red-500 focus:shadow-[0_0_0_3px_rgba(239,68,68,0.15)] bg-red-900/10">
-                        </div>
+                    {/* Nouvel Index */}
+                    <div>
+                      <span className="text-xs font-bold text-blue-700 mb-1 block">Nouvel Index (N) *</span>
+                      <input 
+                        type="number" 
+                        required
+                        className="w-full px-4 py-3 text-xl font-mono border-2 border-blue-200 rounded-lg focus:outline-none focus:border-blue-600 bg-white shadow-sm"
+                        placeholder="00000"
+                        value={formData[currentSite].newIndex}
+                        onChange={(e) => handleInputChange('newIndex', e.target.value)}
+                      />
                     </div>
 
-                    <div class="input-group">
-                        <label class="input-label">Masse Totale (kg)</label>
-                        <input type="number" id="m_tot" value="2200" class="input-field">
-                    </div>
-                    
-                    <div class="input-group">
-                        <label class="input-label">Hauteur Cible (m)</label>
-                        <input type="number" id="h_target" value="50" class="input-field">
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="input-group mb-0">
-                            <label class="input-label">Vitesse (m/s)</label>
-                            <input type="number" id="v_target" value="10" class="input-field">
-                        </div>
-                        <div class="input-group mb-0">
-                            <label class="input-label">Accél. Pic (m/s²)</label>
-                            <input type="number" id="a_target" value="1.2" class="input-field">
-                        </div>
-                    </div>
+                    {/* Delta Calculé */}
+                    {metrics.activeConsumption > 0 && (
+                      <div className="pt-2 border-t border-slate-200 flex justify-between items-center">
+                        <span className="text-xs font-medium text-slate-500">Consommation</span>
+                        <span className="text-sm font-bold font-mono text-blue-700">
+                          {metrics.activeConsumption.toLocaleString()} kWh
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <h2 class="text-xs font-bold text-blue-400 uppercase mb-4 tracking-widest border-b border-blue-500/30 pb-2">
-                    2. Hardware & Dimensions
-                </h2>
-                
-                <div class="space-y-3">
+                {/* BLOC 2 : QUALITÉ & PUISSANCE */}
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <div className="h-6 w-1 bg-purple-500 rounded-full"></div>
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Paramètres Techniques
+                    </label>
+                  </div>
+                  
+                  <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
                     
-                    <!-- A. ROTOR -->
-                    <div class="hardware-block">
-                        <h3 class="hardware-title">A. ROTOR</h3>
-                        <div class="space-y-2">
-                            <div class="spec-row">
-                                <span class="spec-label">Type</span>
-                                <span class="spec-value">Rotor Passif</span>
-                            </div>
-                            <div>
-                                <div class="spec-row mb-0"><span class="spec-label">Matériau</span> <span class="spec-value text-green-400">Acier Feuilleté (Fe-Si)</span></div>
-                                <span class="tech-note text-green-300/70">Tôles empilées : Pertes Foucault négligeables</span>
-                            </div>
-                            <div>
-                                <div class="spec-row mb-0"><span class="spec-label">Géométrie</span> <span class="spec-value">Triangle Équilatéral</span></div>
-                                <span class="tech-note">Prisme massif pour stabilité magnétique</span>
-                            </div>
-                            <div class="grid grid-cols-2 gap-2 mt-1 border-t border-slate-600/30 pt-1">
-                                <div class="text-[10px] text-slate-400">Côté (L): <span class="text-white font-mono">400mm</span></div>
-                                <div class="text-[10px] text-slate-400 text-right">Prof (P): <span class="text-white font-mono">170mm</span></div>
-                            </div>
-                            <div class="spec-row pt-1"><span class="spec-label">Passage arbre</span> <span class="spec-value">Alésage Ø 100 mm</span></div>
-                        </div>
+                    {/* Cos Phi */}
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="text-xs font-bold text-slate-600 uppercase">Cos φ (Facteur Puissance) *</label>
+                        {metrics.bonificationCoef > 0 && (
+                          <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold flex items-center animate-pulse">
+                            <TrendingDown size={10} className="mr-1" />
+                            BONIF. { (metrics.bonificationCoef * 100).toFixed(1) }%
+                          </span>
+                        )}
+                      </div>
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        min="0" 
+                        max="1" 
+                        required
+                        className={`w-full px-4 py-3 text-xl font-mono border-2 rounded-lg focus:outline-none transition-all
+                          ${metrics.bonificationCoef > 0 ? 'border-emerald-300 text-emerald-700 bg-emerald-50 focus:border-emerald-500' : 'border-slate-200 focus:border-purple-500'}`}
+                        placeholder="0.9X"
+                        value={formData[currentSite].cosPhi}
+                        onChange={(e) => handleInputChange('cosPhi', e.target.value)}
+                      />
                     </div>
 
-                    <!-- B. STATOR -->
-                    <div class="hardware-block">
-                        <h3 class="hardware-title">B. STATOR</h3>
-                        <div class="space-y-2">
-                            <div>
-                                <div class="spec-row mb-0"><span class="spec-label">Technologie</span> <span class="spec-value">Modulaire (12 Bob./Niv)</span></div>
-                                <span class="tech-note">Groupés par 3 en étoile (6 Av/Ar, 6 G/D)</span>
-                            </div>
-                            <div class="grid grid-cols-2 gap-2 mt-1 border-t border-slate-600/30 pt-1">
-                                <div class="text-[10px] text-slate-400">H. Pôle: <span class="text-white font-mono">300mm</span></div>
-                                <div class="text-[10px] text-slate-400 text-right">L. Pôle: <span class="text-white font-mono">170mm</span></div>
-                            </div>
-                            <div>
-                                <div class="spec-row mb-0"><span class="spec-label">Pas Vertical</span> <span class="spec-value">375 mm</span></div>
-                                <span class="tech-note">Distance centre-à-centre</span>
-                            </div>
-                            <div>
-                                <div class="spec-row mb-0"><span class="spec-label">Entrefer</span> <span class="spec-value text-red-300 font-bold">2.0 mm</span></div>
-                                <span class="tech-note text-red-400/70">Sécurité Critique : Distance constante impérative</span>
-                            </div>
-                        </div>
+                    {/* Puissance Maximale Appelée */}
+                    <div>
+                      <label className="flex justify-between text-xs font-bold text-slate-600 mb-1 uppercase">
+                        <span>Max. Appelée (kVA) *</span>
+                        <span className="text-slate-400">Souscrit: {config.subscribedPower}</span>
+                      </label>
+                      <div className="relative">
+                        <input 
+                          type="number" 
+                          required
+                          className={`w-full px-3 py-2 font-mono text-sm border-2 rounded focus:outline-none 
+                            ${metrics.isPowerOverrun 
+                              ? 'border-red-300 bg-red-50 text-red-700 focus:border-red-500' 
+                              : 'border-slate-300 focus:border-purple-500'}`}
+                          placeholder="Valeur P.Max"
+                          value={formData[currentSite].maxPower}
+                          onChange={(e) => handleInputChange('maxPower', e.target.value)}
+                        />
+                        {metrics.isPowerOverrun && (
+                          <div className="absolute right-2 top-2 text-red-500">
+                            <AlertTriangle size={16} />
+                          </div>
+                        )}
+                      </div>
+                      {metrics.isPowerOverrun && (
+                        <p className="text-[10px] text-red-600 mt-1 font-bold">
+                          DÉPASSEMENT : +{metrics.powerOverrunVal} kVA
+                        </p>
+                      )}
                     </div>
 
-                    <!-- C. COMMANDE & ELEC -->
-                    <div class="hardware-block">
-                        <h3 class="hardware-title">C. COMMANDE & ÉLEC</h3>
-                        <div class="space-y-2">
-                            <div class="spec-row"><span class="spec-label">Commande</span> <span class="spec-value">FOC (Field-Oriented)</span></div>
-                            <hr class="border-slate-600/50 my-1">
-                            
-                            <!-- Bobinage Détails -->
-                            <div>
-                                <div class="spec-row mb-0"><span class="spec-label">R Bobine (20°C)</span> <span class="spec-value text-yellow-100">5.87 Ω</span></div>
-                                <span class="tech-note">Prévoir ≈ 7 Ω à chaud (70°C)</span>
-                            </div>
-                            <div>
-                                <div class="spec-row mb-0"><span class="spec-label">Spires (N)</span> <span class="spec-value">500 tours</span></div>
-                                <span class="tech-note">10 couches de 50 spires</span>
-                            </div>
-                            <div>
-                                <div class="spec-row mb-0"><span class="spec-label">Fil Cuivre</span> <span class="spec-value">1.15 mm²</span></div>
-                                <span class="tech-note">Ø 1.21 mm (Cuivre nu) | Longueur ≈ 400m</span>
-                            </div>
-                            <div class="spec-row"><span class="spec-label">Pertes (Unit)</span> <span class="spec-value">193 Watts</span></div>
-                            <div class="spec-row"><span class="spec-label">Constante FCEM</span> <span class="spec-value">45 V/(m/s)</span></div>
-                            <div class="spec-row"><span class="spec-label">Chute Tension</span> <span class="spec-value">34 V (R×I)</span></div>
-                            <div>
-                                <div class="spec-row mb-0"><span class="spec-label text-yellow-400">FCEM</span> <span class="spec-value text-yellow-400 font-bold">550 - 1000 V</span></div>
-                            </div>
-                        </div>
+                    {/* Réactif (Optionnel) */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1 uppercase">Réactif (kVarh)</label>
+                      <input 
+                        type="number" 
+                        className="w-full px-3 py-2 font-mono text-sm border border-slate-300 rounded focus:outline-none focus:border-purple-500"
+                        placeholder="Optionnel"
+                        value={formData[currentSite].reactiveCons}
+                        onChange={(e) => handleInputChange('reactiveCons', e.target.value)}
+                      />
                     </div>
 
-                    <!-- COURANTS -->
-                    <div class="hardware-block border-l-4 border-l-blue-500">
-                        <h3 class="hardware-title !border-0 !mb-1 !pb-0 text-blue-200">COURANTS DE FONCTIONNEMENT</h3>
-                        <div class="space-y-3 pt-2">
-                            <div class="flex justify-between items-center">
-                                <span class="text-slate-400 text-xs">Nominal</span>
-                                <span class="text-white font-mono font-bold text-sm">5.73 A</span>
-                            </div>
-                            
-                            <div class="border-t border-slate-600/50 pt-1">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-green-300 text-[10px] uppercase font-bold">Pic "Confort & Sécurité"</span>
-                                    <span class="text-green-400 font-bold font-mono">6.90 A</span>
-                                </div>
-                                <div class="text-[9px] text-slate-400 leading-tight mt-0.5">Accélération max tolérable (2.0 m/s²)</div>
-                            </div>
-
-                            <div class="border-t border-slate-600/50 pt-1">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-red-300 text-[10px] uppercase font-bold">Pic "Limite Système"</span>
-                                    <span class="text-red-400 font-bold font-mono">11.46 A</span>
-                                </div>
-                                <div class="text-[9px] text-slate-400 leading-tight mt-0.5">Capacité max système (9.81 m/s²)</div>
-                            </div>
-                        </div>
-                    </div>
-
+                  </div>
                 </div>
-            </div>
+              </div>
 
-            <div class="p-4 bg-slate-900 border-t border-slate-700 mt-auto">
-                 <button onclick="preValidate()" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3.5 rounded-lg shadow-lg transition transform active:scale-[0.98] border border-blue-500/30 text-sm tracking-wide uppercase">
-                    Lancer Simulation
+              {/* Bouton Action */}
+              <div className="pt-4 border-t border-slate-100 flex justify-end">
+                <button 
+                  type="submit"
+                  className="bg-blue-700 hover:bg-blue-800 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-blue-700/20 transition-all hover:scale-105 active:scale-95 flex items-center"
+                >
+                  <Save className="mr-2" size={20} />
+                  Valider le Relevé
                 </button>
-                <!-- Status -->
-                <div id="statusBox" class="hidden mt-3 text-center text-xs font-bold transition-all duration-300"></div>
-            </div>
-        </div>
+              </div>
 
-        <!-- Center Column : Split into 2 parts -->
-        <div class="flex flex-col flex-1 border-r border-slate-200 overflow-hidden">
-            
-            <!-- TOP: Visualisation 2D (65% height approx) -->
-            <div class="flex-1 relative bg-white min-h-[50%]">
-                <div class="absolute top-4 left-4 z-10 pointer-events-none">
-                    <div class="bg-white/90 backdrop-blur-md border border-slate-200 p-4 rounded-xl shadow-lg ring-1 ring-black/5">
-                        <h3 class="text-[10px] font-black text-blue-600 mb-1 uppercase tracking-widest">Temps Réel</h3>
-                        <div class="text-[10px] text-slate-500 font-mono space-y-1">
-                            <div class="flex justify-between w-24"><span>Pos:</span> <span id="disp_y" class="text-slate-900 font-bold text-sm">0.00 m</span></div>
-                            <div class="flex justify-between w-24"><span>Vit:</span> <span id="disp_v" class="text-slate-900">0.00 m/s</span></div>
+            </form>
+
+            {/* Zone Paramètres STEG Sécurisée */}
+            <div className="bg-slate-50 border-t border-slate-200">
+               <button 
+                 onClick={() => setIsConfigUnlocked(!isConfigUnlocked)}
+                 className="w-full flex justify-between items-center px-6 py-4 text-xs font-bold text-slate-500 uppercase hover:bg-slate-100 transition-colors"
+               >
+                 <span className="flex items-center">
+                   <Settings size={14} className="mr-2" />
+                   Configuration & Tarifs (Admin)
+                 </span>
+                 {isConfigUnlocked ? <Unlock size={14} className="text-red-500" /> : <Lock size={14} />}
+               </button>
+
+               {isConfigUnlocked && (
+                 <div className="px-6 py-6 bg-white border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-top-2">
+                    
+                    <div className="col-span-full mb-2 p-3 bg-red-50 border border-red-100 rounded-lg flex items-start">
+                        <AlertTriangle className="text-red-500 mr-3 flex-shrink-0" size={18} />
+                        <div>
+                            <h4 className="text-sm font-bold text-red-800">Zone Sensible</h4>
+                            <p className="text-xs text-red-600">Modifier ces valeurs impacte directement les calculs de bonification et de facturation.</p>
                         </div>
                     </div>
-                </div>
 
-                <!-- Indicateur Régénération -->
-                <div id="regenIndicator" class="absolute top-4 right-4 z-10 hidden transition-opacity duration-300">
-                    <div class="bg-green-50 backdrop-blur border border-green-500/30 p-2 px-3 rounded-full shadow-xl flex items-center gap-2">
-                        <div class="w-2 h-2 bg-green-500 rounded-full animate-ping"></div>
-                        <span class="text-[10px] font-bold text-green-700 tracking-wide uppercase">Régénération</span>
+                    {/* Groupe Tarifs */}
+                    <div className="space-y-3">
+                        <h5 className="text-xs font-bold text-slate-400 uppercase">Tarification Base</h5>
+                        <div>
+                            <label className="block text-xs text-slate-600 mb-1">Prix Unitaire (DT/kWh)</label>
+                            <input type="number" step="0.001" value={config.unitPriceKwh} onChange={(e) => handleConfigChange('unitPriceKwh', e.target.value)} className="w-full text-sm border border-slate-300 rounded p-2" />
+                        </div>
+                        <div>
+                            <label className="block text-xs text-slate-600 mb-1">Prix Unitaire Puissance (DT/kVA)</label>
+                            <input type="number" step="0.100" value={config.powerUnitPrice} onChange={(e) => handleConfigChange('powerUnitPrice', e.target.value)} className="w-full text-sm border border-slate-300 rounded p-2" />
+                        </div>
                     </div>
-                </div>
 
-                <canvas id="visuCanvas" class="w-full h-full block"></canvas>
+                    {/* Groupe Contrat */}
+                    <div className="space-y-3">
+                        <h5 className="text-xs font-bold text-slate-400 uppercase">Contrat</h5>
+                        <div>
+                            <label className="block text-xs text-slate-600 mb-1">Puissance Souscrite (kVA)</label>
+                            <input type="number" value={config.subscribedPower} onChange={(e) => handleConfigChange('subscribedPower', e.target.value)} className="w-full text-sm border border-slate-300 rounded p-2" />
+                        </div>
+                        <div>
+                            <label className="block text-xs text-slate-600 mb-1">Seuil Pénalité Cos φ</label>
+                            <input type="number" step="0.01" value={config.minCosPhi} onChange={(e) => handleConfigChange('minCosPhi', e.target.value)} className="w-full text-sm border border-slate-300 rounded p-2" />
+                        </div>
+                    </div>
+
+                    {/* Groupe Taxes */}
+                    <div className="space-y-3">
+                        <h5 className="text-xs font-bold text-slate-400 uppercase">Taxes & Redevances</h5>
+                        <div className="grid grid-cols-2 gap-2">
+                            <div>
+                                <label className="block text-xs text-slate-600 mb-1">TVA (%)</label>
+                                <input type="number" value={config.vatRate} onChange={(e) => handleConfigChange('vatRate', e.target.value)} className="w-full text-sm border border-slate-300 rounded p-2" />
+                            </div>
+                            <div>
+                                <label className="block text-xs text-slate-600 mb-1">RTT (DT)</label>
+                                <input type="number" value={config.rtt} onChange={(e) => handleConfigChange('rtt', e.target.value)} className="w-full text-sm border border-slate-300 rounded p-2" />
+                            </div>
+                        </div>
+                    </div>
+
+                 </div>
+               )}
             </div>
+          </div>
+        </div>
 
-            <!-- BOTTOM: Rapport Permanent -->
-            <div id="reportContainer" class="h-72 bg-slate-50 border-t border-slate-200 flex flex-col shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20 relative">
+        {/* Colonne Droite : KPI & Résultats Financiers */}
+        <div className="space-y-6">
+          
+          {/* Carte Résultat Financier */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+             <div className="bg-slate-900 px-6 py-4 border-b border-slate-800">
+               <h3 className="text-white text-sm font-bold uppercase tracking-wider flex items-center">
+                 <DollarSign size={16} className="mr-2 text-emerald-400" />
+                 Estimation Facture
+               </h3>
+             </div>
+             
+             <div className="p-6 space-y-4">
+               {/* Total Conso */}
+               <div className="flex justify-between items-center text-sm">
+                 <span className="text-slate-500">Conso. Active ({metrics.activeConsumption} kWh)</span>
+                 <span className="font-mono text-slate-700">{(metrics.activeConsumption * (parseFloat(config.unitPriceKwh) || 0)).toFixed(3)} DT</span>
+               </div>
+               
+               {/* Redevance Puissance */}
+               <div className="flex justify-between items-center text-sm">
+                 <span className="text-slate-500">Redevance Puissance Fixe</span>
+                 <span className="font-mono text-slate-700">{((parseFloat(config.subscribedPower) || 0) * (parseFloat(config.powerUnitPrice) || 0)).toFixed(3)} DT</span>
+               </div>
+
+                {/* Bonification / Pénalité */}
+                {metrics.bonificationAmount > 0 && (
+                  <div className="flex justify-between items-center text-sm bg-emerald-50 p-2 rounded border border-emerald-100">
+                    <span className="text-emerald-700 font-bold">Bonification Cos φ ({ (metrics.bonificationCoef * 100).toFixed(1) }%)</span>
+                    <span className="font-mono font-bold text-emerald-700">-{formatMoney(metrics.bonificationAmount)}</span>
+                  </div>
+                )}
                 
-                <div class="p-3 border-b border-slate-200 flex justify-between items-center bg-white">
-                    <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
-                        <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                        RAPPORT DE CYCLE
-                    </h3>
-                    <button onclick="downloadReportImage()" class="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 px-2 py-1 rounded hover:bg-blue-50 transition" title="Télécharger le rapport">
-                        📥 Télécharger
-                    </button>
-                </div>
+                {/* Dépassement */}
+                {metrics.isPowerOverrun && (
+                  <div className="flex justify-between items-center text-sm bg-red-50 p-2 rounded border border-red-100">
+                    <span className="text-red-700 font-bold">Dépassement Puissance</span>
+                    <span className="font-mono font-bold text-red-700">Alerte</span>
+                  </div>
+                )}
 
-                <!-- Content Area -->
-                <div id="reportContent" class="flex-1 p-4 overflow-y-auto relative">
-                    <!-- Default State -->
-                    <div class="flex items-center justify-center h-full text-slate-400 text-sm font-medium">
-                        En attente de simulation...
-                    </div>
-                </div>
+               <div className="border-t border-slate-100 my-2"></div>
+               
+               <div className="flex justify-between items-end">
+                 <span className="text-sm font-bold text-slate-800">Total HTVA Estimé</span>
+                 <span className="text-2xl font-bold text-blue-900 font-mono">
+                   {formatMoney(metrics.estimatedBillHT)}
+                 </span>
+               </div>
+               <p className="text-[10px] text-slate-400 text-right mt-1">* Hors TVA et taxes municipales</p>
+             </div>
+          </div>
+
+          {/* Mini Historique */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col h-[350px]">
+            <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+              <h3 className="text-slate-700 font-bold flex items-center text-sm">
+                <History className="mr-2 text-slate-400" size={16} />
+                Derniers Enregistrements
+              </h3>
             </div>
-
-        </div>
-
-        <!-- Right: Charts (3 sections) -->
-        <div class="w-[500px] flex flex-col bg-slate-800 border-l border-slate-700 shrink-0">
             
-            <!-- Chart 1 -->
-            <div class="h-1/3 p-3 border-b border-slate-700 flex flex-col relative">
-                <div class="flex justify-between items-center mb-2">
-                    <h3 class="text-[10px] text-slate-400 font-bold tracking-wider">CINÉMATIQUE</h3>
-                    <button onclick="downloadGraph('kineChart', 'Cinematique')" class="text-slate-400 hover:text-white transition" title="Télécharger avec Données">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                    </button>
+            <div className="flex-1 overflow-y-auto p-2 space-y-2">
+              {logs.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                  <History size={32} className="mb-2 opacity-50" />
+                  <p className="text-sm">Aucune donnée</p>
                 </div>
-                <div class="flex-1 relative min-h-0 bg-slate-900/50 rounded-lg border border-slate-700/50 p-1">
-                    <canvas id="kineChart"></canvas>
-                </div>
+              ) : (
+                logs.map((log) => (
+                  <div key={log.id} className="bg-white border border-slate-100 p-3 rounded-lg shadow-sm text-sm">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="font-bold text-slate-700 text-xs">{log.siteName}</span>
+                      <span className="text-[10px] text-slate-500 font-mono bg-slate-100 px-1 rounded">{log.recordDate}</span>
+                    </div>
+                    <div className="flex justify-between items-center mt-2">
+                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${log.bonificationCoef > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
+                         φ {log.cosPhi}
+                       </span>
+                       <span className="font-mono text-xs text-blue-700">{formatMoney(log.estimatedBillHT)}</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
+          </div>
 
-            <!-- Chart 2 -->
-            <div class="h-1/3 p-3 border-b border-slate-700 flex flex-col relative">
-                <div class="flex justify-between items-center mb-2">
-                    <h3 class="text-[10px] text-slate-400 font-bold tracking-wider">ÉLECTRIQUE</h3>
-                    <button onclick="downloadGraph('elecChart', 'Electrique')" class="text-slate-400 hover:text-white transition" title="Télécharger avec Données">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                    </button>
-                </div>
-                <div class="flex-1 relative min-h-0 bg-slate-900/50 rounded-lg border border-slate-700/50 p-1">
-                    <canvas id="elecChart"></canvas>
-                </div>
-            </div>
-
-            <!-- Chart 3 -->
-            <div class="h-1/3 p-3 flex flex-col relative">
-                <div class="flex justify-between items-center mb-2">
-                    <h3 class="text-[10px] text-slate-400 font-bold tracking-wider">BILAN ÉNERGIE (CUMUL)</h3>
-                    <button onclick="downloadGraph('nrgChart', 'Energie')" class="text-slate-400 hover:text-white transition" title="Télécharger avec Données">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                    </button>
-                </div>
-                <div class="flex-1 relative min-h-0 bg-slate-900/50 rounded-lg border border-slate-700/50 p-1">
-                    <canvas id="nrgChart"></canvas>
-                </div>
-            </div>
         </div>
+
+      </main>
+
+      {/* Notification Toast */}
+      {notification && (
+        <div className={`fixed bottom-6 right-6 px-6 py-4 rounded-xl shadow-2xl text-white font-medium flex items-center animate-bounce-short z-50
+          ${notification.type === 'error' ? 'bg-red-500' : 'bg-emerald-600'}`}>
+          {notification.type === 'error' ? <AlertTriangle className="mr-2" /> : <CheckCircle2 className="mr-2" />}
+          {notification.msg}
+        </div>
+      )}
 
     </div>
+  );
+};
 
-    <!-- Modal Validation -->
-    <div id="validationModal" class="fixed inset-0 modal z-[60] hidden flex items-center justify-center p-4">
-        <div id="valModalContent" class="bg-slate-800 border-2 rounded-xl max-w-md w-full shadow-2xl overflow-hidden transform transition-all scale-100 relative">
-            <div id="valHeader" class="p-4 border-b flex justify-between items-center bg-yellow-900/30 border-yellow-600/50">
-                <h2 id="valTitle" class="text-lg font-bold text-yellow-400 flex items-center gap-2">⚠️ AVERTISSEMENT</h2>
-            </div>
-            <div class="p-6">
-                <div id="valMessage" class="text-sm text-slate-300 space-y-4"></div>
-            </div>
-            <div class="bg-slate-900 p-4 border-t border-slate-700 flex gap-3 justify-end">
-                <button id="valBtnCancel" onclick="closeValidation()" class="px-4 py-2 rounded-lg text-sm font-bold text-slate-400 hover:text-white hover:bg-slate-700 transition">Annuler</button>
-                <button id="valBtnConfirm" onclick="confirmSimulation()" class="px-4 py-2 rounded-lg text-sm font-bold bg-yellow-600 text-white hover:bg-yellow-500 shadow-lg transition">CONFIRMER & FORCER</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Guide d'Utilisation -->
-    <div id="helpModal" class="fixed inset-0 modal z-[70] hidden flex items-center justify-center p-4">
-        <div class="bg-slate-800 border-2 border-slate-600 rounded-xl max-w-2xl w-full shadow-2xl overflow-hidden transform transition-all scale-100 relative">
-            <div class="bg-slate-900 p-5 border-b border-slate-700 flex justify-between items-center">
-                <h2 class="text-xl font-bold text-blue-400 flex items-center gap-2">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    Comment utiliser ce simulateur ?
-                </h2>
-                <button onclick="closeHelpModal()" class="text-slate-400 hover:text-white transition">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
-            <div class="p-6 overflow-y-auto max-h-[70vh]">
-                <div class="space-y-6">
-                    <div class="flex gap-4">
-                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">1</div>
-                        <div>
-                            <h3 class="text-white font-bold text-lg mb-1">Configuration</h3>
-                            <p class="text-slate-300 text-sm leading-relaxed">
-                                Utilisez le panneau de gauche pour définir les paramètres de votre mission :
-                                <ul class="list-disc list-inside mt-1 ml-1 text-slate-400">
-                                    <li>Type de Cycle (Montée Simple ou Aller-Retour)</li>
-                                    <li>Masse totale (Charge + Cabine)</li>
-                                    <li>Hauteur, Vitesse et Accélération cibles</li>
-                                </ul>
-                            </p>
-                        </div>
-                    </div>
-                    <div class="flex gap-4">
-                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">2</div>
-                        <div>
-                            <h3 class="text-white font-bold text-lg mb-1">Lancement & Sécurité</h3>
-                            <p class="text-slate-300 text-sm leading-relaxed">
-                                Cliquez sur <span class="bg-blue-600/30 text-blue-300 px-1 rounded text-xs font-mono">LANCER SIMULATION</span>.
-                                Le système effectue une <strong>pré-validation automatique</strong> :
-                                <ul class="list-disc list-inside mt-1 ml-1 text-slate-400">
-                                    <li><span class="text-yellow-400 font-bold">Avertissement :</span> Paramètres risqués mais possibles (nécessite confirmation).</li>
-                                    <li><span class="text-red-400 font-bold">Erreur Critique :</span> Paramètres impossibles physiquement (arrêt immédiat).</li>
-                                </ul>
-                            </p>
-                        </div>
-                    </div>
-                    <div class="flex gap-4">
-                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">3</div>
-                        <div>
-                            <h3 class="text-white font-bold text-lg mb-1">Analyse Temps Réel</h3>
-                            <p class="text-slate-300 text-sm leading-relaxed">
-                                Observez la simulation visuelle au centre et les graphiques dynamiques à droite :
-                                <ul class="list-disc list-inside mt-1 ml-1 text-slate-400">
-                                    <li><strong>Cinématique :</strong> Position, Vitesse, Accélération.</li>
-                                    <li><strong>Électrique :</strong> Tension et Courant consommés.</li>
-                                    <li><strong>Énergie :</strong> Consommation cumulée vs Régénération.</li>
-                                </ul>
-                            </p>
-                        </div>
-                    </div>
-                    <div class="flex gap-4">
-                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">4</div>
-                        <div>
-                            <h3 class="text-white font-bold text-lg mb-1">Rapport & Export</h3>
-                            <p class="text-slate-300 text-sm leading-relaxed">
-                                Une fois la simulation terminée :
-                                <ul class="list-disc list-inside mt-1 ml-1 text-slate-400">
-                                    <li>Le <strong>Rapport de Cycle</strong> s'affiche en bas au centre avec le bilan complet.</li>
-                                    <li>Utilisez les boutons <span class="text-slate-200">📥</span> pour télécharger les graphiques ou le rapport sous forme d'image.</li>
-                                </ul>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-slate-900 p-4 border-t border-slate-700 text-right">
-                <button onclick="closeHelpModal()" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold transition">J'ai compris</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- NOUVEAU: Modal Validation Magnétique (Plein écran avec Iframe) -->
-    <div id="magValModal" class="fixed inset-0 z-[80] hidden bg-slate-900">
-        <button onclick="closeMagVal()" class="absolute top-6 right-6 text-white z-50 hover:text-red-400 bg-black/50 p-2 rounded-full transition shadow-lg border border-white/10">
-            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-        </button>
-        <iframe id="magValFrame" class="w-full h-full border-none"></iframe>
-    </div>
-
-    <!-- Template pour le code de Validation Magnétique -->
-    <template id="magValTemplate">
-        <!DOCTYPE html>
-        <html lang="fr">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>M-LEV: Validation Magnétique</title>
-            <script src="https://cdn.tailwindcss.com"></script>
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-            <style>
-                body { 
-                    font-family: 'Segoe UI', system-ui, sans-serif; 
-                    background-color: #f8fafc; 
-                    color: #1e293b; 
-                    margin: 0; 
-                    overflow: hidden;
-                }
-                canvas { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
-                
-                .hud-top-bar {
-                    position: absolute; top: 90px; left: 50%; transform: translateX(-50%);
-                    background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px);
-                    border: 1px solid #cbd5e1; border-radius: 12px; padding: 0.75rem 1.5rem;
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.08); display: flex; gap: 2rem; align-items: center; z-index: 20; min-width: 850px;
-                }
-                
-                .hud-bottom-panel {
-                    position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-                    background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px);
-                    border: 1px solid #cbd5e1; border-radius: 16px; padding: 1.5rem;
-                    box-shadow: 0 10px 40px rgba(0,0,0,0.1); display: flex; gap: 2.5rem; align-items: center;
-                }
-
-                /* Nouveaux Styles Inputs */
-                .control-group { display: flex; flex-direction: column; gap: 0.5rem; width: 240px; }
-                .control-row { display: flex; align-items: center; gap: 0.5rem; }
-                
-                input[type=range] {
-                    -webkit-appearance: none; width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px; outline: none;
-                }
-                input[type=range]::-webkit-slider-thumb {
-                    -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; 
-                    background: #3b82f6; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-                    transition: transform 0.1s;
-                }
-                input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
-                input[type=range].accel-range::-webkit-slider-thumb { background: #10b981; }
-                input[type=range].mass-range::-webkit-slider-thumb { background: #d97706; }
-
-                input[type=number] {
-                    width: 70px; padding: 0.25rem 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;
-                    font-family: 'Courier New', monospace; font-weight: bold; text-align: right; color: #334155;
-                }
-                input[type=number]:focus { outline: 2px solid #3b82f6; border-color: transparent; }
-
-                .coil-led { width: 10px; height: 10px; border-radius: 50%; background: #cbd5e1; display: inline-block; border: 1px solid #94a3b8; transition: all 0.2s; }
-                .coil-active { background: #f59e0b; box-shadow: 0 0 0 2px #fef3c7; border-color: #d97706; transform: scale(1.1); }
-                .label-sm { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
-                .val-lg { font-family: 'Courier New', monospace; font-weight: 800; font-size: 1.25rem; color: #0f172a; }
-                
-                #magHelp {
-                    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-                    background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 20px 50px rgba(0,0,0,0.2);
-                    z-index: 100; max-width: 600px; display: none; border: 1px solid #e2e8f0;
-                }
-                #magHelp.show { display: block; animation: fadein 0.2s; }
-                @keyframes fadein { from { opacity: 0; transform: translate(-50%, -45%); } to { opacity: 1; transform: translate(-50%, -50%); } }
-            </style>
-        </head>
-        <body class="relative">
-            <canvas id="simCanvas"></canvas>
-            
-            <button onclick="document.getElementById('magHelp').classList.add('show')" class="absolute top-6 right-20 z-30 bg-white hover:bg-slate-50 text-slate-500 hover:text-blue-600 p-2 px-3 rounded-full shadow-lg border border-slate-200 transition flex items-center gap-2 font-bold text-sm" title="Aide">
-                <i class="fa-solid fa-circle-question text-lg"></i> AIDE
-            </button>
-
-            <!-- HELP MODAL -->
-            <div id="magHelp">
-                <div class="flex justify-between items-center mb-4 border-b pb-2">
-                    <h2 class="text-xl font-bold text-slate-800">Guide de Validation Magnétique</h2>
-                    <button onclick="document.getElementById('magHelp').classList.remove('show')" class="text-slate-400 hover:text-slate-800"><i class="fa-solid fa-xmark text-xl"></i></button>
-                </div>
-                <div class="space-y-6 text-sm text-slate-600">
-                    
-                    <div>
-                        <h3 class="font-bold text-slate-800 mb-2 uppercase text-xs tracking-wider border-b border-slate-100 pb-1">1. Contrôles de Simulation</h3>
-                        <ul class="list-disc pl-5 space-y-2">
-                            <li>
-                                <strong class="text-amber-600">Charge (Masse) :</strong> 
-                                Influe directement sur la force requise pour vaincre la gravité. Une masse élevée augmente le courant de base, même à l'arrêt.
-                            </li>
-                            <li>
-                                <strong class="text-emerald-600">Consigne Accélération (Couple) :</strong> 
-                                Ajoute une force dynamique. Le courant total dépend de la somme (Gravité + Accélération) x Masse.
-                                <br><em class="text-xs text-slate-400">Objectif : Vérifier que le fer ne sature pas (>1.8T) à pleine charge.</em>
-                            </li>
-                            <li>
-                                <strong class="text-blue-600">Consigne Vitesse (Fréquence) :</strong> 
-                                Pilote la vitesse de rotation du champ. Plus la vitesse est élevée, plus la tension induite (FCEM) augmente.
-                                <br><em class="text-xs text-slate-400">Objectif : Vérifier que la tension reste sous la limite de l'onduleur (1000V).</em>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div>
-                        <h3 class="font-bold text-slate-800 mb-2 uppercase text-xs tracking-wider border-b border-slate-100 pb-1">2. Comprendre le Scénario Visuel</h3>
-                        <div class="grid grid-cols-2 gap-4 text-xs">
-                            <div class="bg-slate-50 p-2 rounded border border-slate-100">
-                                <strong class="block text-slate-700 mb-1">Rotor (Triangle Central)</strong>
-                                C'est la partie mobile en acier passif. Il tourne sur lui-même pour simuler le déplacement linéaire (1 tour = 1.2m).
-                            </div>
-                            <div class="bg-slate-50 p-2 rounded border border-slate-100">
-                                <strong class="block text-slate-700 mb-1">Stator (Rectangles Latéraux)</strong>
-                                Ce sont les pôles fixes qui génèrent le champ. Ils s'illuminent en <span class="text-amber-500 font-bold">Jaune</span> lorsqu'ils sont actifs.
-                            </div>
-                            <div class="col-span-2 bg-slate-50 p-2 rounded border border-slate-100">
-                                <strong class="block text-slate-700 mb-1">Carte de Chaleur (Flux Magnétique)</strong>
-                                Visualise la densité du flux B dans le matériau :
-                                <div class="flex items-center gap-3 mt-1 font-medium">
-                                    <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-blue-500"></div> Faible</span>
-                                    <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-green-500"></div> Nominal</span>
-                                    <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-red-500"></div> Saturation (>1.8T)</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-
-            <div class="absolute top-6 w-full text-center pointer-events-none z-10">
-                <h1 class="text-3xl font-extrabold text-slate-800 tracking-tight flex items-center justify-center gap-3">
-                    <span class="bg-blue-600 text-white w-10 h-10 rounded-lg flex items-center justify-center text-lg shadow-lg shadow-blue-200"><i class="fa-solid fa-check"></i></span>
-                    VALIDATION MAGNÉTIQUE
-                </h1>
-                <div class="text-xs text-slate-500 font-medium mt-1 uppercase tracking-widest">
-                    Rapport de Saturation & Performance
-                </div>
-            </div>
-            
-            <div class="hud-top-bar" style="min-width: 900px; gap: 2rem;">
-                
-                <!-- NOUVEAU CONTROLE MASSE -->
-                <div class="control-group">
-                    <div class="flex justify-between items-center">
-                        <label class="label-sm text-amber-700">Charge (Masse)</label>
-                        <span class="text-[10px] text-slate-400">kg</span>
-                    </div>
-                    <div class="control-row">
-                        <input type="range" id="input-mass" class="mass-range" min="0" max="5000" step="50" value="2200">
-                        <input type="number" id="num-mass" min="0" max="5000" step="50" value="2200">
-                    </div>
-                </div>
-
-                <div class="control-group">
-                    <div class="flex justify-between items-center">
-                        <label class="label-sm text-emerald-700">Consigne Accélération</label>
-                        <span class="text-[10px] text-slate-400">m/s²</span>
-                    </div>
-                    <div class="control-row">
-                        <input type="range" id="input-accel" class="accel-range" min="0" max="10" step="0.1" value="0">
-                        <input type="number" id="num-accel" min="0" max="10" step="0.1" value="0">
-                    </div>
-                </div>
-
-                <div class="control-group">
-                    <div class="flex justify-between items-center">
-                        <label class="label-sm text-blue-700">Consigne Vitesse</label>
-                        <span class="text-[10px] text-slate-400">m/s</span>
-                    </div>
-                    <div class="control-row">
-                        <input type="range" id="input-speed" min="0" max="25" step="0.5" value="0">
-                        <input type="number" id="num-speed" min="0" max="25" step="0.5" value="0">
-                    </div>
-                </div>
-
-                <div class="w-px h-12 bg-slate-200 mx-2"></div>
-
-                <div class="pl-2 border-l border-slate-200">
-                    <div class="label-sm mb-2 text-center text-slate-500">Séquence Bobines</div>
-                    <div class="flex gap-6">
-                        <!-- Gauche -->
-                        <div class="flex flex-col items-center">
-                            <div class="text-[9px] text-slate-400 font-bold mb-1">GAUCHE</div>
-                            <div class="flex gap-2">
-                                <div class="flex flex-col items-center"><span id="led-l-a" class="coil-led mb-0.5"></span><span class="text-[9px] text-slate-500 font-mono">A</span></div>
-                                <div class="flex flex-col items-center"><span id="led-l-b" class="coil-led mb-0.5"></span><span class="text-[9px] text-slate-500 font-mono">B</span></div>
-                                <div class="flex flex-col items-center"><span id="led-l-c" class="coil-led mb-0.5"></span><span class="text-[9px] text-slate-500 font-mono">C</span></div>
-                            </div>
-                        </div>
-                        
-                        <div class="w-px bg-slate-100 h-8 mt-4"></div>
-
-                        <!-- Droite -->
-                        <div class="flex flex-col items-center">
-                            <div class="text-[9px] text-slate-400 font-bold mb-1">DROITE</div>
-                            <div class="flex gap-2">
-                                <div class="flex flex-col items-center"><span id="led-r-a" class="coil-led mb-0.5"></span><span class="text-[9px] text-slate-500 font-mono">A</span></div>
-                                <div class="flex flex-col items-center"><span id="led-r-b" class="coil-led mb-0.5"></span><span class="text-[9px] text-slate-500 font-mono">B</span></div>
-                                <div class="flex flex-col items-center"><span id="led-r-c" class="coil-led mb-0.5"></span><span class="text-[9px] text-slate-500 font-mono">C</span></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="hud-bottom-panel">
-                <div class="text-center w-24">
-                    <div class="label-sm mb-1">Courant</div>
-                    <div class="val-lg text-orange-600" id="disp-current">0.0</div>
-                    <div class="text-[10px] text-slate-400 font-bold">Ampères</div>
-                </div>
-                <div class="w-px h-10 bg-slate-200"></div>
-                <div class="text-center w-24 relative">
-                    <div class="label-sm mb-1">Tension</div>
-                    <div class="val-lg text-amber-600" id="disp-voltage">0</div>
-                    <div class="text-[10px] text-slate-400 font-bold">Volts (FCEM)</div>
-                    <div id="warn-volt" class="hidden absolute -top-3 -right-2 bg-red-100 text-red-600 border border-red-200 px-1.5 py-0.5 rounded text-[9px] font-bold">MAX</div>
-                </div>
-                <div class="w-px h-10 bg-slate-200"></div>
-                <div class="text-center w-24">
-                    <div class="label-sm mb-1">Vitesse Réelle</div>
-                    <div class="val-lg text-slate-800" id="disp-real-speed">0.0</div>
-                    <div class="text-[10px] text-slate-400 font-bold">m/s</div>
-                </div>
-                <div class="w-px h-10 bg-slate-200"></div>
-                <div class="w-48 bg-slate-50 rounded-xl p-3 border border-slate-200 shadow-inner">
-                    <div class="flex justify-between items-end mb-1">
-                        <div class="label-sm text-slate-500">Flux (Tesla)</div>
-                        <div class="val-lg text-blue-600 leading-none" id="disp-b">0.00</div>
-                    </div>
-                    <div class="w-full h-2 bg-slate-200 mt-1 rounded-full overflow-hidden flex relative">
-                        <div id="bar-sat" class="h-full bg-gradient-to-r from-blue-500 via-emerald-400 to-rose-500 w-0 transition-all duration-100"></div>
-                        <div class="absolute top-0 bottom-0 w-0.5 bg-slate-800 opacity-20" style="left: 90%"></div>
-                    </div>
-                    <div class="flex justify-between w-full text-[9px] text-slate-400 mt-1 font-medium">
-                        <span>0T</span>
-                        <span class="text-rose-500 font-bold">1.8T</span>
-                        <span>2.0T</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="absolute bottom-40 right-10 bg-white/90 p-4 rounded-xl border border-slate-200 shadow-xl backdrop-blur-sm">
-                <div class="label-sm mb-3 border-b border-slate-100 pb-2">CARTE THERMIQUE</div>
-                <div class="flex flex-col gap-2 text-[10px] text-slate-600 font-medium">
-                    <div class="flex items-center justify-between gap-4">
-                        <span>Zone Froide</span>
-                        <div class="flex items-center gap-2"><div class="w-12 h-2 rounded bg-gradient-to-r from-blue-600 to-cyan-400"></div> <span class="w-8 text-right">0.5T</span></div>
-                    </div>
-                    <div class="flex items-center justify-between gap-4">
-                        <span>Conduction</span>
-                        <div class="flex items-center gap-2"><div class="w-12 h-2 rounded bg-gradient-to-r from-cyan-400 to-yellow-400"></div> <span class="w-8 text-right">1.2T</span></div>
-                    </div>
-                    <div class="flex items-center justify-between gap-4">
-                        <span class="text-rose-500 font-bold">SATURATION</span>
-                        <div class="flex items-center gap-2"><div class="w-12 h-2 rounded bg-gradient-to-r from-yellow-400 to-rose-600 shadow-sm"></div> <span class="w-8 text-right text-rose-600 font-bold">1.8T</span></div>
-                    </div>
-                </div>
-            </div>
-            
-            <script>
-                const canvas = document.getElementById('simCanvas');
-                const ctx = canvas.getContext('2d', { willReadFrequently: true });
-                const SPECS = { accel_comfort: 2.0, accel_limit: 9.81, I_min: 1.0, I_comfort: 6.90, I_limit: 11.46, V_comfort: 15.0, V_max: 25.0, Voltage_Max: 1250, Kv: 1000 / 20 };
-                const CONFIG = { rotor: { side: 0.400, R: 0.400 / Math.sqrt(3), hole: 0.040 }, stator: { faceX: 0.235, legL: 0.25, legW: 0.04, backW: 0.06, coilL: 0.08, coilThick: 0.06 } };
-                // Ajout de cmdMass par défaut à 2200
-                let state = { cmdAccel: 0.0, cmdSpeed: 0.0, cmdMass: 2200, current: 0.0, voltage: 0.0, realSpeed: 0.0, angle: 0, activePhase: 0, vA: {x:0, y:0}, vB: {x:0, y:0}, vC: {x:0, y:0} };
-                let GRID_RES = 200, scale, cx, cy, pxSize;
-                
-                const elRangeAccel = document.getElementById('input-accel');
-                const elNumAccel = document.getElementById('num-accel');
-                const elRangeSpeed = document.getElementById('input-speed');
-                const elNumSpeed = document.getElementById('num-speed');
-                // Nouveaux éléments DOM pour la masse
-                const elRangeMass = document.getElementById('input-mass');
-                const elNumMass = document.getElementById('num-mass');
-
-                function resize() {
-                    canvas.width = window.innerWidth;
-                    canvas.height = window.innerHeight;
-                    const minDim = Math.min(canvas.width, canvas.height);
-                    scale = minDim / 1.1; 
-                    cx = canvas.width / 2;
-                    cy = canvas.height / 2;
-                    GRID_RES = Math.min(300, Math.ceil(canvas.width / 2.5));
-                    pxSize = Math.ceil(canvas.width / GRID_RES);
-                }
-                window.addEventListener('resize', resize);
-                
-                // Maths
-                function dot2(v) { return v.x*v.x + v.y*v.y; }
-                function sub(v1, v2) { return {x: v1.x-v2.x, y: v1.y-v2.y}; }
-                function add(v1, v2) { return {x: v1.x+v2.x, y: v1.y+v2.y}; }
-                function mul(v, s) { return {x: v.x*s, y: v.y*s}; }
-                function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
-                function sdTriangleExact(p, a, b, c) {
-                    const ba = sub(b, a); const pa = sub(p, a);
-                    const cb = sub(c, b); const pb = sub(p, b);
-                    const ac = sub(a, c); const pc = sub(p, c);
-                    const d1 = dot2( sub(mul(ba, clamp((pa.x*ba.x+pa.y*ba.y)/dot2(ba),0.0,1.0)), pa) );
-                    const d2 = dot2( sub(mul(cb, clamp((pb.x*cb.x+pb.y*cb.y)/dot2(cb),0.0,1.0)), pb) );
-                    const d3 = dot2( sub(mul(ac, clamp((pc.x*ac.x+pc.y*ac.y)/dot2(ac),0.0,1.0)), pc) );
-                    const minD = Math.sqrt( Math.min(Math.min(d1, d2), d3) );
-                    const s1 = Math.sign((b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x));
-                    const s2 = Math.sign((c.x - b.x) * (p.y - b.y) - (c.y - b.y) * (p.x - b.x));
-                    const s3 = Math.sign((a.x - c.x) * (p.y - c.y) - (a.y - c.y) * (p.x - c.x));
-                    const inside = (s1 == s2 && s2 == s3);
-                    return inside ? -minD : minD;
-                }
-                function sdCircle(p, r) { return Math.sqrt(p.x*p.x + p.y*p.y) - r; }
-                function rotate(v, rad) { return { x: v.x*Math.cos(rad) - v.y*Math.sin(rad), y: v.x*Math.sin(rad) + v.y*Math.cos(rad) }; }
-                
-                function updatePhysics() {
-                    // Calcul du courant basé sur la masse et l'accélération
-                    // K calibré pour correspondre à ~11.46A pour 2200kg @ 9.81m/s² (1G) + 9.81m/s² (Gravité)
-                    // F_max = 2200 * (9.81 + 9.81) = 43164 N
-                    // I_limit = 11.46 A
-                    // K = 11.46 / 43164 approx 0.0002655
-                    
-                    const K_fi = 0.0002655; 
-                    const gravity = 9.81;
-                    
-                    // Force Totale = Masse * (Gravité + Accélération Commande)
-                    const totalForce = state.cmdMass * (gravity + state.cmdAccel);
-                    
-                    // Courant requis
-                    let I_req = totalForce * K_fi;
-                    
-                    // Dynamique de simulation (lissage)
-                    if (state.realSpeed < state.cmdSpeed) {
-                        state.current = I_req;
-                        state.realSpeed += (Math.max(0.1, state.cmdAccel) * 0.016); // Accélération minime pour bouger si cmdAccel=0
-                    } else {
-                        // Maintien de vitesse (compensation frottements fictifs + gravité)
-                        // Pour validation statique, on garde I_req pour montrer l'effort de maintien
-                        state.current = I_req; 
-                        
-                        if(state.realSpeed > state.cmdSpeed) state.realSpeed -= 0.05;
-                        if(state.realSpeed < 0) state.realSpeed = 0;
-                    }
-                    
-                    state.voltage = state.realSpeed * SPECS.Kv;
-                    if (state.voltage > SPECS.Voltage_Max) {
-                        state.voltage = SPECS.Voltage_Max;
-                        state.realSpeed = SPECS.Voltage_Max / SPECS.Kv; 
-                    }
-                    
-                    const rpmVisual = state.realSpeed * 30; 
-                    state.angle += rpmVisual * 0.01;
-                    // Mode statique si vitesse nulle : faire clignoter les bobines lentement ou fixer une phase
-                    if(state.realSpeed < 0.1) {
-                         state.angle += 0.5; // Rotation très lente pour visualiser le champ statique
-                    }
-
-                    const seq = Math.floor(state.angle / 40) % 3;
-                    state.activePhase = [2, 1, 0][seq];
-                    const rad = state.angle * Math.PI / 180;
-                    const R = CONFIG.rotor.R;
-                    const side = CONFIG.rotor.side;
-                    state.vA = rotate({x: 0, y: R}, rad);
-                    state.vB = rotate({x: side/2, y: -R/2}, rad);
-                    state.vC = rotate({x: -side/2, y: -R/2}, rad);
-                }
-                
-                function calculateField(mx, my) {
-                    const p = {x: mx, y: my};
-                    const dTri = sdTriangleExact(p, state.vA, state.vB, state.vC);
-                    const dHole = sdCircle(p, CONFIG.rotor.hole);
-                    const dRotor = Math.max(dTri, -dHole);
-                    let B = 0;
-                    let matID = 0; 
-                    let activeY = 0;
-                    if(state.activePhase === 0) activeY = 0.2; 
-                    else if(state.activePhase === 1) activeY = 0; 
-                    else activeY = -0.2; 
-                    const dSourceR = Math.sqrt((mx - CONFIG.stator.faceX)**2 + (my - activeY)**2);
-                    const dSourceL = Math.sqrt((mx - (-CONFIG.stator.faceX))**2 + (my - activeY)**2);
-                    const dFluxSource = Math.min(dSourceR, dSourceL);
-                    if (dRotor < 0) {
-                        matID = 1;
-                        if (state.current > 0) {
-                            const hotspot = Math.exp(-dFluxSource * 8); 
-                            const body = 0.2;
-                            B = state.current * (0.25 * hotspot + 0.05 * body);
-                            const distCenter = Math.sqrt(mx*mx + my*my);
-                            if (distCenter > CONFIG.rotor.R * 0.8) { B *= 1.2; }
-                        }
-                    }
-                    if (B > 2.2) B = 2.2;
-                    return { B, matID };
-                }
-                
-                function getHeatmapColor(t) {
-                    let r=0, g=0, b=0;
-                    if (t < 0.2) { b = 255; g = Math.floor((t / 0.2) * 200); r = 50; } 
-                    else if (t < 0.5) { g = 200; b = Math.floor(255 - ((t - 0.2) / 0.3) * 255); r = 50;} 
-                    else if (t < 0.8) { g = 200; r = Math.floor(50 + ((t - 0.5) / 0.3) * 205); b = 0; } 
-                    else { r = 255; g = Math.floor(200 - ((t - 0.8) / 0.2) * 200); b = 0; } 
-                    return `rgb(${r},${g},${b})`;
-                }
-                
-                function loop() {
-                    updatePhysics();
-                    ctx.fillStyle = "#ffffff"; 
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    ctx.strokeStyle = "#f1f5f9";
-                    ctx.lineWidth = 1;
-                    const stepGrid = 50;
-                    ctx.beginPath();
-                    for(let x=0; x<canvas.width; x+=stepGrid) { ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); }
-                    for(let y=0; y<canvas.height; y+=stepGrid) { ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); }
-                    ctx.stroke();
-                    const w = canvas.width, h = canvas.height;
-                    const step = w / GRID_RES;
-                    let maxB_frame = 0;
-                    for(let py = 0; py < h; py += step) {
-                        for(let px = 0; px < w; px += step) {
-                            const mx = (px - cx) / scale;
-                            const my = -(py - cy) / scale; 
-                            const f = calculateField(mx, my);
-                            if (f.matID === 1 && f.B > maxB_frame) maxB_frame = f.B;
-                            if (f.matID === 1) { 
-                                let t = f.B / 2.0;
-                                if(t > 1) t = 1;
-                                if (t < 0.05) ctx.fillStyle = "#e2e8f0"; 
-                                else ctx.fillStyle = getHeatmapColor(t);
-                                ctx.fillRect(px, py, step+1, step+1);
-                            }
-                        }
-                    }
-                    drawOverlays();
-                    updateUI(maxB_frame);
-                    requestAnimationFrame(loop);
-                }
-                
-                function drawOverlays() {
-                    ctx.save();
-                    ctx.translate(cx, cy);
-                    ctx.scale(scale, -scale); 
-                    ctx.lineWidth = 0.004;
-                    ctx.strokeStyle = "#1e293b"; 
-                    ctx.beginPath();
-                    ctx.moveTo(state.vA.x, state.vA.y);
-                    ctx.lineTo(state.vB.x, state.vB.y);
-                    ctx.lineTo(state.vC.x, state.vC.y);
-                    ctx.closePath();
-                    ctx.stroke();
-                    ctx.fillStyle = "#fff";
-                    ctx.beginPath(); ctx.arc(0, 0, CONFIG.rotor.hole, 0, Math.PI*2); 
-                    ctx.fill(); ctx.stroke();
-                    
-                    // Stator DROIT (Phase normale)
-                    drawStatorUnit(ctx, CONFIG.stator.faceX, 0, false, state.activePhase);
-                    
-                    // Stator GAUCHE (Phase décalée : Si Droite=A(0), Gauche=C(2))
-                    const leftPhase = (state.activePhase + 2) % 3;
-                    drawStatorUnit(ctx, -CONFIG.stator.faceX, 0, true, leftPhase);
-                    
-                    ctx.restore();
-                }
-                
-                function drawStatorUnit(ctx, faceX, faceY, isLeftStator, phase) {
-                    ctx.save();
-                    ctx.translate(faceX, faceY);
-                    const dir = isLeftStator ? -1 : 1; 
-                    ctx.scale(dir, 1); 
-                    const L = CONFIG.stator.legL;
-                    const W = CONFIG.stator.legW;
-                    const backW = CONFIG.stator.backW;
-                    const coilL = CONFIG.stator.coilL;
-                    ctx.strokeStyle = "#334155";
-                    ctx.lineWidth = 0.004;
-                    ctx.lineJoin = "round";
-                    ctx.beginPath();
-                    ctx.moveTo(L, 0.25);
-                    ctx.lineTo(L + backW, 0.25);
-                    ctx.lineTo(L + backW, -0.25);
-                    ctx.lineTo(L, -0.25);
-                    ctx.stroke();
-                    const connPoint = { x: L + backW + 0.08, y: 0 };
-                    const coilCenters = [];
-                    function drawLeg(angle, idx) {
-                        let coilCenterWorld = {x:0, y:0};
-                        if (angle === 0) {
-                            ctx.beginPath(); ctx.rect(0, -W/2, L, W); ctx.stroke();
-                            const cx = L * 0.2; 
-                            drawCoil(cx, -W/2, L, W, idx);
-                            coilCenterWorld = {x: cx + coilL/2, y: 0};
-                        } else {
-                            ctx.save();
-                            ctx.translate(L, 0); 
-                            ctx.rotate(angle);    
-                            ctx.beginPath(); ctx.rect(-L, -W/2, L, W); ctx.stroke();
-                            const cxLoc = -L * 0.8; 
-                            drawCoil(cxLoc, -W/2, L, W, idx, true);
-                            const bx = cxLoc + coilL/2;
-                            const by = 0;
-                            const xRot = bx * Math.cos(angle);
-                            const yRot = bx * Math.sin(angle);
-                            coilCenterWorld = { x: L + xRot, y: yRot };
-                            ctx.restore();
-                        }
-                        coilCenters.push(coilCenterWorld);
-                    }
-                    function drawCoil(x, y, l, w, idx, rotated=false) {
-                        ctx.save();
-                        const isActive = (idx === phase) && (state.current > 0.5);
-                        ctx.fillStyle = isActive ? "#f59e0b" : "#92400e"; 
-                        ctx.shadowColor = "#f59e0b";
-                        ctx.shadowBlur = isActive ? 15 : 0;
-                        const cThick = CONFIG.stator.coilThick;
-                        const cLen = CONFIG.stator.coilL;
-                        const cx = x; 
-                        const cy = -cThick/2;
-                        if(!isActive) {
-                            ctx.shadowColor = "rgba(0,0,0,0.2)";
-                            ctx.shadowBlur = 2;
-                        }
-                        ctx.fillRect(cx, cy, cLen, cThick);
-                        ctx.strokeStyle = "rgba(255,255,255,0.4)"; 
-                        ctx.lineWidth = 0.001;
-                        ctx.strokeRect(cx, cy, cLen, cThick);
-                        ctx.shadowBlur = 0;
-                        ctx.restore();
-                    }
-                    drawLeg(Math.PI/3, 0);  // Haut
-                    drawLeg(0, 1);          // Centre
-                    drawLeg(-Math.PI/3, 2); // Bas
-                    ctx.lineWidth = 0.003;
-                    ctx.strokeStyle = "#d97706";
-                    ctx.lineCap = "round";
-                    ctx.beginPath();
-                    coilCenters.forEach(pt => {
-                        ctx.moveTo(pt.x, pt.y);
-                        ctx.lineTo(connPoint.x, connPoint.y);
-                    });
-                    ctx.stroke();
-                    ctx.fillStyle = "#d97706";
-                    ctx.beginPath();
-                    ctx.arc(connPoint.x, connPoint.y, 0.012, 0, Math.PI*2);
-                    ctx.fill();
-                    ctx.restore();
-                }
-                function updateUI(maxB) {
-                    document.getElementById('disp-current').innerText = state.current.toFixed(1);
-                    document.getElementById('disp-voltage').innerText = state.voltage.toFixed(0);
-                    const dSpeed = document.getElementById('disp-real-speed');
-                    if(dSpeed) dSpeed.innerText = state.realSpeed.toFixed(1);
-                    const bVal = document.getElementById('disp-b');
-                    bVal.innerText = maxB.toFixed(2);
-                    const satBar = document.getElementById('bar-sat');
-                    const pct = Math.min(100, (maxB / 2.0) * 100);
-                    satBar.style.width = pct + "%";
-                    if (maxB > 1.8) bVal.classList.replace('text-blue-600', 'text-rose-600');
-                    else bVal.classList.replace('text-rose-600', 'text-blue-600');
-                    
-                    const elWarn = document.getElementById('warn-volt');
-                    if (state.voltage >= SPECS.Voltage_Max) elWarn.classList.remove('hidden');
-                    else elWarn.classList.add('hidden');
-
-                    const hasCurrent = state.current > 0.5;
-                    
-                    // Mise à jour LEDs Droite (Phase normale)
-                    const ledsRight = ['led-r-a', 'led-r-b', 'led-r-c'];
-                    ledsRight.forEach((id, idx) => {
-                        const el = document.getElementById(id);
-                        if (idx === state.activePhase && hasCurrent) el.classList.add('coil-active');
-                        else el.classList.remove('coil-active');
-                    });
-
-                    // Mise à jour LEDs Gauche (Phase opposée/décalée)
-                    // Si Droite=A(0) => Gauche=C(2)
-                    const leftPhase = (state.activePhase + 2) % 3;
-                    const ledsLeft = ['led-l-a', 'led-l-b', 'led-l-c'];
-                    ledsLeft.forEach((id, idx) => {
-                        const el = document.getElementById(id);
-                        if (idx === leftPhase && hasCurrent) el.classList.add('coil-active');
-                        else el.classList.remove('coil-active');
-                    });
-                }
-
-                function updateAccel(v) {
-                    let val = parseFloat(v);
-                    if(isNaN(val)) val = 0;
-                    if(val > 10) val = 10;
-                    if(val < 0) val = 0;
-                    
-                    state.cmdAccel = val;
-                    elRangeAccel.value = val;
-                    elNumAccel.value = val;
-                }
-                function updateSpeed(v) {
-                    let val = parseFloat(v);
-                    if(isNaN(val)) val = 0;
-                    if(val > 25) val = 25;
-                    if(val < 0) val = 0;
-
-                    state.cmdSpeed = val;
-                    elRangeSpeed.value = val;
-                    elNumSpeed.value = val;
-                }
-                // Nouvelle fonction updateMass
-                function updateMass(v) {
-                    let val = parseFloat(v);
-                    if(isNaN(val)) val = 0;
-                    if(val > 5000) val = 5000;
-                    if(val < 0) val = 0;
-
-                    state.cmdMass = val;
-                    elRangeMass.value = val;
-                    elNumMass.value = val;
-                }
-
-                elRangeAccel.addEventListener('input', (e) => updateAccel(e.target.value));
-                elNumAccel.addEventListener('input', (e) => updateAccel(e.target.value));
-                
-                elRangeSpeed.addEventListener('input', (e) => updateSpeed(e.target.value));
-                elNumSpeed.addEventListener('input', (e) => updateSpeed(e.target.value));
-
-                // Listeners pour la masse
-                elRangeMass.addEventListener('input', (e) => updateMass(e.target.value));
-                elNumMass.addEventListener('input', (e) => updateMass(e.target.value));
-
-                resize();
-                loop();
-            </script>
-        </body>
-        </html>
-    </template>
-
-    <script>
-        // ==========================================
-        // CONFIGURATION HARDWARE
-        // ==========================================
-        const HARDWARE = {
-            rotor: { cote: 0.400, hauteur: 0.400 * Math.sqrt(3) / 2, ratio_rot: 1.2 },
-            stator: { h_bobine: 0.300, w_bobine: 0.170, pas: 0.375, ecart: 0.404 },
-            elec: { f_max: 39240, r_phase: 5.87, k_emf: 45, p_fixes: 280, i_nom: 5.73 }
-        };
-        let simState = { running: false, data: {}, missionType: 'up' };
-        let charts = {};
-        let animId;
-
-        // UI Functions
-        function setMission(type) {
-            simState.missionType = type;
-            document.getElementById('mission_type').value = type;
-            const btnUp = document.getElementById('btn_up');
-            const btnUpDown = document.getElementById('btn_updown');
-            const pauseContainer = document.getElementById('pause_container');
-            
-            if(type === 'up') {
-                btnUp.className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-blue-600 text-white shadow-md transition-all duration-200";
-                btnUpDown.className = "flex-1 py-1.5 text-xs font-bold rounded-md text-slate-400 hover:text-white transition-all duration-200";
-                pauseContainer.classList.add('hidden');
-            } else {
-                btnUp.className = "flex-1 py-1.5 text-xs font-bold rounded-md text-slate-400 hover:text-white transition-all duration-200";
-                btnUpDown.className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-red-600 text-white shadow-md transition-all duration-200";
-                pauseContainer.classList.remove('hidden');
-            }
-        }
-
-        // --- MAG VALIDATION MODAL LOGIC ---
-        function openMagVal() {
-            const modal = document.getElementById('magValModal');
-            const iframe = document.getElementById('magValFrame');
-            const template = document.getElementById('magValTemplate').innerHTML;
-            
-            // Inject content into iframe
-            iframe.srcdoc = template;
-            modal.classList.remove('hidden');
-        }
-
-        function closeMagVal() {
-            const modal = document.getElementById('magValModal');
-            const iframe = document.getElementById('magValFrame');
-            
-            // Clear content to stop simulation loop and save resources
-            iframe.srcdoc = ""; 
-            modal.classList.add('hidden');
-        }
-
-        function initCharts() {
-            Chart.defaults.color = '#64748b';
-            Chart.defaults.borderColor = '#334155';
-            const commonOptions = {
-                responsive: true, maintainAspectRatio: false, animation: false,
-                elements: { point: { radius: 0 } },
-                plugins: { legend: { display: true, labels: { color: '#94a3b8', boxWidth: 8, font: {size: 9} } } },
-                scales: { x: { display: false }, y: { grid: { color: '#1e293b' }, ticks: { font: {size: 9} } } }
-            };
-
-            charts.kine = new Chart(document.getElementById('kineChart'), {
-                type: 'line',
-                data: { labels: [], datasets: [
-                    { label: 'Pos (m)', data: [], borderColor: '#3b82f6', borderWidth: 1.5, yAxisID: 'y' },
-                    { label: 'Vit (m/s)', data: [], borderColor: '#22c55e', borderWidth: 1.5, yAxisID: 'y1' },
-                    { label: 'Acc (m/s²)', data: [], borderColor: '#eab308', borderWidth: 1, borderDash: [2,2], yAxisID: 'y1' }
-                ]},
-                options: { ...commonOptions, scales: { x: { display: false }, y: { position: 'left', title: {display: false} }, y1: { position: 'right', grid: {drawOnChartArea: false} } } }
-            });
-
-            charts.elec = new Chart(document.getElementById('elecChart'), {
-                type: 'line',
-                data: { labels: [], datasets: [
-                    { label: 'U (V)', data: [], borderColor: '#38bdf8', borderWidth: 1.5, yAxisID: 'y' },
-                    { label: 'I (A)', data: [], borderColor: '#f472b6', borderWidth: 1.5, yAxisID: 'y1' }
-                ]},
-                options: { ...commonOptions, scales: { x: { display: false }, y: { position: 'left' }, y1: { position: 'right', grid: {drawOnChartArea: false} } } }
-            });
-
-            charts.nrg = new Chart(document.getElementById('nrgChart'), {
-                type: 'line',
-                data: { labels: [], datasets: [
-                    { label: 'Conso (kWh)', data: [], borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', fill: true, borderWidth: 1.5 },
-                    { label: 'Regen (kWh)', data: [], borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, borderWidth: 1.5 }
-                ]},
-                options: { ...commonOptions, scales: { x: { display: true, ticks: { maxTicksLimit: 5 } }, y: { title: {display: true, text: 'kWh'} } } }
-            });
-        }
-
-        function downloadGraph(canvasId, filename) {
-            const sourceCanvas = document.getElementById(canvasId);
-            const m = document.getElementById('m_tot').value;
-            const h = document.getElementById('h_target').value;
-            const v = document.getElementById('v_target').value;
-            const a = document.getElementById('a_target').value;
-            
-            const destCanvas = document.createElement('canvas');
-            const ctx = destCanvas.getContext('2d');
-            const chartHeight = sourceCanvas.height;
-            const textHeight = 60;
-            destCanvas.width = sourceCanvas.width;
-            destCanvas.height = chartHeight + textHeight;
-            
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, destCanvas.width, destCanvas.height);
-            ctx.drawImage(sourceCanvas, 0, 0);
-            ctx.fillStyle = '#1e293b'; 
-            ctx.font = 'bold 12px Inter, sans-serif';
-            ctx.textAlign = 'center';
-            
-            const text = `INPUTS: Masse ${m}kg | Hauteur ${h}m | Vitesse ${v}m/s | Accél ${a}m/s²`;
-            ctx.fillText(text, destCanvas.width / 2, chartHeight + 35);
-            ctx.font = 'italic 10px sans-serif';
-            ctx.fillStyle = '#94a3b8';
-            ctx.fillText(`Généré le ${new Date().toLocaleString()}`, destCanvas.width / 2, chartHeight + 50);
-            
-            const link = document.createElement('a');
-            link.download = `M-LEV_${filename}.png`;
-            link.href = destCanvas.toDataURL('image/png');
-            link.click();
-        }
-
-        function downloadReportImage() {
-            if (!simState.data.t || simState.data.t.length === 0) {
-                 const statusBox = document.getElementById('statusBox');
-                 statusBox.className = "mt-3 p-2 text-center text-xs font-bold rounded bg-red-900/50 text-red-300 border border-red-500/50";
-                 statusBox.innerHTML = "⚠️ Veuillez lancer une simulation avant de télécharger.";
-                 statusBox.classList.remove('hidden');
-                 // Auto-hide after 3 seconds
-                 setTimeout(() => {
-                    if(statusBox.innerHTML.includes("Veuillez lancer")) {
-                        statusBox.classList.add('hidden');
-                    }
-                 }, 3000);
-                 return;
-            }
-            const canvas = document.createElement('canvas');
-            canvas.width = 600;
-            canvas.height = 400;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#f8fafc'; 
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#1e293b'; 
-            ctx.fillRect(0, 0, canvas.width, 60);
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 20px Inter, sans-serif';
-            ctx.fillText('RAPPORT DE CYCLE M-LEV', 20, 38);
-            const d = simState.data; const l = d.t.length-1;
-            const time = d.t[l].toFixed(1) + " s";
-            const h_max = Math.max(...d.y).toFixed(1) + " m";
-            const v_max = Math.max(...d.v).toFixed(1) + " m/s";
-            const e_cons = d.e_cons_total.toFixed(3) + " kWh";
-            const e_regen = d.e_regen_total.toFixed(3) + " kWh";
-            const eff = (d.e_cons_total>0) ? (1-(d.e_loss_total/d.e_cons_total))*100 : 0;
-            
-            ctx.fillStyle = '#334155';
-            ctx.font = '14px Inter, sans-serif';
-            let y = 100;
-            const x1 = 40;
-            const x2 = 300;
-            ctx.font = 'bold 14px Inter, sans-serif'; ctx.fillText('PERFORMANCE', x1, y); y+=25;
-            ctx.font = '14px Inter, sans-serif';
-            ctx.fillText(`Temps Total: ${time}`, x1, y); y+=25;
-            ctx.fillText(`Hauteur Max: ${h_max}`, x1, y); y+=25;
-            ctx.fillText(`Vitesse Pic: ${v_max}`, x1, y); y+=40;
-            y = 100;
-            ctx.font = 'bold 14px Inter, sans-serif'; ctx.fillText('ÉNERGIE', x2, y); y+=25;
-            ctx.font = '14px Inter, sans-serif';
-            ctx.fillText(`Conso Totale: ${e_cons}`, x2, y); y+=25;
-            ctx.fillStyle = '#16a34a'; 
-            ctx.fillText(`Régénération: ${e_regen}`, x2, y); y+=25;
-            ctx.fillStyle = '#2563eb'; 
-            ctx.fillText(`Rendement: ${eff.toFixed(1)} %`, x2, y);
-            ctx.fillStyle = '#94a3b8';
-            ctx.font = 'italic 12px sans-serif';
-            ctx.fillText(`Simulation générée le ${new Date().toLocaleString()}`, 20, 380);
-            const link = document.createElement('a');
-            link.download = `M-LEV_Rapport_Cycle.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        }
-
-        // VALIDATION & SIMULATION LOGIC ...
-        function preValidate() {
-            const v = parseFloat(document.getElementById('v_target').value);
-            const a = parseFloat(document.getElementById('a_target').value);
-            const m = parseFloat(document.getElementById('m_tot').value);
-            let warnings = [], criticals = [];
-
-            if (v > 20) criticals.push(`<strong>Vitesse (${v} m/s) > 20 m/s</strong><br>Critique : Limite tension onduleur (>1000V FCEM).`);
-            else if (v > 15) warnings.push(`<strong>Vitesse (${v} m/s) > 15 m/s</strong><br>Warning : Inconfort auriculaire.`);
-
-            if (a > 9.81) criticals.push(`<strong>Accélération (${a} m/s²) > 9.81 m/s²</strong><br>Critique : Limite physique moteur (1G).`);
-            else if (a > 2.0) warnings.push(`<strong>Accélération (${a} m/s²) > 2.0 m/s²</strong><br>Warning : Risque chute passagers.`);
-
-            if (m > 4000) criticals.push(`<strong>Masse (${m} kg) > 4000 kg</strong><br>Critique : Décrochage moteur.`);
-            else if (m > 2500) warnings.push(`<strong>Masse (${m} kg) > 2500 kg</strong><br>Warning : Surcharge.`);
-
-            if (criticals.length > 0) showValidationModal('critical', criticals);
-            else if (warnings.length > 0) showValidationModal('warning', warnings);
-            else checkFeasibility();
-        }
-
-        function showValidationModal(type, msgs) {
-            const modal = document.getElementById('validationModal');
-            document.getElementById('valMessage').innerHTML = msgs.map(m => `<div class="p-3 bg-black/20 rounded border border-white/5">${m}</div>`).join('');
-            modal.classList.remove('hidden');
-            
-            const header = document.getElementById('valHeader');
-            const btnConfirm = document.getElementById('valBtnConfirm');
-            const btnCancel = document.getElementById('valBtnCancel');
-
-            if (type === 'critical') {
-                header.className = "p-4 border-b flex justify-between items-center bg-red-900/50 border-red-600";
-                document.getElementById('valTitle').innerHTML = "⛔ LIMITE CRITIQUE (ARRÊT)";
-                btnConfirm.classList.add('hidden');
-                btnCancel.innerText = "Retour";
-            } else {
-                header.className = "p-4 border-b flex justify-between items-center bg-yellow-900/30 border-yellow-600/50";
-                document.getElementById('valTitle').innerHTML = "⚠️ SEUIL D'AVERTISSEMENT";
-                btnConfirm.classList.remove('hidden');
-                btnCancel.innerText = "Annuler";
-            }
-        }
-
-        function closeValidation() { document.getElementById('validationModal').classList.add('hidden'); }
-        function confirmSimulation() { closeValidation(); checkFeasibility(); }
-
-        // Ajout des fonctions pour le HelpModal
-        function openHelpModal() { document.getElementById('helpModal').classList.remove('hidden'); }
-        function closeHelpModal() { document.getElementById('helpModal').classList.add('hidden'); }
-
-        function checkFeasibility() {
-            const m = parseFloat(document.getElementById('m_tot').value);
-            const a = parseFloat(document.getElementById('a_target').value);
-            const f_req = m * (9.81 + a);
-            const statusBox = document.getElementById('statusBox');
-
-            if (f_req > HARDWARE.elec.f_max) {
-                statusBox.className = "mt-3 p-2 text-center text-xs font-bold rounded bg-red-900/50 text-red-300 border border-red-500/50";
-                statusBox.innerHTML = `⚠️ NON FAISABLE: Force ${f_req.toFixed(0)}N > Max ${HARDWARE.elec.f_max}N`;
-                statusBox.classList.remove('hidden');
-            } else {
-                statusBox.className = "mt-3 p-2 text-center text-xs font-bold rounded bg-green-900/50 text-green-300 border border-green-500/50";
-                statusBox.innerHTML = `✅ SYSTÈME VALIDE: Marge de Sécurité ${(100*(HARDWARE.elec.f_max/f_req - 1)).toFixed(0)}%`;
-                statusBox.classList.remove('hidden');
-                runSimulation();
-            }
-        }
-
-        function runSimulation() {
-            // 1. Reset Report Area to Loading State
-            const reportContent = document.getElementById('reportContent');
-            reportContent.innerHTML = `
-                <div class="flex flex-col items-center justify-center h-full space-y-3">
-                    <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <div class="text-blue-500 font-bold tracking-widest animate-text-pulse">SIMULATION EN COURS...</div>
-                </div>
-            `;
-
-            const m = parseFloat(document.getElementById('m_tot').value);
-            const h = parseFloat(document.getElementById('h_target').value);
-            const v_lim = parseFloat(document.getElementById('v_target').value);
-            const a_lim = parseFloat(document.getElementById('a_target').value);
-            const type = simState.missionType;
-            const t_pause = (type === 'up_down') ? parseFloat(document.getElementById('t_pause').value) : 0;
-
-            const pi = Math.PI;
-            let t_acc = (v_lim * pi) / (2 * a_lim);
-            let d_acc = 0.5 * v_lim * t_acc;
-            let v_peak = v_lim;
-            let t_cruise = 0;
-
-            if (2 * d_acc > h) {
-                t_acc = Math.sqrt(((h/2)*pi)/a_lim);
-                v_peak = a_lim * t_acc * (2/pi);
-            } else {
-                t_cruise = (h - 2 * d_acc) / v_peak;
-            }
-            
-            const t_up = 2*t_acc + t_cruise;
-            const t_cycle_end = (type === 'up') ? t_up : (t_up + t_pause + t_up);
-            const t_max = t_cycle_end + 2.0;
-
-            const dt = 0.05;
-            let t = 0, y = 0, v = 0;
-            let data = { t: [], y: [], v: [], a: [], u: [], i: [], e_cons_cumul: [], e_regen_cumul: [], e_cons_total: 0, e_regen_total: 0, e_loss_total: 0 };
-            
-            let running = true;
-            let cur_cons = 0, cur_regen = 0;
-
-            while(running) {
-                let a = 0;
-                // S-Curve Logic simplified
-                if (t <= t_acc) {
-                    a = a_lim * Math.sin((t/t_acc)*pi);
-                } else if (t <= t_acc + t_cruise) {
-                    a = 0; if (v < v_peak*0.999) v += (v_peak-v)*0.1;
-                } else if (t <= t_up) {
-                    a = -a_lim * Math.sin(((t-(t_acc+t_cruise))/t_acc)*pi);
-                } else if (t <= t_up + t_pause) {
-                    a = 0; v = 0; y = h;
-                } else {
-                    if (type === 'up') { a=0; v=0; y=h; }
-                    else {
-                        const t_d = t - (t_up + t_pause);
-                        if (t_d <= t_acc) a = -a_lim * Math.sin((t_d/t_acc)*pi);
-                        else if (t_d <= t_acc + t_cruise) { a=0; if (v > -v_peak*0.999) v+= (-v_peak-v)*0.1; }
-                        else if (t_d <= t_up) a = a_lim * Math.sin(((t_d-(t_acc+t_cruise))/t_acc)*pi);
-                        else { a=0; v=0; y=0; }
-                    }
-                }
-
-                v += a * dt; y += v * dt;
-                if(y <= 0) { y=0; if(v<0 || (a>0 && t>t_up+t_pause)) v=0; }
-                if(type === 'up' && t > t_up && y > h) { y=h; v=0; }
-
-                // Elec
-                let F = m * (9.81 + a);
-                if (y<=0.001 && Math.abs(v)<0.01 && t>t_up+t_pause) F = 0;
-                let I = F / (HARDWARE.elec.f_max / 6.43); if(I<0) I=0;
-                let U = (HARDWARE.elec.r_phase * I) + (HARDWARE.elec.k_emf * v);
-                let P_j = (HARDWARE.elec.r_phase * I**2 * 6)/1000;
-                let P_m = (F*v)/1000;
-                let P_fix = (F>0) ? (HARDWARE.elec.p_fixes/1000) : 0;
-                let P_el = P_m + P_j + P_fix;
-
-                let dE = P_el * dt / 3600;
-                let dE_j = P_j * dt / 3600;
-                if(P_el > 0) { data.e_cons_total += dE; cur_cons += dE; }
-                else { data.e_regen_total += Math.abs(dE); cur_regen += Math.abs(dE); }
-                data.e_loss_total += dE_j + (P_fix * dt / 3600);
-
-                data.t.push(t); data.y.push(y); data.v.push(v); data.a.push(a);
-                data.u.push(U); data.i.push(I);
-                data.e_cons_cumul.push(cur_cons); data.e_regen_cumul.push(cur_regen);
-
-                t += dt;
-                if (t > t_max || t > 500) running = false;
-            }
-            simState.data = data;
-            startVisuals();
-        }
-
-        function startVisuals() {
-            if (animId) cancelAnimationFrame(animId);
-            const canvas = document.getElementById('visuCanvas');
-            const ctx = canvas.getContext('2d');
-            const d = simState.data;
-            let idx = 0;
-            
-            charts.kine.data.labels = []; charts.kine.data.datasets.forEach(ds => ds.data = []);
-            charts.elec.data.labels = []; charts.elec.data.datasets.forEach(ds => ds.data = []);
-            charts.nrg.data.labels = []; charts.nrg.data.datasets.forEach(ds => ds.data = []);
-            
-            const max_h = parseFloat(document.getElementById('h_target').value);
-
-            function loop() {
-                if (idx >= d.t.length) { showFinalReport(); return; }
-                
-                canvas.width = canvas.parentElement.offsetWidth;
-                canvas.height = canvas.parentElement.offsetHeight;
-                
-                // Draw Scene (White BG)
-                ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
-                // Grid
-                ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1; ctx.beginPath();
-                for(let i=0; i<canvas.width; i+=50) { ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); }
-                for(let i=0; i<canvas.height; i+=50) { ctx.moveTo(0,i); ctx.lineTo(canvas.width,i); }
-                ctx.stroke();
-
-                const scale = canvas.height / 4;
-                const cx = canvas.width/2; const cy = canvas.height/2;
-                const y_sim = d.y[idx];
-                let cam_y = y_sim;
-                function w2s(wy) { return cy + (cam_y - wy) * scale; }
-
-                // Coils
-                const nb = Math.ceil(max_h / HARDWARE.stator.pas) + 5;
-                for(let i=-2; i<nb; i++) {
-                    const wy = i * HARDWARE.stator.pas; const sy = w2s(wy);
-                    if(sy > -100 && sy < canvas.height+100) {
-                        const dist = Math.abs(wy - y_sim);
-                        let col = '#cbd5e1';
-                        if(dist < (HARDWARE.rotor.hauteur*1.5)) { col = (wy < y_sim) ? '#ef4444' : '#3b82f6'; }
-                        if(dist < 0.1) col = '#facc15';
-                        ctx.fillStyle = col;
-                        const bw = HARDWARE.stator.w_bobine * scale; const bh = HARDWARE.stator.h_bobine * scale; const gap = HARDWARE.stator.ecart * scale;
-                        ctx.fillRect(cx-gap/2-bw, sy-bh/2, bw, bh); ctx.fillRect(cx+gap/2, sy-bh/2, bw, bh);
-                    }
-                }
-
-                // Rotor
-                const theta = (y_sim / HARDWARE.rotor.ratio_rot) * 2 * Math.PI;
-                ctx.save(); ctx.translate(cx, cy); ctx.rotate(theta);
-                const s = HARDWARE.rotor.cote * scale; const rc = (HARDWARE.rotor.cote / Math.sqrt(3)) * scale;
-                ctx.beginPath(); ctx.moveTo(0, -rc); ctx.lineTo(s/2, rc/2); ctx.lineTo(-s/2, rc/2); ctx.closePath();
-                const grd = ctx.createLinearGradient(-s/2, -rc, s/2, rc); grd.addColorStop(0, '#60a5fa'); grd.addColorStop(1, '#2563eb');
-                ctx.fillStyle = grd; ctx.fill();
-                ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(0, -rc, s*0.1, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(s/2, rc/2, s*0.1, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(-s/2, rc/2, s*0.1, 0, Math.PI*2); ctx.fill();
-                ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(0, 0, s*0.05, 0, Math.PI*2); ctx.fill();
-                ctx.restore();
-
-                // UI
-                document.getElementById('disp_y').innerText = y_sim.toFixed(2);
-                document.getElementById('disp_v').innerText = d.v[idx].toFixed(2);
-                
-                const isRegen = (idx>0 && d.e_regen_cumul[idx] > d.e_regen_cumul[idx-1]);
-                const regInd = document.getElementById('regenIndicator');
-                if(isRegen) regInd.classList.remove('hidden'); else regInd.classList.add('hidden');
-
-                // Charts
-                if (idx % 3 === 0) {
-                    const l = d.t[idx].toFixed(1);
-                    charts.kine.data.labels.push(l);
-                    charts.kine.data.datasets[0].data.push(d.y[idx]);
-                    charts.kine.data.datasets[1].data.push(d.v[idx]);
-                    charts.kine.data.datasets[2].data.push(d.a[idx]);
-                    
-                    charts.elec.data.labels.push(l);
-                    charts.elec.data.datasets[0].data.push(d.u[idx]);
-                    charts.elec.data.datasets[1].data.push(d.i[idx]);
-
-                    charts.nrg.data.labels.push(l);
-                    charts.nrg.data.datasets[0].data.push(d.e_cons_cumul[idx]);
-                    charts.nrg.data.datasets[1].data.push(d.e_regen_cumul[idx]);
-
-                    charts.kine.update('none'); charts.elec.update('none'); charts.nrg.update('none');
-                }
-                
-                idx++;
-                animId = requestAnimationFrame(loop);
-            }
-            animId = requestAnimationFrame(loop);
-        }
-
-        function showFinalReport() {
-            const d = simState.data; const l = d.t.length-1;
-            
-            // Calculs
-            const time = d.t[l].toFixed(1) + " s";
-            const h_max = Math.max(...d.y).toFixed(1) + " m";
-            const v_max = Math.max(...d.v).toFixed(1) + " m/s";
-            const a_max = Math.max(...d.a).toFixed(1) + " m/s²";
-            const e_cons = d.e_cons_total.toFixed(3) + " kWh";
-            const e_loss = d.e_loss_total.toFixed(3) + " kWh";
-            const e_regen = d.e_regen_total.toFixed(3) + " kWh";
-            const pct = (d.e_cons_total>0) ? (d.e_regen_total/d.e_cons_total*100).toFixed(1) : "0.0";
-            const eff = (d.e_cons_total>0) ? ((1-(d.e_loss_total/d.e_cons_total))*100).toFixed(1) : "0.0";
-            const u_max = Math.max(...d.u).toFixed(0) + " V";
-
-            // Injecter HTML dans le Rapport Permanent
-            const reportContent = document.getElementById('reportContent');
-            reportContent.innerHTML = `
-                <div class="grid grid-cols-2 gap-4 h-full">
-                    <div class="space-y-3">
-                        <div class="bg-white p-3 rounded border border-slate-200">
-                            <h4 class="text-[10px] font-bold text-blue-500 uppercase tracking-wider mb-2">Performance</h4>
-                            <div class="text-xs space-y-1 text-slate-600">
-                                <div class="flex justify-between"><span>Temps Total:</span> <span class="font-bold text-slate-900">${time}</span></div>
-                                <div class="flex justify-between"><span>Hauteur Max:</span> <span class="font-bold text-slate-900">${h_max}</span></div>
-                                <div class="flex justify-between"><span>Vitesse Pic:</span> <span class="font-bold text-slate-900">${v_max}</span></div>
-                                <div class="flex justify-between"><span>Accél Max:</span> <span class="font-bold text-slate-900">${a_max}</span></div>
-                            </div>
-                        </div>
-                        <div class="bg-white p-3 rounded border border-slate-200">
-                            <h4 class="text-[10px] font-bold text-blue-500 uppercase tracking-wider mb-2">Système</h4>
-                            <div class="text-xs flex justify-between text-slate-600">
-                                <span>Tension Max:</span> <span class="font-bold text-blue-600">${u_max}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-slate-800 p-3 rounded border border-slate-700 text-slate-300 flex flex-col justify-between">
-                        <div>
-                            <h4 class="text-[10px] font-bold text-green-400 uppercase tracking-wider mb-3">Bilan Énergétique</h4>
-                            <div class="text-xs space-y-2">
-                                <div class="flex justify-between items-center">
-                                    <span>Conso Total</span>
-                                    <span class="font-mono text-white font-bold">${e_cons}</span>
-                                </div>
-                                <div class="flex justify-between items-center">
-                                    <span class="text-green-400">Régénération</span>
-                                    <span class="font-mono text-green-400 font-bold">${e_regen}</span>
-                                </div>
-                                <div class="flex justify-between items-center text-red-400/80 text-[10px]">
-                                    <span>Pertes</span>
-                                    <span>${e_loss}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="space-y-2 pt-3 border-t border-slate-700/50">
-                            <div class="flex justify-between items-center">
-                                <span class="text-[10px] uppercase font-bold">Taux Regen</span>
-                                <span class="bg-green-500/20 text-green-400 px-2 py-0.5 rounded text-xs font-mono font-bold">${pct}%</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-[10px] uppercase font-bold">Rendement</span>
-                                <span class="bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded text-xs font-mono font-bold">${eff}%</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        window.onload = initCharts;
-    </script>
-</body>
-</html>
+export default App;
