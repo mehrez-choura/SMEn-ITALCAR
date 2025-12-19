@@ -7,15 +7,18 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script>
+        window.process = { env: { NODE_ENV: 'production' } };
+    </script>
+
+    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
     
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <script src="https://unpkg.com/lucide-react@0.263.1/dist/umd/lucide-react.min.js"></script>
+    <script src="https://unpkg.com/lucide-react@0.294.0/dist/umd/lucide-react.min.js"></script>
 
     <style>
-        /* Animation personnalisée pour les notifications */
         @keyframes bounce-short {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-5px); }
@@ -23,23 +26,53 @@
         .animate-bounce-short {
             animation: bounce-short 0.5s ease-in-out;
         }
+        /* Style pour l'écran de chargement/erreur */
+        #debug-console {
+            display: none;
+            padding: 20px;
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #b91c1c;
+            margin: 20px;
+            border-radius: 8px;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
 
-    <div id="root"></div>
+    <div id="debug-console"></div>
+
+    <div id="root">
+        <div class="flex items-center justify-center h-screen text-slate-500">
+            Chargement de l'application...<br>
+            (Si ce message reste affiché, vérifiez votre connexion internet pour charger les scripts)
+        </div>
+    </div>
+
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            const consoleDiv = document.getElementById('debug-console');
+            consoleDiv.style.display = 'block';
+            consoleDiv.innerHTML = `<strong>Erreur détectée :</strong><br>${message}<br><br>Source: ${source}:${lineno}`;
+        };
+    </script>
 
     <script type="text/babel">
-        // --- Récupération des dépendances depuis les variables globales ---
+        // Vérification que les librairies sont chargées
+        if (!window.React || !window.ReactDOM || !window.lucideReact) {
+            throw new Error("Les librairies React ou Lucide n'ont pas pu être chargées. Vérifiez votre connexion.");
+        }
+
         const { useState, useEffect } = React;
         
-        // On récupère toutes les icônes nécessaires depuis la librairie chargée via CDN
+        // Extraction sécurisée des icônes
         const { 
             Zap, Activity, Save, History, TrendingUp, AlertTriangle, Factory, 
             CheckCircle2, BarChart3, Settings, Lock, Unlock, Calendar, DollarSign, 
             TrendingDown, HelpCircle, FileText, Calculator, AlertCircle, Eye, 
             Hash, BookOpen 
-        } = lucideReact;
+        } = window.lucideReact;
 
         const App = () => {
             // --- État de l'application ---
@@ -90,19 +123,16 @@
 
             // --- Helpers Logic ---
 
-            // Formatage visuel (ex: 1000 -> "1 000")
             const formatInputDisplay = (val) => {
                 if (val === '' || val === undefined || val === null) return '';
                 const cleanVal = val.toString().replace(/[^0-9.]/g, ''); 
                 return cleanVal.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
             };
 
-            // Parsing inverse pour stockage (ex: "1 000" -> 1000)
             const parseInputValue = (val) => {
-                return val.replace(/\s/g, ''); // Enlève les espaces
+                return val.replace(/\s/g, ''); 
             };
 
-            // Mise à jour automatique de l'ancien index si un historique existe pour le site
             useEffect(() => {
                 const siteLogs = logs.filter(l => l.siteId === currentSite).sort((a, b) => b.id - a.id);
                 
@@ -112,7 +142,7 @@
                     ...prev,
                     [currentSite]: {
                     ...prev[currentSite],
-                    lastIndex: lastLog.newIndex, // L'ancien index devient le nouveau du dernier relevé
+                    lastIndex: lastLog.newIndex, 
                     manualLastIndex: false
                     }
                 }));
@@ -120,7 +150,6 @@
             }, [currentSite, logs]);
 
             const handleInputChange = (field, value) => {
-                // Si c'est un champ numérique formaté (index), on nettoie la valeur avant de stocker
                 const cleanValue = (field === 'lastIndex' || field === 'newIndex') ? parseInputValue(value) : value;
 
                 setFormData(prev => {
@@ -147,24 +176,21 @@
                 }));
             };
 
-            // --- COEUR DU CALCUL (Algorithme STEG) ---
+            // --- COEUR DU CALCUL ---
             const calculateMetrics = () => {
                 const data = formData[currentSite];
                 const sConf = siteConfigs[currentSite];
                 const gConf = globalConfig;
 
-                // Parsing inputs
                 const newIdx = parseFloat(data.newIndex) || 0;
                 const oldIdx = parseFloat(data.lastIndex) || 0;
-                const cosPhi = parseFloat(data.cosPhi) || 1; // Default 1 to avoid infinity
+                const cosPhi = parseFloat(data.cosPhi) || 1; 
                 const maxPower = parseFloat(data.maxPower) || 0;
                 
-                // Cas particuliers
                 const lateFees = parseFloat(data.lateFees) || 0;
                 const relanceFees = parseFloat(data.relanceFees) || 0;
                 const adjustment = parseFloat(data.adjustment) || 0;
 
-                // Parsing config
                 const unitPrice = parseFloat(gConf.unitPriceKwh) || 0;
                 const subPower = parseFloat(sConf.subscribedPower) || 0;
                 const powerPrice = parseFloat(gConf.powerUnitPrice) || 0;
@@ -173,78 +199,62 @@
                 const muniTaxRate = parseFloat(gConf.municipalTaxRate) || 0;
                 const emptyLosses = parseFloat(sConf.emptyLosses) || 0;
 
-                // 1. Énergie Enregistrée
                 const energyRecorded = Math.max(0, newIdx - oldIdx);
 
-                // 2. Pertes & Conso Facturée
-                const loadLosses = energyRecorded * 0.02; // 2% pertes en charge
+                const loadLosses = energyRecorded * 0.02; 
                 const billedKwh = energyRecorded + emptyLosses + loadLosses;
 
-                // 3. Conso Facturée HTVA (Base)
                 const baseEnergyAmountHT = billedKwh * unitPrice;
 
-                // 4. Calcul Bonification / Pénalité Cos Phi
                 let adjustmentRate = 0;
-                let adjustmentType = 'none'; // 'bonus', 'penalty', 'neutral'
+                let adjustmentType = 'none'; 
 
                 if (cosPhi >= 0.91 && cosPhi <= 1) {
-                // Bonification
-                const steps = Math.round((cosPhi - 0.90) * 100); 
-                adjustmentRate = -(steps * 0.005);
-                adjustmentType = 'bonus';
+                    const steps = Math.round((cosPhi - 0.90) * 100); 
+                    adjustmentRate = -(steps * 0.005);
+                    adjustmentType = 'bonus';
                 } else if (cosPhi >= 0.80 && cosPhi <= 0.90) {
-                // Neutre
-                adjustmentRate = 0;
-                adjustmentType = 'neutral';
+                    adjustmentRate = 0;
+                    adjustmentType = 'neutral';
                 } else {
-                // Pénalité Cumulative
-                adjustmentType = 'penalty';
-                let penalty = 0;
-                
-                if (cosPhi < 0.80) {
-                    const limit = Math.max(cosPhi, 0.75);
-                    const steps = Math.round((0.80 - limit) * 100); 
-                    penalty += steps * 0.005;
-                }
-                if (cosPhi < 0.75) {
-                    const limit = Math.max(cosPhi, 0.70);
-                    const steps = Math.round((0.75 - limit) * 100);
-                    penalty += steps * 0.01;
-                }
-                if (cosPhi < 0.70) {
-                    const limit = Math.max(cosPhi, 0.60);
-                    const steps = Math.round((0.70 - limit) * 100);
-                    penalty += steps * 0.015;
-                }
-                if (cosPhi < 0.60) {
-                    const steps = Math.round((0.60 - cosPhi) * 100);
-                    penalty += steps * 0.02;
-                }
-                adjustmentRate = penalty;
+                    adjustmentType = 'penalty';
+                    let penalty = 0;
+                    
+                    if (cosPhi < 0.80) {
+                        const limit = Math.max(cosPhi, 0.75);
+                        const steps = Math.round((0.80 - limit) * 100); 
+                        penalty += steps * 0.005;
+                    }
+                    if (cosPhi < 0.75) {
+                        const limit = Math.max(cosPhi, 0.70);
+                        const steps = Math.round((0.75 - limit) * 100);
+                        penalty += steps * 0.01;
+                    }
+                    if (cosPhi < 0.70) {
+                        const limit = Math.max(cosPhi, 0.60);
+                        const steps = Math.round((0.70 - limit) * 100);
+                        penalty += steps * 0.015;
+                    }
+                    if (cosPhi < 0.60) {
+                        const steps = Math.round((0.60 - cosPhi) * 100);
+                        penalty += steps * 0.02;
+                    }
+                    adjustmentRate = penalty;
                 }
 
                 const cosPhiAdjustmentAmount = baseEnergyAmountHT * adjustmentRate;
 
-                // 5. Total 1 : Energie Ajustée
                 const total1_HT = baseEnergyAmountHT + cosPhiAdjustmentAmount;
-                
-                // 6. Total 1 TTC
                 const total1_TTC = total1_HT * (1 + vat);
 
-                // 7. Total 2 : Fixe & Frais
                 const powerPremium = subPower * powerPrice;
                 const total2_HT = powerPremium + lateFees + relanceFees;
-                
-                // 7bis. Total 2 TTC
                 const total2_TTC = total2_HT * (1 + vat);
 
-                // 8. Surtaxe Municipale
                 const municipalTax = billedKwh * muniTaxRate;
 
-                // 9. Net à Payer
                 const netToPay = total1_TTC + total2_TTC + rtt + municipalTax + adjustment;
 
-                // Extra: Dépassement
                 const isPowerOverrun = maxPower > subPower;
 
                 return {
@@ -322,7 +332,7 @@
             const formatMoney = (amount) => amount.toLocaleString('fr-TN', { style: 'currency', currency: 'TND', minimumFractionDigits: 3 });
             const formatNumber = (num) => num.toLocaleString('fr-TN', { maximumFractionDigits: 2 });
 
-            // --- LOGIQUE D'AFFICHAGE DU TICKET ---
+            // --- UI RENDER ---
             
             const liveMetrics = calculateMetrics();
             const siteLogs = logs.filter(l => l.siteId === currentSite).sort((a, b) => b.id - a.id);
@@ -388,60 +398,18 @@
                     </div>
                 </header>
 
-                {/* Modal Guide Utilisation (NOUVEAU) */}
+                {/* Modals */}
                 {showUserGuide && (
                     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowUserGuide(false)}>
                     <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative" onClick={e => e.stopPropagation()}>
-                        <button onClick={() => setShowUserGuide(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
-                        ✕
-                        </button>
+                        <button onClick={() => setShowUserGuide(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">✕</button>
                         <h2 className="text-xl font-bold text-emerald-800 mb-4 flex items-center">
                         <BookOpen className="mr-2" />
-                        Guide d'Utilisation du Gestionnaire
+                        Guide d'Utilisation
                         </h2>
                         <div className="space-y-4 text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-200 h-[60vh] overflow-y-auto">
-                        
-                        <div className="space-y-2">
-                            <h3 className="font-bold text-blue-800 flex items-center"><span className="bg-blue-100 text-blue-700 px-2 rounded mr-2">1</span> Initialisation</h3>
-                            <p>Ouvrez le site et commencez par sélectionner le <strong>Site MT</strong> (Mégrine, El Khadhra, etc.) en haut à gauche.</p>
-                            <p>Ensuite, vérifiez ou modifiez le <strong>Mois et l'Année</strong> du relevé via le sélecteur de date.</p>
-                        </div>
-
-                        <div className="border-t border-slate-200 my-2"></div>
-
-                        <div className="space-y-2">
-                            <h3 className="font-bold text-blue-800 flex items-center"><span className="bg-blue-100 text-blue-700 px-2 rounded mr-2">2</span> Collecte des Données Index</h3>
-                            <ul className="list-disc ml-5 space-y-1">
-                            <li><strong>Ancien Index :</strong> Ce champ se remplit automatiquement basé sur le "Nouvel Index" du relevé précédent. Vous pouvez le modifier manuellement si besoin.</li>
-                            <li><strong>Nouvel Index :</strong> Relevez l'index d'énergie active directement sur le compteur STEG (Code <strong>1.8.0</strong>).</li>
-                            </ul>
-                        </div>
-
-                        <div className="border-t border-slate-200 my-2"></div>
-
-                        <div className="space-y-2">
-                            <h3 className="font-bold text-blue-800 flex items-center"><span className="bg-blue-100 text-blue-700 px-2 rounded mr-2">3</span> Paramètres Techniques</h3>
-                            <ul className="list-disc ml-5 space-y-1">
-                            <li><strong>Cos φ :</strong> Entrez la valeur (entre 0 et 1, ex: 0.92). Le système calculera automatiquement les bonifications ou pénalités.</li>
-                            <li><strong>Puissance Max :</strong> Entrez la puissance maximale atteinte (en kVA). Si elle dépasse la puissance souscrite, une alerte s'affichera.</li>
-                            <li><strong>Réactif :</strong> (Optionnel) Relevez l'index d'énergie réactive (Code <strong>3.8.0</strong>).</li>
-                            </ul>
-                        </div>
-
-                        <div className="border-t border-slate-200 my-2"></div>
-
-                        <div className="space-y-2">
-                            <h3 className="font-bold text-blue-800 flex items-center"><span className="bg-blue-100 text-blue-700 px-2 rounded mr-2">4</span> Validation & Historique</h3>
-                            <p>Une fois les données saisies, cliquez sur le bouton <strong>"Valider ce Relevé"</strong>.</p>
-                            <p>Le système affichera le détail complet de la facture estimée sur la droite et l'ajoutera à l'historique en bas de page.</p>
-                        </div>
-
-                        <div className="bg-amber-50 p-3 rounded-lg border border-amber-200 mt-4">
-                            <h4 className="font-bold text-amber-800 text-xs uppercase mb-1">Configuration & Tarifs</h4>
-                            <p className="text-xs">
-                                Les tarifs (Prix kWh, Taxes) et les paramètres fixes (Puissance souscrite, pertes à vide) sont modifiables via le panneau <strong>"Configuration & Tarifs"</strong> en bas du formulaire.
-                            </p>
-                        </div>
+                           <p>Sélectionnez un site, entrez le nouvel index (1.8.0), le Cos φ et la puissance max atteinte.</p>
+                           <p>Le calculateur gère automatiquement les bonifications et pénalités.</p>
                         </div>
                         <div className="mt-6 flex justify-end">
                         <button onClick={() => setShowUserGuide(false)} className="bg-emerald-700 hover:bg-emerald-800 text-white px-6 py-2 rounded-lg font-bold">Compris</button>
@@ -450,38 +418,14 @@
                     </div>
                 )}
 
-                {/* Modal Aide Cos Phi */}
                 {showHelp && (
                     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowHelp(false)}>
                     <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative" onClick={e => e.stopPropagation()}>
-                        <button onClick={() => setShowHelp(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
-                        ✕
-                        </button>
-                        <h2 className="text-xl font-bold text-blue-900 mb-4 flex items-center">
-                        <FileText className="mr-2" />
-                        Règle de Facturation Cos φ (STEG)
-                        </h2>
+                        <button onClick={() => setShowHelp(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">✕</button>
+                        <h2 className="text-xl font-bold text-blue-900 mb-4 flex items-center"><FileText className="mr-2" /> Règle Cos φ</h2>
                         <div className="space-y-4 text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-200 h-[60vh] overflow-y-auto">
-                        <p>La facturation de l'énergie active s'entend pour un facteur de puissance (cos φ) compris entre <strong>0,80 et 0,90</strong>.</p>
-                        
-                        <div className="bg-emerald-50 border-l-4 border-emerald-500 p-3">
-                            <h3 className="font-bold text-emerald-800">Bonification (Réduction)</h3>
-                            <p>Si le facteur de puissance est compris entre <strong>0,91 et 1</strong> :</p>
-                            <ul className="list-disc ml-5 mt-1">
-                                <li>Le prix de l'énergie active est diminué de <strong>0,5%</strong> par centième au-dessus de 0,90.</li>
-                            </ul>
-                        </div>
-
-                        <div className="bg-red-50 border-l-4 border-red-500 p-3">
-                            <h3 className="font-bold text-red-800">Pénalité (Majoration)</h3>
-                            <p>Si le facteur de puissance est <strong>inférieur à 0,80</strong>, le prix est augmenté de façon cumulative :</p>
-                            <ul className="list-disc ml-5 mt-1 space-y-1">
-                                <li><strong>0,5 %</strong> par centième entre 0,79 et 0,75</li>
-                                <li><strong>1 %</strong> par centième entre 0,74 et 0,70</li>
-                                <li><strong>1,5 %</strong> par centième entre 0,69 et 0,60</li>
-                                <li><strong>2 %</strong> par centième si inférieur à 0.60</li>
-                            </ul>
-                        </div>
+                            <p>Bonification si Cos φ > 0.90.</p>
+                            <p>Pénalité progressive si Cos φ < 0.80.</p>
                         </div>
                         <div className="mt-6 flex justify-end">
                         <button onClick={() => setShowHelp(false)} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold">Fermer</button>
@@ -492,10 +436,9 @@
 
                 <main className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
                     
-                    {/* Colonne Gauche : Saisie (7 colonnes) */}
+                    {/* Colonne Gauche : Saisie */}
                     <div className="lg:col-span-7 space-y-6">
                     
-                    {/* Onglets Sites */}
                     <div className="grid grid-cols-3 gap-2">
                         {SITES.map((site) => (
                         <button
@@ -517,7 +460,7 @@
                         <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                         <h2 className="text-lg font-bold text-slate-800 flex items-center">
                             <Calendar className="mr-2 text-blue-600" size={20} />
-                            Saisie Relevé Mensuel
+                            Saisie Relevé
                         </h2>
                         <input 
                             type="month"
@@ -527,13 +470,10 @@
                         />
                         </div>
 
-                        {/* Inputs Principaux */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         
-                        {/* Groupe 1 : Energie */}
                         <div className="space-y-4">
-                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Compteur Actif (1.8.0)</h3>
-                            
+                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Compteur Actif</h3>
                             <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
                                 <div>
                                 <label className="text-xs font-bold text-slate-500 block mb-1">Ancien Index</label>
@@ -557,56 +497,32 @@
                                     className="w-full text-lg p-2 border-2 border-blue-200 rounded focus:border-blue-600 focus:outline-none font-mono tracking-wide"
                                 />
                                 </div>
-                                {liveMetrics.energyRecorded > 0 && (
-                                <div className="text-right text-xs font-bold text-blue-600">
-                                    Diff: {formatInputDisplay(liveMetrics.energyRecorded)} kWh
-                                </div>
-                                )}
                             </div>
                         </div>
 
-                        {/* Groupe 2 : Technique */}
                         <div className="space-y-4">
-                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Paramètres Techniques</h3>
-                            
+                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Technique</h3>
                             <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
                                 <div>
-                                <label className="text-xs font-bold text-slate-500 block mb-1">Cos φ (0.00 - 1.00) *</label>
+                                <label className="text-xs font-bold text-slate-500 block mb-1">Cos φ *</label>
                                 <input 
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    max="1"
-                                    required
-                                    placeholder="0.92"
+                                    type="number" step="0.01" min="0" max="1" required placeholder="0.92"
                                     value={formData[currentSite].cosPhi || ''}
                                     onChange={(e) => handleInputChange('cosPhi', e.target.value)}
                                     className="w-full text-sm p-2 border border-slate-300 rounded focus:border-blue-500 focus:outline-none"
                                 />
                                 </div>
                                 <div>
-                                <label className="text-xs font-bold text-slate-500 block mb-1">Puissance Max Appelée *</label>
+                                <label className="text-xs font-bold text-slate-500 block mb-1">P. Max (kVA) *</label>
                                 <div className="relative">
                                     <input 
-                                    type="number"
-                                    required
-                                    placeholder="kVA"
+                                    type="number" required placeholder="kVA"
                                     value={formData[currentSite].maxPower || ''}
                                     onChange={(e) => handleInputChange('maxPower', e.target.value)}
                                     className={`w-full text-sm p-2 border rounded focus:outline-none ${liveMetrics.isPowerOverrun ? 'border-red-400 bg-red-50 text-red-700' : 'border-slate-300'}`}
                                     />
                                     {liveMetrics.isPowerOverrun && <AlertCircle size={14} className="absolute right-2 top-2.5 text-red-500" />}
                                 </div>
-                                </div>
-                                <div>
-                                <label className="text-xs font-bold text-slate-500 block mb-1">Réactif (3.8.0)</label>
-                                <input 
-                                    type="number"
-                                    placeholder="kVarh"
-                                    value={formData[currentSite].reactiveCons || ''}
-                                    onChange={(e) => handleInputChange('reactiveCons', e.target.value)}
-                                    className="w-full text-sm p-2 border border-slate-300 rounded focus:border-blue-500 focus:outline-none"
-                                />
                                 </div>
                             </div>
                         </div>
@@ -615,28 +531,18 @@
 
                         {/* Cas Particuliers */}
                         <div className="border-t border-slate-100 pt-4">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Cas Particuliers & Ajustements</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label className="text-[10px] font-bold text-slate-500 block mb-1">Frais de Retard (DT)</label>
-                                <input type="number" value={formData[currentSite].lateFees || ''} onChange={(e) => handleInputChange('lateFees', e.target.value)} className="w-full text-sm p-2 border border-slate-200 rounded" placeholder="0.000" />
-                            </div>
-                            <div>
-                                <label className="text-[10px] font-bold text-slate-500 block mb-1">Frais de Relance (DT)</label>
-                                <input type="number" value={formData[currentSite].relanceFees || ''} onChange={(e) => handleInputChange('relanceFees', e.target.value)} className="w-full text-sm p-2 border border-slate-200 rounded" placeholder="0.000" />
-                            </div>
-                            <div>
-                                <label className="text-[10px] font-bold text-slate-500 block mb-1">Avance / Arriéré (DT)</label>
-                                <input type="number" value={formData[currentSite].adjustment || ''} onChange={(e) => handleInputChange('adjustment', e.target.value)} className="w-full text-sm p-2 border border-slate-200 rounded" placeholder="+/- 0.000" />
-                            </div>
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Frais & Ajustements</h3>
+                        <div className="grid grid-cols-3 gap-4">
+                            <input type="number" placeholder="Retard (DT)" value={formData[currentSite].lateFees || ''} onChange={(e) => handleInputChange('lateFees', e.target.value)} className="w-full text-sm p-2 border border-slate-200 rounded" />
+                            <input type="number" placeholder="Relance (DT)" value={formData[currentSite].relanceFees || ''} onChange={(e) => handleInputChange('relanceFees', e.target.value)} className="w-full text-sm p-2 border border-slate-200 rounded" />
+                            <input type="number" placeholder="Ajust. (DT)" value={formData[currentSite].adjustment || ''} onChange={(e) => handleInputChange('adjustment', e.target.value)} className="w-full text-sm p-2 border border-slate-200 rounded" />
                         </div>
                         </div>
 
                         <button type="submit" className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-700/20 transition-transform active:scale-95 flex items-center justify-center">
                         <Save size={20} className="mr-2" />
-                        Valider ce Relevé
+                        Valider
                         </button>
-
                     </form>
 
                     {/* Configuration Zone */}
@@ -647,61 +553,35 @@
                         </button>
                         
                         {isConfigUnlocked && (
-                        <div className="p-6 bg-white border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top-2">
+                        <div className="p-6 bg-white border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <h4 className="text-xs font-bold text-blue-700">Paramètres Site ({SITES.find(s=>s.id===currentSite).name})</h4>
-                                <div>
-                                <label className="text-[10px] uppercase text-slate-500">Puissance Souscrite (kVA)</label>
-                                <input type="number" value={siteConfigs[currentSite].subscribedPower || ''} onChange={(e) => handleSiteConfigChange('subscribedPower', e.target.value)} className="w-full border p-1 rounded text-sm" />
-                                </div>
-                                <div>
-                                <label className="text-[10px] uppercase text-slate-500">Pertes à Vide Fixe (kWh)</label>
-                                <input type="number" value={siteConfigs[currentSite].emptyLosses || ''} onChange={(e) => handleSiteConfigChange('emptyLosses', e.target.value)} className="w-full border p-1 rounded text-sm" />
-                                </div>
+                                <h4 className="text-xs font-bold text-blue-700">Paramètres Site</h4>
+                                <input type="number" value={siteConfigs[currentSite].subscribedPower || ''} onChange={(e) => handleSiteConfigChange('subscribedPower', e.target.value)} className="w-full border p-1 rounded text-sm" placeholder="P. Souscrite" />
+                                <input type="number" value={siteConfigs[currentSite].emptyLosses || ''} onChange={(e) => handleSiteConfigChange('emptyLosses', e.target.value)} className="w-full border p-1 rounded text-sm" placeholder="Pertes à vide" />
                             </div>
                             <div className="space-y-2">
                                 <h4 className="text-xs font-bold text-blue-700">Paramètres Globaux</h4>
                                 <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label className="text-[10px] uppercase text-slate-500">Prix Énergie (DT/kWh)</label>
                                     <input type="number" step="0.001" value={globalConfig.unitPriceKwh || ''} onChange={(e) => handleGlobalConfigChange('unitPriceKwh', e.target.value)} className="w-full border p-1 rounded text-sm" />
-                                </div>
-                                <div>
-                                    <label className="text-[10px] uppercase text-slate-500">Prix Puissance (DT/kVA)</label>
                                     <input type="number" step="0.001" value={globalConfig.powerUnitPrice || ''} onChange={(e) => handleGlobalConfigChange('powerUnitPrice', e.target.value)} className="w-full border p-1 rounded text-sm" />
-                                </div>
-                                <div>
-                                    <label className="text-[10px] uppercase text-slate-500">TVA (%)</label>
-                                    <input type="number" value={globalConfig.vatRate || ''} onChange={(e) => handleGlobalConfigChange('vatRate', e.target.value)} className="w-full border p-1 rounded text-sm" />
-                                </div>
-                                <div>
-                                    <label className="text-[10px] uppercase text-slate-500">RTT (DT)</label>
-                                    <input type="number" value={globalConfig.rtt || ''} onChange={(e) => handleGlobalConfigChange('rtt', e.target.value)} className="w-full border p-1 rounded text-sm" />
-                                </div>
                                 </div>
                             </div>
                         </div>
                         )}
                     </div>
-
                     </div>
 
-                    {/* Colonne Droite : Ticket de Caisse (5 colonnes) */}
+                    {/* Colonne Droite : Ticket */}
                     <div className="lg:col-span-5 space-y-4">
                     
                     <div className={`bg-white p-6 rounded-xl shadow-lg border transition-all duration-300 relative overflow-hidden
                         ${displayContext.isLive ? 'border-blue-200' : 'border-emerald-200 ring-2 ring-emerald-50'}`}>
                         
-                        {/* Filigrane STEG */}
-                        <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-                            <Zap size={100} />
-                        </div>
+                        <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><Zap size={100} /></div>
 
                         <div className="flex justify-between items-end border-b-2 border-slate-100 pb-4 mb-4">
                         <div>
-                            <h3 className={`text-sm font-bold uppercase ${displayContext.isLive ? 'text-blue-600' : 'text-emerald-700'}`}>
-                            {displayContext.title}
-                            </h3>
+                            <h3 className={`text-sm font-bold uppercase ${displayContext.isLive ? 'text-blue-600' : 'text-emerald-700'}`}>{displayContext.title}</h3>
                             <p className="text-xs text-slate-400">{SITES.find(s=>s.id===currentSite).name}</p>
                         </div>
                         <div className="text-right">
@@ -712,32 +592,18 @@
 
                         <div className="space-y-3 text-sm">
                         
-                        {/* 1. Conso */}
                         <div className="pb-3 border-b border-slate-50 border-dashed">
                             <div className="flex justify-between text-slate-600">
-                            <span>Énergie Enregistrée</span>
-                            <span className="font-mono">{formatInputDisplay(displayMetrics.energyRecorded)} kWh</span>
-                            </div>
-                            <div className="flex justify-between text-slate-500 text-xs pl-2">
-                            <span>+ Pertes à vide</span>
-                            <span className="font-mono">{displayContext.emptyLosses}</span>
-                            </div>
-                            <div className="flex justify-between text-slate-500 text-xs pl-2">
-                            <span>+ Pertes en charge (2%)</span>
-                            <span className="font-mono">{formatInputDisplay(displayMetrics.loadLosses)}</span>
-                            </div>
-                            <div className="flex justify-between font-bold text-slate-700 mt-1 bg-slate-50 px-2 py-1 rounded">
-                            <span>Total Facturé ({formatInputDisplay(displayMetrics.billedKwh)} kWh)</span>
-                            <span>{formatMoney(displayMetrics.baseEnergyAmountHT)}</span>
+                            <span>Énergie ({formatInputDisplay(displayMetrics.energyRecorded)} kWh + Pertes)</span>
+                            <span className="font-mono">{formatMoney(displayMetrics.baseEnergyAmountHT)}</span>
                             </div>
                         </div>
 
-                        {/* 2. Cos Phi */}
                         <div className="pb-3 border-b border-slate-50 border-dashed">
                             <div className="flex justify-between items-center">
                                 <span className="text-slate-600">Ajustement Cos φ ({displayContext.cosPhi || '-'})</span>
-                                {displayMetrics.adjustmentType === 'bonus' && <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1 rounded">BONIFICATION</span>}
-                                {displayMetrics.adjustmentType === 'penalty' && <span className="text-[10px] bg-red-100 text-red-800 px-1 rounded">PÉNALITÉ</span>}
+                                {displayMetrics.adjustmentType === 'bonus' && <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1 rounded">BONUS</span>}
+                                {displayMetrics.adjustmentType === 'penalty' && <span className="text-[10px] bg-red-100 text-red-800 px-1 rounded">PENALITÉ</span>}
                             </div>
                             <div className={`flex justify-between font-mono font-bold mt-1 ${displayMetrics.adjustmentRate < 0 ? 'text-emerald-600' : (displayMetrics.adjustmentRate > 0 ? 'text-red-600' : 'text-slate-400')}`}>
                             <span>{displayMetrics.adjustmentRate > 0 ? '+' : ''}{(displayMetrics.adjustmentRate * 100).toFixed(1)}%</span>
@@ -745,51 +611,24 @@
                             </div>
                         </div>
 
-                        {/* 3. Total 1 */}
                         <div className="flex justify-between font-bold text-slate-800 bg-blue-50 p-2 rounded">
                             <span>Total 1 (Énergie TTC)</span>
                             <span>{formatMoney(displayMetrics.total1_TTC)}</span>
                         </div>
 
-                        {/* 4. Fixe & Taxes */}
                         <div className="pt-2 space-y-1">
                             <div className="flex justify-between text-slate-600 text-xs">
-                                <span>Prime Puissance Fixe</span>
-                                <span className="font-mono">{formatMoney(displayMetrics.powerPremium)}</span>
-                            </div>
-                            {(parseFloat(displayContext.lateFees) > 0 || parseFloat(displayContext.relanceFees) > 0) && (
-                            <div className="flex justify-between text-orange-600 text-xs">
-                                <span>Frais Retard/Relance</span>
-                                <span className="font-mono">{formatMoney((parseFloat(displayContext.lateFees)||0) + (parseFloat(displayContext.relanceFees)||0))}</span>
-                            </div>
-                            )}
-                            <div className="flex justify-between font-bold text-slate-800 bg-slate-50 p-2 rounded">
-                                <span>Total 2 (Fixe TTC)</span>
-                                <span>{formatMoney(displayMetrics.total2_TTC)}</span>
+                                <span>Prime Fixe + Frais</span>
+                                <span className="font-mono">{formatMoney(displayMetrics.total2_TTC)}</span>
                             </div>
                         </div>
 
-                        {/* 5. Finaux */}
                         <div className="space-y-1 pt-2 text-xs text-slate-500">
-                            <div className="flex justify-between">
-                                <span>RTT</span>
-                                <span className="font-mono">{formatMoney(globalConfig.rtt)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span>Surtaxe Municipale</span>
-                                <span className="font-mono">{formatMoney(displayMetrics.municipalTax)}</span>
-                            </div>
-                            {parseFloat(displayContext.adjustment) !== 0 && (
-                                <div className="flex justify-between font-bold text-slate-700">
-                                    <span>Avance / Arriéré</span>
-                                    <span className="font-mono">{formatMoney(parseFloat(displayContext.adjustment)||0)}</span>
-                                </div>
-                            )}
+                            <div className="flex justify-between"><span>Taxes & RTT</span><span className="font-mono">{formatMoney(displayMetrics.municipalTax + globalConfig.rtt)}</span></div>
                         </div>
 
                         </div>
 
-                        {/* Net à Payer */}
                         <div className="mt-6 border-t-2 border-slate-800 pt-4">
                         <div className="flex justify-between items-end">
                             <span className="text-lg font-black text-slate-900 uppercase">Net à Payer</span>
@@ -797,70 +636,25 @@
                             {formatMoney(displayMetrics.netToPay)}
                             </span>
                         </div>
-                        <p className="text-[10px] text-center text-slate-400 mt-2">
-                            {displayContext.isLive ? "Calcul estimatif en temps réel" : "Calcul basé sur le dernier relevé validé"}
-                        </p>
                         </div>
                     </div>
 
-                    {/* Historique Avancé */}
-                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col h-[300px]">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center justify-between">
-                        <span className="flex items-center"><History size={12} className="mr-1" /> Historique {SITES.find(s=>s.id===currentSite).name}</span>
-                        <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full text-[10px]">{siteLogs.length} relevés</span>
-                        </h3>
-                        
+                    {/* Historique Rapide */}
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col h-[200px]">
+                        <h3 className="text-xs font-bold text-slate-400 uppercase mb-3"><History size={12} className="inline mr-1" /> Historique Récent</h3>
                         <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-                        {siteLogs.length === 0 ? (
-                            <div className="h-full flex flex-col items-center justify-center text-slate-300">
-                            <History size={32} className="mb-2 opacity-20" />
-                            <p className="text-xs">Aucun historique pour ce site</p>
+                        {siteLogs.map(log => (
+                            <div key={log.id} className="p-2 bg-slate-50 rounded border border-slate-100 flex justify-between items-center text-xs">
+                                <span>{log.recordDate}</span>
+                                <span className="font-bold text-blue-700">{formatMoney(log.netToPay)}</span>
                             </div>
-                        ) : (
-                            siteLogs.map(log => (
-                            <div key={log.id} className="p-3 bg-slate-50 rounded-lg border border-slate-100 hover:border-blue-200 transition-colors group">
-                                <div className="flex justify-between items-start mb-2 border-b border-slate-100 pb-2">
-                                <span className="font-bold text-slate-700 text-xs flex items-center">
-                                    <Calendar size={10} className="mr-1 text-slate-400" /> {log.recordDate}
-                                </span>
-                                <span className="font-mono font-bold text-blue-700 text-sm">{formatMoney(log.netToPay)}</span>
-                                </div>
-                                
-                                <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-600 mt-1">
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-400">Ancien Index</span>
-                                        <span className="font-mono">{formatInputDisplay(log.lastIndex)}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-400">Nouvel Index</span>
-                                        <span className="font-mono">{formatInputDisplay(log.newIndex)}</span>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-3 gap-2 text-[10px] text-slate-500 border-t border-slate-200 pt-2 mt-2">
-                                    <div className="flex flex-col">
-                                    <span className="uppercase text-[9px] text-slate-400">P. Souscrite</span>
-                                    <span className="font-mono font-semibold">{log.subscribedPowerRef} kVA</span>
-                                    </div>
-                                    <div className="flex flex-col text-center">
-                                    <span className="uppercase text-[9px] text-slate-400">Cos φ</span>
-                                    <span className={`font-mono font-semibold ${log.cosPhi < 0.8 ? 'text-red-500' : 'text-emerald-600'}`}>{log.cosPhi}</span>
-                                    </div>
-                                    <div className="flex flex-col text-right">
-                                    <span className="uppercase text-[9px] text-slate-400">P. Max</span>
-                                    <span className="font-mono font-semibold">{log.maxPower} kVA</span>
-                                    </div>
-                                </div>
-                            </div>
-                            )))}
+                        ))}
                         </div>
                     </div>
 
                     </div>
-
                 </main>
 
-                {/* Notification Toast */}
                 {notification && (
                     <div className={`fixed bottom-6 right-6 px-6 py-4 rounded-xl shadow-2xl text-white font-medium flex items-center animate-bounce-short z-50
                     ${notification.type === 'error' ? 'bg-red-500' : 'bg-emerald-600'}`}>
