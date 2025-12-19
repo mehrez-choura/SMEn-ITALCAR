@@ -1,7 +1,7 @@
 {
-  "name": "m-lev-simulation",
+  "name": "SMEn-ITALCAR",
   "version": "1.0.0",
-  "description": "Simulation M-LEV - Bilan & Cycles",
+  "description": "SMEn-ITALCAR",
   "scripts": {
     "start": "npx serve ."
   },
