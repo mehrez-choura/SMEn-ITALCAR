@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       animation: {
-        'bounce-short': 'bounce 1s infinite', // Pour votre classe animate-bounce-short
+        'bounce-short': 'bounce 1s infinite',
       }
     },
   },
