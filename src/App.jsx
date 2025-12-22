@@ -12,16 +12,13 @@ import {
   Store, Droplets, Filter, Check, Image as ImageIcon
 } from 'lucide-react';
 
-// --- INITIALISATION FIREBASE ---
-// Note pour usage local : Remplacez ce bloc par votre propre config Firebase
-const firebaseConfig = JSON.parse(__firebase_config);
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+// --- INITIALISATION FIREBASE CORRIGÉE ---
+// On importe vos vraies connexions définies dans le fichier firebase.js
+import { db, auth } from './firebase'; 
+import { collection } from "firebase/firestore";
 
-// Helper pour les chemins sécurisés
-const getCollection = (name) => collection(db, 'artifacts', appId, 'public', 'data', name);
+// Helper simple qui pointe vers la racine de la base de données
+const getCollection = (name) => collection(db, name);
 
 // --- COMPOSANT HORLOGE ---
 const DateTimeDisplay = () => {
