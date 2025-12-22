@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { initializeApp } from "firebase/app";
-import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, collection, addDoc, doc, setDoc, onSnapshot, query, orderBy, getDocs, deleteDoc, where } from "firebase/firestore";
+// IMPORT CORRECT DEPUIS VOTRE FICHIER LOCAL
+import { db, auth } from './firebase'; 
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
+import { collection, addDoc, doc, setDoc, onSnapshot, query, orderBy, getDocs, deleteDoc, where } from "firebase/firestore";
 import { 
   Zap, Activity, Save, History, TrendingUp, AlertTriangle, Factory, CheckCircle2,
   BarChart3, Settings, Lock, Unlock, Calendar, DollarSign, TrendingDown, HelpCircle,
@@ -12,12 +13,8 @@ import {
   Store, Droplets, Filter, Check, Image as ImageIcon
 } from 'lucide-react';
 
-// --- INITIALISATION FIREBASE CORRIGÉE ---
-// On importe vos vraies connexions définies dans le fichier firebase.js
-import { db, auth } from './firebase'; 
-import { collection } from "firebase/firestore";
-
-// Helper simple qui pointe vers la racine de la base de données
+// --- HELPER SIMPLE POUR LES COLLECTIONS (CORRIGÉ) ---
+// Pointe directement vers la racine Firestore via l'objet 'db' importé
 const getCollection = (name) => collection(db, name);
 
 // --- COMPOSANT HORLOGE ---
@@ -763,22 +760,26 @@ const StegModule = ({ onBack, userRole }) => {
                 </div>
                 
                 <div className="bg-white p-4 rounded-xl border border-slate-200 h-[400px] flex flex-col">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase mb-2 flex items-center"><Database size={12} className="mr-1"/> Historique Cloud</h3>
-                    <div className="flex-1 overflow-y-auto space-y-2">
-                        {siteLogs.map(log => (
-                            <div key={log.docId} className="p-3 border rounded-lg bg-slate-50 text-xs hover:bg-blue-50 transition-colors">
-                                <div className="flex justify-between font-bold text-slate-700 mb-1">
-                                    <span className="flex items-center"><Calendar size={12} className="mr-1"/> {log.recordDate}</span>
-                                    <span className="text-blue-600">{formatMoney(log.netToPay)}</span>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-500 mt-2 border-t pt-2 border-slate-200">
-                                    <div>Conso: <span className="font-mono text-slate-700">{formatNumber(log.type === 'MT' ? log.energyRecorded : log.consumptionGrid)}</span> kWh</div>
-                                    <div>{log.type === 'MT' ? `P.Max: ${log.maxPower} kVA` : (log.type === 'BT_PV' ? `PV: ${formatNumber(log.productionPv)}` : 'Standard')}</div>
-                                    {log.type === 'MT' && <div>Cos φ: <span className={log.cosPhi < 0.8 ? 'text-red-500 font-bold' : 'text-emerald-600'}>{log.cosPhi}</span></div>}
-                                    {log.type === 'MT' && log.reactiveCons > 0 && <div>Réactif: {log.reactiveCons}</div>}
-                                </div>
-                            </div>
-                        ))}
+                    <h3 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center justify-between">
+                      <span className="flex items-center"><Database size={12} className="mr-1"/> Historique Cloud</span>
+                      <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[10px]">En ligne</span>
+                    </h3>
+                    <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+                       {siteLogs.length === 0 ? <div className="text-center text-slate-400 text-xs py-10">Aucun historique disponible</div> : 
+                       siteLogs.map(log => (
+                         <div key={log.docId} className="p-3 border rounded-lg bg-slate-50 text-xs hover:bg-blue-50 transition-colors">
+                             <div className="flex justify-between font-bold text-slate-700 mb-1">
+                                 <span className="flex items-center"><Calendar size={12} className="mr-1"/> {log.recordDate}</span>
+                                 <span className="text-blue-600">{formatMoney(log.netToPay)}</span>
+                             </div>
+                             <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-500 mt-2 border-t pt-2 border-slate-200">
+                                 <div>Conso: <span className="font-mono text-slate-700">{formatNumber(log.type === 'MT' ? log.energyRecorded : log.consumptionGrid)}</span> kWh</div>
+                                 <div>{log.type === 'MT' ? `P.Max: ${log.maxPower} kVA` : (log.type === 'BT_PV' ? `PV: ${formatNumber(log.productionPv)}` : 'Standard')}</div>
+                                 {log.type === 'MT' && <div>Cos φ: <span className={log.cosPhi < 0.8 ? 'text-red-500 font-bold' : 'text-emerald-600'}>{log.cosPhi}</span></div>}
+                                 {log.type === 'MT' && log.reactiveCons > 0 && <div>Réactif: {log.reactiveCons}</div>}
+                             </div>
+                         </div>
+                       ))}
                     </div>
                 </div>
             </div>
@@ -840,8 +841,8 @@ const AirModule = ({ onBack, userRole }) => {
               ...prev,
               [activeCompressor]: {
                   ...prev[activeCompressor],
-                  lastRun: compLogs[0].newRun,
-                  lastLoad: compLogs[0].newLoad,
+                  lastRun: compLogs[0].newRun || prev[activeCompressor].lastRun,
+                  lastLoad: compLogs[0].newLoad || prev[activeCompressor].lastLoad,
               }
           }));
       }
@@ -926,9 +927,7 @@ const AirModule = ({ onBack, userRole }) => {
                   <DateTimeDisplay />
               </div>
             </div>
-            <div className="flex gap-4">
-                <button onClick={() => setShowGuide(true)} className="flex items-center bg-white/10 px-3 py-2 rounded text-xs font-bold border border-white/20 hover:bg-white/20"><BookOpen size={14} className="mr-2" /> Procédure ES 3000</button>
-            </div>
+            <button onClick={() => setShowGuide(true)} className="flex items-center bg-white/10 px-3 py-2 rounded text-xs font-bold border border-white/20 hover:bg-white/20"><BookOpen size={14} className="mr-2" /> Procédure ES 3000</button>
         </header>
 
         {showGuide && (
@@ -950,11 +949,32 @@ const AirModule = ({ onBack, userRole }) => {
             </div>
         )}
 
+        {showMaintPopup && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                <div className="bg-white p-6 rounded-xl w-full max-w-sm">
+                    <h3 className="font-bold mb-4">Valider : {MAINT_LABELS[showMaintPopup]}</h3>
+                    <form onSubmit={(e) => {
+                        e.preventDefault();
+                        const fd = new FormData(e.target);
+                        handleMaintenanceDone(showMaintPopup, { date: fd.get('date'), tech: fd.get('tech'), notes: fd.get('notes') });
+                    }}>
+                        <input name="date" type="date" required defaultValue={new Date().toISOString().split('T')[0]} className="w-full border p-2 rounded mb-2 text-sm" />
+                        <input name="tech" placeholder="Intervenant" required className="w-full border p-2 rounded mb-2 text-sm" />
+                        <textarea name="notes" placeholder="Notes" className="w-full border p-2 rounded mb-4 text-sm"></textarea>
+                        <div className="flex justify-end gap-2">
+                            <button type="button" onClick={() => setShowMaintPopup(null)} className="px-4 py-2 text-slate-500">Annuler</button>
+                            <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded font-bold">Confirmer</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        )}
+
         <main className="p-8 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className="lg:col-span-7 space-y-6">
                 <div className="flex gap-2">
                     {COMPRESSORS.map(c => (
-                        <button key={c.id} onClick={() => setActiveCompressor(c.id)} className={`flex-1 p-4 rounded-xl border text-left ${activeCompressor === c.id ? 'bg-white border-sky-500 shadow-md ring-2 ring-sky-100' : 'bg-white border-slate-200'}`}>
+                        <button key={c.id} onClick={() => setActiveCompressor(c.id)} className={`flex-1 p-4 rounded-xl border text-left ${activeCompressor === c.id ? 'bg-white border-sky-500 shadow-md ring-2 ring-sky-100' : 'bg-white border-slate-200 hover:border-sky-300'}`}>
                             <div className="font-bold text-slate-700">{c.name}</div>
                             <div className="text-xs text-slate-400">{c.model} - {c.serial}</div>
                         </button>
@@ -962,11 +982,11 @@ const AirModule = ({ onBack, userRole }) => {
                 </div>
 
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                     <div className="flex justify-between items-center mb-6">
+                      <div className="flex justify-between items-center mb-6">
                         <h2 className="font-bold flex items-center text-slate-800"><Timer className="mr-2 text-sky-600"/> Saisie Relevé</h2>
                         <input type="week" value={week} onChange={(e) => setWeek(e.target.value)} className="text-slate-800 text-sm px-2 py-1 rounded outline-none border font-bold" />
-                     </div>
-                     <div className="grid grid-cols-2 gap-6 mb-6">
+                      </div>
+                      <div className="grid grid-cols-2 gap-6 mb-6">
                         <div className="bg-slate-50 p-3 rounded-lg border">
                             <div className="flex justify-between mb-1">
                                 <label className="text-xs font-bold text-slate-500">Marche (H)</label>
@@ -980,9 +1000,9 @@ const AirModule = ({ onBack, userRole }) => {
                             <input type="number" readOnly={!editingPrev} className={`w-full text-xs mb-2 bg-transparent ${editingPrev ? 'border rounded bg-white' : ''}`} value={formData[activeCompressor].lastLoad} onChange={e => handleInput('lastLoad', e.target.value)} />
                             <input type="number" className="w-full border-2 border-sky-100 p-2 rounded text-lg font-mono focus:border-sky-500 outline-none" placeholder="Nouveau" value={formData[activeCompressor].newLoad} onChange={e => handleInput('newLoad', e.target.value)} />
                         </div>
-                     </div>
-                     <textarea className="w-full border p-2 rounded text-sm mb-4" placeholder="Note / Justification..." value={formData[activeCompressor].description} onChange={e => handleInput('description', e.target.value)}></textarea>
-                     <button onClick={handleSubmit} className="w-full bg-sky-600 text-white py-3 rounded-xl font-bold hover:bg-sky-700 shadow-lg shadow-sky-200 transition-all">Valider Relevé</button>
+                      </div>
+                      <textarea className="w-full border p-2 rounded text-sm mb-4" placeholder="Note / Justification..." value={formData[activeCompressor].description} onChange={e => handleInput('description', e.target.value)}></textarea>
+                      <button onClick={handleSubmit} className="w-full bg-sky-600 text-white py-3 rounded-xl font-bold hover:bg-sky-700 shadow-lg shadow-sky-200 transition-all">Valider Relevé</button>
                 </div>
             </div>
 
@@ -1004,7 +1024,33 @@ const AirModule = ({ onBack, userRole }) => {
                     <div className="text-center bg-blue-50 p-2 rounded text-blue-700 font-bold">Coût Est. : {kpis.costHT.toFixed(0)} DT</div>
                 </div>
 
-                 {/* Historique Air */}
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 className="text-sm font-bold text-slate-700 mb-4 uppercase flex items-center"><Wrench size={16} className="mr-2 text-amber-500" /> Maintenance Prédictive</h3>
+                    <div className="space-y-4">
+                        {Object.keys(MAINT_INTERVALS).map(key => {
+                            const Icon = MAINT_ICONS[key];
+                            return (
+                                <div key={key} className="flex flex-col p-3 border border-slate-200 rounded-lg hover:shadow-md transition-shadow bg-white relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity"><Icon size={30}/></div>
+                                    <div className="flex justify-between items-center mb-2 relative z-10">
+                                        <div className="text-sm font-bold text-slate-800">{MAINT_LABELS[key]}</div>
+                                        <div className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">{MAINT_INTERVALS[key]}h</div>
+                                    </div>
+                                    <div className="mb-2 relative z-10">
+                                        <div className={`text-xs font-bold mb-1 ${getStatusColor(kpis.maintStatus[key].remaining)}`}>
+                                            {kpis.maintStatus[key].remaining <= 0 ? `${Math.abs(kpis.maintStatus[key].remaining)}h dépassement` : `${kpis.maintStatus[key].remaining}h restants`}
+                                        </div>
+                                        <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                            <div className={`h-full rounded-full transition-all duration-500 ${kpis.maintStatus[key].remaining < 0 ? 'bg-red-600' : (kpis.maintStatus[key].remaining < 200 ? 'bg-orange-500' : 'bg-emerald-400')}`} style={{ width: `${Math.max(0, Math.min(100, (kpis.maintStatus[key].remaining / MAINT_INTERVALS[key]) * 100))}%` }}></div>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setShowMaintPopup(key)} className="w-full mt-1 bg-slate-800 hover:bg-slate-700 text-white text-xs py-2 rounded flex items-center justify-center transition-colors relative z-10">Faire maintenance</button>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
                 <div className="bg-white p-4 rounded-xl border border-slate-200 h-[300px] flex flex-col">
                     <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">Historique</h3>
                     <div className="flex-1 overflow-y-auto space-y-2">
@@ -1026,52 +1072,7 @@ const AirModule = ({ onBack, userRole }) => {
                     </div>
                 </div>
             </div>
-
-            {/* NEW Maintenance Section */}
-            <div className="lg:col-span-12">
-                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 className="font-bold text-slate-700 mb-4 flex items-center"><Wrench className="mr-2 text-amber-500"/> Tableau de Maintenance</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
-                        {Object.keys(MAINT_INTERVALS).map(key => {
-                            const Icon = MAINT_ICONS[key];
-                            return (
-                                <div key={key} className="flex flex-col p-4 border rounded-xl hover:shadow-lg transition-all bg-slate-50 relative overflow-hidden group">
-                                    <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity"><Icon size={40}/></div>
-                                    <div className="text-xs text-slate-500 uppercase font-bold mb-1">{MAINT_LABELS[key]}</div>
-                                    <div className={`text-xl font-black mb-2 ${getStatusColor(kpis.maintStatus[key].remaining)}`}>{kpis.maintStatus[key].remaining} h</div>
-                                    <div className="w-full bg-slate-200 rounded-full h-1.5 mb-4 overflow-hidden">
-                                        <div className={`h-full ${kpis.maintStatus[key].remaining < 200 ? 'bg-orange-500' : 'bg-emerald-500'}`} style={{width: `${Math.min(100, (kpis.maintStatus[key].remaining/MAINT_INTERVALS[key])*100)}%`}}></div>
-                                    </div>
-                                    <button onClick={() => setShowMaintPopup(key)} className="mt-auto w-full py-2 bg-white border border-slate-200 rounded text-xs font-bold hover:bg-slate-800 hover:text-white transition-colors">Faire Maint.</button>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            </div>
         </main>
-        
-        {/* Popup Maintenance */}
-        {showMaintPopup && (
-            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                <div className="bg-white p-6 rounded-xl w-full max-w-sm">
-                    <h3 className="font-bold mb-4">Valider : {MAINT_LABELS[showMaintPopup]}</h3>
-                    <form onSubmit={(e) => {
-                        e.preventDefault();
-                        const fd = new FormData(e.target);
-                        handleMaintenanceDone(showMaintPopup, { date: fd.get('date'), tech: fd.get('tech'), notes: fd.get('notes') });
-                    }}>
-                        <input name="date" type="date" required defaultValue={new Date().toISOString().split('T')[0]} className="w-full border p-2 rounded mb-2 text-sm" />
-                        <input name="tech" placeholder="Intervenant" required className="w-full border p-2 rounded mb-2 text-sm" />
-                        <textarea name="notes" placeholder="Notes" className="w-full border p-2 rounded mb-4 text-sm"></textarea>
-                        <div className="flex justify-end gap-2">
-                            <button type="button" onClick={() => setShowMaintPopup(null)} className="px-4 py-2 text-slate-500">Annuler</button>
-                            <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded font-bold">Confirmer</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        )}
         {notif && <div className="fixed bottom-6 right-6 px-6 py-4 bg-sky-600 text-white rounded-xl shadow-xl">{notif}</div>}
     </div>
   );
@@ -1138,7 +1139,7 @@ const SitesDashboard = ({ onBack, userRole }) => {
       if (!historyData[site]) return;
       try {
         for (const year of Object.keys(historyData[site])) {
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'site_history', `${site}_${year}`), { months: historyData[site][year] });
+            await setDoc(doc(db, 'site_history', `${site}_${year}`), { months: historyData[site][year] });
         }
         setNotif("Historique sauvegardé");
         setShowHistoryInput(false);
@@ -1172,7 +1173,6 @@ const SitesDashboard = ({ onBack, userRole }) => {
                 </div>
              </div>
              
-             {/* Simple Bar Chart */}
              <div className="h-48 flex items-end gap-2">
                  {['J','F','M','A','M','J','J','A','S','O','N','D'].map((m, i) => {
                      const val2024 = parseFloat(data2024[i]) || 0;
@@ -1255,12 +1255,12 @@ const SitesDashboard = ({ onBack, userRole }) => {
         )}
 
         <main className="p-8 max-w-7xl mx-auto">
-            {/* KPI HEADERS */}
+            {/* KEY METRICS */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center"><div className="p-3 rounded-full bg-blue-50 text-blue-600 mr-4"><Maximize2 size={20} /></div><div><div className="text-xs text-slate-500 uppercase font-bold">Surface</div><div className="text-xl font-black text-slate-800">{currentData.area.toLocaleString()} m²</div></div></div>
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center"><div className="p-3 rounded-full bg-blue-50 text-blue-600 mr-4"><Maximize2 size={20} /></div><div><div className="text-xs text-slate-500 uppercase font-bold">Surface Totale</div><div className="text-xl font-black text-slate-800">{currentData.area.toLocaleString()} m²</div></div></div>
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center"><div className="p-3 rounded-full bg-emerald-50 text-emerald-600 mr-4"><Zap size={20} /></div><div><div className="text-xs text-slate-500 uppercase font-bold">Source Principale</div><div className="text-xl font-black text-slate-800">{currentData.energyMix[0].name}</div></div></div>
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center"><div className="p-3 rounded-full bg-amber-50 text-amber-600 mr-4"><TrendingUp size={20} /></div><div><div className="text-xs text-slate-500 uppercase font-bold">Poste #1</div><div className="text-xl font-black text-slate-800">{currentData.elecUsage[0].name}</div></div></div>
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center"><div className="p-3 rounded-full bg-purple-50 text-purple-600 mr-4"><Leaf size={20} /></div><div><div className="text-xs text-slate-500 uppercase font-bold">Ratio 2023</div><div className="text-xl font-black text-slate-800">-- <span className="text-xs font-normal text-slate-400">kWh/m²</span></div></div></div>
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center"><div className="p-3 rounded-full bg-purple-50 text-purple-600 mr-4"><Leaf size={20} /></div><div><div className="text-xs text-slate-500 uppercase font-bold">Ratio Global</div><div className="text-xl font-black text-slate-800">-- <span className="text-xs font-normal text-slate-400">kWh/m²</span></div></div></div>
             </div>
 
             <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
@@ -1268,72 +1268,58 @@ const SitesDashboard = ({ onBack, userRole }) => {
                     <button key={key} onClick={() => setActiveSiteTab(key)} className={`px-4 py-2 rounded font-bold whitespace-nowrap ${activeSiteTab === key ? 'bg-emerald-600 text-white' : 'bg-white'}`}>{SITES_DATA[key].name}</button>
                 ))}
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white p-6 rounded-xl border border-slate-200 overflow-hidden relative">
-                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-emerald-500"></div>
-                    <h3 className="font-bold text-slate-500 uppercase mb-4">Fiche Technique</h3>
-                    <div className="text-3xl font-black text-slate-800 mb-2">{currentData.area.toLocaleString()} m²</div>
-                    <div className="grid grid-cols-2 gap-2 mb-4">
-                        <div className="bg-slate-50 p-2 rounded text-xs"><span className="block font-bold">Couvert</span>{currentData.covered} m²</div>
-                        <div className="bg-slate-50 p-2 rounded text-xs"><span className="block font-bold">Ouvert</span>{currentData.open} m²</div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="space-y-6">
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <h3 className="text-sm font-bold text-slate-400 uppercase mb-4 flex items-center"><Building2 size={16} className="mr-2" /> Structure</h3>
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-slate-50 p-3 rounded-lg border border-slate-100"><div className="text-xs text-slate-500 mb-1 font-bold">COUVERT</div><div className="font-bold text-slate-700 text-lg">{currentData.covered.toLocaleString()} m²</div></div>
+                                <div className="bg-slate-50 p-3 rounded-lg border border-slate-100"><div className="text-xs text-slate-500 mb-1 font-bold">OUVERT</div><div className="font-bold text-slate-700 text-lg">{currentData.open.toLocaleString()} m²</div></div>
+                            </div>
+                            <div className="text-xs text-slate-600 bg-blue-50 p-3 rounded-lg border border-blue-100"><span className="font-bold text-blue-800 block mb-1">Affectation :</span>{currentData.details}</div>
+                        </div>
                     </div>
-                    <div className="text-xs text-slate-500 border-t pt-4">{currentData.details}</div>
-                    
-                    <div className="mt-6 border-t pt-4">
-                        <h4 className="text-xs font-bold text-slate-400 uppercase mb-2">Température Moyenne Annuelle</h4>
-                        <div className="flex items-end gap-1 h-16">
-                            {avgTempHistory.map(d => (
-                                <div key={d.year} className="flex-1 bg-orange-100 rounded-t relative group" style={{height: `${(d.temp/30)*100}%`}}>
-                                    <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-1 rounded mb-1">{d.temp}°</div>
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <h3 className="text-sm font-bold text-slate-400 uppercase mb-4">Mix Énergétique</h3>
+                        <div className="flex h-4 rounded-full overflow-hidden mb-4">{currentData.energyMix.map((s, idx) => (<div key={idx} style={{ width: `${s.value}%`, backgroundColor: s.color }}></div>))}</div>
+                        <div className="space-y-2">{currentData.energyMix.map((s, idx) => (<div key={idx} className="flex justify-between text-xs font-bold text-slate-600"><span>{s.name}</span><span>{s.value}%</span></div>))}</div>
+                    </div>
+                </div>
+                <div className="lg:col-span-2 space-y-6">
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <h3 className="text-sm font-bold text-slate-400 uppercase mb-6 flex items-center"><PieChart size={16} className="mr-2" /> Répartition Consommation</h3>
+                        <div className="space-y-4">
+                            {currentData.elecUsage.map((usage, idx) => (
+                                <div key={idx} className="flex items-center justify-between group">
+                                    <div className="w-1/3 pr-2 flex items-center">
+                                        {usage.significant && <div className="w-2 h-2 rounded-full bg-red-500 mr-2 flex-shrink-0"></div>}
+                                        <span className="text-sm font-bold text-slate-800">{usage.name}</span>
+                                    </div>
+                                    <div className="flex-1 px-4"><div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden"><div className={`h-full rounded-full ${usage.significant ? 'bg-emerald-500' : 'bg-slate-300'}`} style={{ width: `${usage.value}%` }}></div></div></div>
+                                    <div className="w-24 text-right"><span className="font-bold text-slate-700 mr-2">{usage.value}%</span><span className="text-[9px] text-slate-400">{usage.kpi}</span></div>
                                 </div>
                             ))}
                         </div>
-                        <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-                            <span>2018</span><span>2024</span>
-                        </div>
                     </div>
-                </div>
-                
-                <div className="bg-white p-6 rounded-xl border border-slate-200 md:col-span-2">
-                    <h3 className="font-bold text-slate-500 uppercase mb-4">Répartition Énergétique</h3>
-                    <div className="space-y-3">
-                        {currentData.elecUsage.map((u, i) => (
-                            <div key={i} className="flex items-center justify-between">
-                                <div className="flex items-center w-1/3">
-                                    {u.significant && <div className="w-2 h-2 rounded-full bg-emerald-500 mr-2" title="Significatif"></div>}
-                                    <span className="text-sm font-bold text-slate-700">{u.name}</span>
-                                    {u.note && <span className="text-[10px] text-orange-500 ml-2 italic">{u.note}</span>}
-                                </div>
-                                <div className="flex items-center flex-1">
-                                    <div className="w-full bg-slate-100 h-2.5 rounded-full mr-2 overflow-hidden">
-                                        <div className={`h-full rounded-full ${u.name.includes('Gaz') ? 'bg-orange-500' : 'bg-blue-500'}`} style={{width: `${u.value}%`}}></div>
-                                    </div>
-                                    <span className="text-xs font-bold w-8 text-right">{u.value}%</span>
-                                    <span className="text-[9px] text-slate-400 w-16 text-right">{u.kpi}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    <HistoricalAnalysis />
                 </div>
             </div>
-            
-            {/* Visualisation Historique */}
-            <HistoricalAnalysis />
-        </main>
-        {notif && <div className="fixed bottom-6 right-6 px-6 py-4 bg-emerald-600 text-white rounded-xl shadow-xl">{notif}</div>}
+       </main>
+       {notif && <div className="fixed bottom-6 right-6 px-6 py-4 bg-emerald-600 text-white rounded-xl shadow-xl">{notif}</div>}
     </div>
   );
 };
 
 // ==================================================================================
-// 6. MODULE ADMINISTRATION (NEW - To fix missing component)
+// 6. MODULE ADMINISTRATION (Pour gérer les utilisateurs)
 // ==================================================================================
 const AdminPanel = ({ onBack }) => {
     const [users, setUsers] = useState([]);
     const [newUser, setNewUser] = useState({ username: '', password: '', role: 'EQUIPE_ENERGIE' });
     const [loading, setLoading] = useState(false);
-    const [confirmDelete, setConfirmDelete] = useState(null); // ID de l'utilisateur à confirmer
+    const [confirmDelete, setConfirmDelete] = useState(null);
 
     useEffect(() => {
         const q = query(getCollection('users'));
@@ -1363,7 +1349,7 @@ const AdminPanel = ({ onBack }) => {
             }
         } else {
             setConfirmDelete(id);
-            setTimeout(() => setConfirmDelete(null), 3000); // Annule après 3s
+            setTimeout(() => setConfirmDelete(null), 3000);
         }
     };
 
@@ -1430,39 +1416,32 @@ const AdminPanel = ({ onBack }) => {
 };
 
 // ==================================================================================
-// APPLICATION RACINE & NAVIGATION
+// APPLICATION RACINE
 // ==================================================================================
 
 const MainDashboard = ({ user, onNavigate, onLogout }) => {
   const canAccess = (module) => {
       if (user.role === 'ADMIN') return true;
-      if (user.role === 'EQUIPE_ENERGIE') return ['steg', 'air', 'sites'].includes(module);
       if (user.role === 'DIRECTION') return module === 'sites';
+      if (user.role === 'RESP_ENERGIE') return module === 'steg' || module === 'sites';
+      if (user.role === 'RESP_MAINTENANCE') return module === 'air';
+      // Fallback pour anciens rôles ou EQUIPE_ENERGIE
+      if (user.role === 'EQUIPE_ENERGIE') return ['steg', 'air', 'sites'].includes(module);
       return false;
   };
 
   return (
     <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-            <div className="absolute top-10 left-10 w-64 h-64 bg-blue-500 rounded-full blur-[100px]"></div>
-            <div className="absolute bottom-10 right-10 w-96 h-96 bg-emerald-500 rounded-full blur-[120px]"></div>
-        </div>
-
         <div className="z-10 w-full max-w-6xl flex justify-between items-center mb-12">
             <div>
                 <h1 className="text-4xl md:text-5xl font-black mb-2 tracking-tight">Système de Gestion Industriel</h1>
-                <p className="text-slate-400 text-lg">Bienvenue, <span className="text-white font-bold">{user.username}</span> 
-                <span className="ml-2 text-xs bg-white/10 px-2 py-1 rounded text-slate-300 border border-white/20">
-                    {user.role === 'ADMIN' ? 'ADMINISTRATEUR' : user.role === 'DIRECTION' ? 'DIRECTION' : 'ÉQUIPE ÉNERGIE'}
-                </span>
-                </p>
+                <p className="text-slate-400 text-lg">Bienvenue, <span className="text-white font-bold">{user.username}</span></p>
             </div>
             <div className="flex gap-4">
-                {user.role === 'ADMIN' && <button onClick={() => onNavigate('admin')} className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg font-bold flex items-center"><Shield className="mr-2"/> Admin</button>}
-                <button onClick={onLogout} className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-bold flex items-center"><LogOut className="mr-2"/> Déconnexion</button>
+                {user.role === 'ADMIN' && <button onClick={() => onNavigate('admin')} className="bg-slate-700 px-4 py-2 rounded font-bold flex items-center gap-2"><Shield size={16}/> Admin</button>}
+                <button onClick={onLogout} className="bg-red-600 px-4 py-2 rounded font-bold flex items-center gap-2"><LogOut size={16}/> Déconnexion</button>
             </div>
         </div>
-
         <div className="z-10 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl w-full">
             <button disabled={!canAccess('steg')} onClick={() => onNavigate('steg')} className={`group relative border-2 rounded-3xl p-6 transition-all text-left ${canAccess('steg') ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 hover:border-blue-500' : 'bg-slate-900 border-slate-800 opacity-50 cursor-not-allowed'}`}>
                 <div className={`absolute top-4 right-4 p-2 rounded-xl ${canAccess('steg') ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-800 text-slate-600'}`}><Zap size={24} /></div>
@@ -1491,23 +1470,21 @@ const App = () => {
   const [currentModule, setCurrentModule] = useState('dashboard');
   
   useEffect(() => {
-    const initAuth = async () => {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-            await signInAnonymously(auth);
-        }
-    };
-    initAuth();
+      const storedUser = localStorage.getItem('smen_user');
+      if (storedUser) {
+          setUser(JSON.parse(storedUser));
+      }
   }, []);
 
   const handleLogin = (userData) => {
       setUser(userData);
+      localStorage.setItem('smen_user', JSON.stringify(userData));
       setCurrentModule('dashboard');
   };
 
   const handleLogout = () => {
       setUser(null);
+      localStorage.removeItem('smen_user');
       setCurrentModule('dashboard');
   };
 
