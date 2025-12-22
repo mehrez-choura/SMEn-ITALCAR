@@ -12,14 +12,15 @@ import {
   Store, Droplets, Filter, Check, Image as ImageIcon
 } from 'lucide-react';
 
-// --- IMPORT CORRECT DEPUIS VOTRE FICHIER ---
-import { db } from './firebase'; // On utilise votre fichier firebase.js qui marche déjà
-import { collection } from "firebase/firestore";
+// --- INITIALISATION FIREBASE ---
+const firebaseConfig = JSON.parse(__firebase_config);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-// Helper simple pour garder votre code compatible
-const getCollection = (name) => collection(db, name); 
-// Note : J'ai retiré 'artifacts/appId...' car c'est spécifique à un autre outil.
-// On utilise directement vos collections : "steg_logs", "air_logs", etc.
+// Helper pour les chemins sécurisés
+const getCollection = (name) => collection(db, 'artifacts', appId, 'public', 'data', name);
 
 // --- COMPOSANT HORLOGE ---
 const DateTimeDisplay = () => {
@@ -126,7 +127,7 @@ const LoginScreen = ({ onLogin }) => {
                 {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center font-bold flex items-center justify-center"><AlertCircle size={16} className="mr-2"/>{error}</div>}
                 <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-600/20 transition-all">{loading ? "Connexion..." : "Se Connecter"}</button>
             </form>
-            <div className="mt-6 text-center text-xs text-slate-300">v7.0.3 Final • Production</div>
+            <div className="mt-6 text-center text-xs text-slate-300">v7.0.4 Final • Production</div>
         </div>
     </div>
   );
@@ -432,32 +433,47 @@ const StegModule = ({ onBack, userRole }) => {
                             </div>
                         </div>
 
-                        {/* Section 2: Relevé Physique */}
-                        <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
-                            <h4 className="text-lg font-bold text-slate-800 mb-4 flex items-center"><Eye className="mr-2 text-slate-500"/> Relevé Physique</h4>
-                            <ul className="space-y-4">
-                                <li className="flex items-start bg-white p-3 rounded-lg shadow-sm border border-slate-100">
-                                    <MousePointerClick className="text-blue-500 mr-3 mt-1 flex-shrink-0" size={20}/>
-                                    <div>
-                                        <span className="block font-bold text-slate-700 text-sm">Navigation Compteur</span>
-                                        <span className="text-xs text-slate-500">Utilisez le bouton de défilement (généralement bleu) pour faire défiler les écrans LCD du compteur STEG.</span>
+                        {/* Section 2: Relevé Physique Détaillé */}
+                        <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 overflow-y-auto max-h-[400px]">
+                            <h4 className="text-lg font-bold text-slate-800 mb-4 flex items-center"><Eye className="mr-2 text-slate-500"/> Relevé Physique Détaillé</h4>
+                            <div className="space-y-4">
+                                <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
+                                    <div className="flex items-center mb-2">
+                                        <MousePointerClick className="text-blue-500 mr-2" size={18}/>
+                                        <span className="font-bold text-slate-700 text-sm">1. Navigation Compteur</span>
                                     </div>
-                                </li>
-                                <li className="flex items-start bg-white p-3 rounded-lg shadow-sm border border-slate-100">
-                                    <FileText className="text-blue-500 mr-3 mt-1 flex-shrink-0" size={20}/>
-                                    <div>
-                                        <span className="block font-bold text-slate-700 text-sm">Index Énergie Active</span>
-                                        <span className="text-xs text-slate-500">Relevez la valeur en <strong>kWh</strong> (souvent code 1.8.0 ou cumul Jour/Nuit/Pointe).</span>
+                                    <p className="text-xs text-slate-500 leading-relaxed pl-6">
+                                        Appuyez sur le bouton de défilement (souvent bleu ou jaune) pour réveiller l'écran.
+                                        Continuez d'appuyer pour faire défiler les codes OBIS (les chiffres en haut à gauche type <code>1.8.0</code>).
+                                    </p>
+                                </div>
+
+                                <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
+                                    <div className="flex items-center mb-2">
+                                        <FileText className="text-emerald-500 mr-2" size={18}/>
+                                        <span className="font-bold text-slate-700 text-sm">2. Codes à Relever (MT)</span>
                                     </div>
-                                </li>
-                                <li className="flex items-start bg-white p-3 rounded-lg shadow-sm border border-slate-100">
-                                    <Zap className="text-orange-500 mr-3 mt-1 flex-shrink-0" size={20}/>
-                                    <div>
-                                        <span className="block font-bold text-slate-700 text-sm">Données Puissance (MT)</span>
-                                        <span className="text-xs text-slate-500">Notez la P.Max atteinte (kVA) et le Cos φ instantané ou moyen si affiché.</span>
+                                    <ul className="text-xs text-slate-500 space-y-1 pl-6 list-disc">
+                                        <li><strong>1.8.0</strong> : Cumul Énergie Active (kWh) - <em>Vital pour la facturation</em>.</li>
+                                        <li><strong>1.8.1</strong> : Index Jour (kWh).</li>
+                                        <li><strong>1.8.2</strong> : Index Pointe (kWh).</li>
+                                        <li><strong>1.8.3</strong> : Index Nuit/Soir (kWh).</li>
+                                        <li><strong>P.Max (1.6.0)</strong> : Puissance Maximale (kVA) du mois en cours.</li>
+                                    </ul>
+                                </div>
+
+                                <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
+                                    <div className="flex items-center mb-2">
+                                        <AlertTriangle className="text-orange-500 mr-2" size={18}/>
+                                        <span className="font-bold text-slate-700 text-sm">3. Points de Vigilance</span>
                                     </div>
-                                </li>
-                            </ul>
+                                    <ul className="text-xs text-slate-500 space-y-1 pl-6">
+                                        <li>• Vérifiez l'unité : <strong>kWh</strong> (Énergie) vs <strong>kVA</strong> (Puissance).</li>
+                                        <li>• Notez les chiffres <strong>avant la virgule</strong> pour éviter les erreurs d'échelle.</li>
+                                        <li>• Si le compteur affiche <code>Erreur</code> ou un triangle clignotant, signalez-le à la maintenance.</li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
