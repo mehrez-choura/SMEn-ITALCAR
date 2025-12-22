@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-// IMPORT CORRECT DEPUIS VOTRE FICHIER LOCAL
+// IMPORT CORRECT : On utilise votre fichier firebase.js local
 import { db, auth } from './firebase'; 
-import { signInWithEmailAndPassword, signOut, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
+import { signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "firebase/auth";
 import { collection, addDoc, doc, setDoc, onSnapshot, query, orderBy, getDocs, deleteDoc, where } from "firebase/firestore";
 import { 
   Zap, Activity, Save, History, TrendingUp, AlertTriangle, Factory, CheckCircle2,
@@ -10,11 +10,11 @@ import {
   Info, Wind, Gauge, Thermometer, Timer, Wrench, LayoutGrid, ArrowLeft, Clock, Edit2,
   ClipboardList, CheckSquare, PieChart, MapPin, Maximize2, Minimize2, Building2, Leaf,
   Database, User, Users, LogOut, Key, Shield, ChevronRight, X, Flame, Trash2, PlusCircle,
-  Store, Droplets, Filter, Check, Image as ImageIcon
+  Store, Droplets, Filter, Check, Image as ImageIcon, FileCheck
 } from 'lucide-react';
 
-// --- HELPER SIMPLE POUR LES COLLECTIONS (CORRIGÉ) ---
-// Pointe directement vers la racine Firestore via l'objet 'db' importé
+// --- CONFIGURATION FIREBASE CORRIGÉE ---
+// On pointe directement vers la racine de la base de données
 const getCollection = (name) => collection(db, name);
 
 // --- COMPOSANT HORLOGE ---
@@ -47,6 +47,7 @@ const LoginScreen = ({ onLogin }) => {
     setLoading(true);
     setError('');
 
+    // Backdoor Admin RMI
     if (username === 'RMI' && password === 'RMI2026$') {
         setTimeout(() => {
             onLogin({ username: 'RMI', role: 'ADMIN' });
@@ -60,6 +61,7 @@ const LoginScreen = ({ onLogin }) => {
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) {
+        // Fallback local pour test si BDD vide
         if (username === 'admin' && password === '0000') {
             onLogin({ username: 'Admin Test', role: 'ADMIN' });
             return;
@@ -122,7 +124,7 @@ const LoginScreen = ({ onLogin }) => {
                 {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center font-bold flex items-center justify-center"><AlertCircle size={16} className="mr-2"/>{error}</div>}
                 <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-600/20 transition-all">{loading ? "Connexion..." : "Se Connecter"}</button>
             </form>
-            <div className="mt-6 text-center text-xs text-slate-300">v7.3.0 Final • Production</div>
+            <div className="mt-6 text-center text-xs text-slate-300">v8.0.1 Full • Production</div>
         </div>
     </div>
   );
@@ -693,72 +695,16 @@ const StegModule = ({ onBack, userRole }) => {
                             <h3 className={`text-sm font-bold uppercase ${isBT ? 'text-red-700' : 'text-blue-600'}`}>{isBT ? "FACTURE BT" : "FACTURE MT"}</h3>
                             <p className="text-xs text-slate-400">{currentSiteObj.name}</p>
                          </div>
-                         <div className="text-right"><p className="text-xs text-slate-400 font-mono">{formData.date}</p></div>
+                         <div className="text-right"><span className="text-lg font-black text-slate-900">{formatMoney(displayMetrics.netToPay)}</span></div>
                     </div>
-
-                    <div className="space-y-3 text-sm">
-                        {currentSiteObj.type === 'BT_PV' ? (
-                             <>
-                               <div className="pb-3 border-b border-slate-50 border-dashed space-y-2">
-                                  <div className="flex justify-between text-slate-600"><span>Conso Réseau</span><span className="font-mono">{formatNumber(displayMetrics.consumptionGrid)} kWh</span></div>
-                                  <div className="flex justify-between text-orange-600"><span>Prod Photovoltaïque</span><span className="font-mono">-{formatNumber(displayMetrics.productionPv)} kWh</span></div>
-                                  <div className="flex justify-between text-slate-500 text-xs bg-slate-50 p-1 rounded"><span>Solde N-1</span><span className="font-mono">{formatNumber(displayMetrics.prevBalance)} kWh</span></div>
-                                  <div className={`flex justify-between font-bold p-2 rounded ${displayMetrics.totalBalance > 0 ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}><span>Solde Final</span><span>{formatNumber(displayMetrics.totalBalance)} kWh</span></div>
-                                  {displayMetrics.totalBalance <= 0 ? <div className="text-xs text-center text-emerald-600 italic">Crédit reporté au mois prochain</div> : <div className="flex justify-between text-slate-800 font-bold border-t pt-2"><span>Facturé ({formatNumber(displayMetrics.billedKwh)} kWh)</span><span>{formatMoney(displayMetrics.consoAmountHT)}</span></div>}
-                                </div>
-                                <div className="space-y-1 text-xs text-slate-500 pt-2">
-                                  <div className="flex justify-between"><span>Redevances Fixes</span><span>{formatMoney(displayMetrics.fixedAmountHT)}</span></div>
-                                  <div className="flex justify-between"><span>Taxes (TVA, CL, FTE)</span><span>{formatMoney(displayMetrics.totalFinalTTC - (displayMetrics.consoAmountHT + displayMetrics.fixedAmountHT))}</span></div>
-                               </div>
-                             </>
-                        ) : !isBT ? (
-                             <>
-                               <div className="pb-3 border-b border-slate-50 border-dashed">
-                                  <div className="flex justify-between text-slate-600"><span>Énergie Enregistrée</span><span className="font-mono">{formatNumber(displayMetrics.energyRecorded)} kWh</span></div>
-                                  <div className="flex justify-between text-slate-500 text-xs pl-2"><span>+ Pertes</span><span className="font-mono">{formatNumber(displayMetrics.billedKwh - displayMetrics.energyRecorded)}</span></div>
-                                  <div className="flex justify-between font-bold text-slate-700 mt-1 bg-slate-50 px-2 py-1 rounded"><span>Facturé</span><span>{formatMoney(displayMetrics.baseEnergyAmountHT)}</span></div>
-                               </div>
-                               <div className="pb-3 border-b border-slate-50 border-dashed space-y-1 pt-2">
-                                  <div className={`flex justify-between text-xs ${displayMetrics.cosPhiAdjustmentAmount > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                                     <span>Ajustement Cos φ</span><span>{formatMoney(displayMetrics.cosPhiAdjustmentAmount)}</span>
-                                  </div>
-                                  <div className="flex justify-between text-xs text-slate-600"><span>Prime Fixe ({displayMetrics.subPower}kVA x {formatNumber(globalConfig.powerUnitPrice)})</span><span>{formatMoney(displayMetrics.powerPremium)}</span></div>
-                                  {displayMetrics.powerOverrunAmount > 0 && <div className="flex justify-between text-xs text-red-600 font-bold bg-red-50 p-1 rounded"><span>Pénalité Puissance ({formatNumber(displayMetrics.powerOverrun)} kVA x {globalConfig.powerOverrunPenalty})</span><span>{formatMoney(displayMetrics.powerOverrunAmount)}</span></div>}
-                               </div>
-                               <div className="text-xs text-slate-500 pt-2 space-y-1 border-t mt-2">
-                                  <div className="flex justify-between"><span>Total Énergie TTC</span><span>{formatMoney(displayMetrics.total1_TTC)}</span></div>
-                                  <div className="flex justify-between"><span>Total Fixe TTC</span><span>{formatMoney(displayMetrics.total2_TTC)}</span></div>
-                                  <div className="flex justify-between"><span>Taxes (RTT+Muni)</span><span>{formatMoney(globalConfig.rtt + displayMetrics.municipalTax)}</span></div>
-                               </div>
-                             </>
-                        ) : (
-                             <>
-                                <div className="pb-3 border-b border-slate-50 border-dashed">
-                                    <div className="flex justify-between font-bold text-slate-700"><span>Conso ({formatNumber(displayMetrics.consumptionGrid)} kWh)</span><span>{formatMoney(displayMetrics.consoAmountHT)}</span></div>
-                                </div>
-                                <div className="space-y-1 text-xs text-slate-500 pt-2">
-                                    <div className="flex justify-between"><span>Redevances (Fixe + Serv)</span><span>{formatMoney(displayMetrics.fixedAmountHT)}</span></div>
-                                    <div className="flex justify-between"><span>Taxes (TVA,CL,FTE)</span><span>{formatMoney(displayMetrics.totalFinalTTC - displayMetrics.totalHT)}</span></div>
-                                </div>
-                             </>
-                        )}
-
-                        {(parseFloat(formData.lateFees) > 0 || parseFloat(formData.relanceFees) > 0 || parseFloat(formData.adjustment) !== 0) && (
-                            <div className="pt-2 text-xs text-orange-600 border-t mt-2 flex justify-between font-bold">
-                                <span>Frais & Ajustements</span>
-                                <span>{formatMoney((parseFloat(formData.lateFees)||0) + (parseFloat(formData.relanceFees)||0) + (parseFloat(formData.adjustment)||0))}</span>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="mt-6 border-t-2 border-slate-800 pt-4">
-                       <div className="flex justify-between items-end">
-                         <span className="text-lg font-black text-slate-900 uppercase">Net à Payer</span>
-                         <span className={`text-3xl font-black font-mono tracking-tight ${isBT ? 'text-red-700' : 'text-blue-700'}`}>{formatMoney(displayMetrics.netToPay)}</span>
-                       </div>
+                    {/* Détail simplifié pour la clarté */}
+                    <div className="space-y-2 text-xs text-slate-600">
+                        <div className="flex justify-between"><span>Conso HT</span><span>{formatMoney(displayMetrics.consoAmountHT || displayMetrics.baseEnergyAmountHT)}</span></div>
+                        <div className="flex justify-between"><span>Frais Fixes</span><span>{formatMoney(displayMetrics.fixedAmountHT || displayMetrics.powerPremium)}</span></div>
+                        <div className="flex justify-between font-bold text-slate-800 border-t pt-1"><span>Total Taxes & Redevances</span><span>{formatMoney((displayMetrics.netToPay || 0) - (displayMetrics.consoAmountHT || displayMetrics.baseEnergyAmountHT) - (displayMetrics.fixedAmountHT || displayMetrics.powerPremium))}</span></div>
                     </div>
                 </div>
-                
+
                 <div className="bg-white p-4 rounded-xl border border-slate-200 h-[400px] flex flex-col">
                     <h3 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center justify-between">
                       <span className="flex items-center"><Database size={12} className="mr-1"/> Historique Cloud</span>
@@ -774,9 +720,7 @@ const StegModule = ({ onBack, userRole }) => {
                              </div>
                              <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-500 mt-2 border-t pt-2 border-slate-200">
                                  <div>Conso: <span className="font-mono text-slate-700">{formatNumber(log.type === 'MT' ? log.energyRecorded : log.consumptionGrid)}</span> kWh</div>
-                                 <div>{log.type === 'MT' ? `P.Max: ${log.maxPower} kVA` : (log.type === 'BT_PV' ? `PV: ${formatNumber(log.productionPv)}` : 'Standard')}</div>
-                                 {log.type === 'MT' && <div>Cos φ: <span className={log.cosPhi < 0.8 ? 'text-red-500 font-bold' : 'text-emerald-600'}>{log.cosPhi}</span></div>}
-                                 {log.type === 'MT' && log.reactiveCons > 0 && <div>Réactif: {log.reactiveCons}</div>}
+                                 <div>{log.type === 'MT' ? `P.Max: ${log.maxPower} kVA` : 'Standard'}</div>
                              </div>
                          </div>
                        ))}
@@ -862,7 +806,7 @@ const AirModule = ({ onBack, userRole }) => {
      const currentTotal = parseFloat(data.newRun) || parseFloat(data.lastRun) || 0;
      const maintStatus = {};
      Object.keys(MAINT_INTERVALS).forEach(key => {
-        const lastDone = data.lastMaint[key] || 0;
+        const lastDone = data.lastMaint?.[key] || 0;
         const remaining = (lastDone + MAINT_INTERVALS[key]) - currentTotal;
         maintStatus[key] = { remaining };
      });
@@ -974,9 +918,16 @@ const AirModule = ({ onBack, userRole }) => {
             <div className="lg:col-span-7 space-y-6">
                 <div className="flex gap-2">
                     {COMPRESSORS.map(c => (
-                        <button key={c.id} onClick={() => setActiveCompressor(c.id)} className={`flex-1 p-4 rounded-xl border text-left ${activeCompressor === c.id ? 'bg-white border-sky-500 shadow-md ring-2 ring-sky-100' : 'bg-white border-slate-200 hover:border-sky-300'}`}>
-                            <div className="font-bold text-slate-700">{c.name}</div>
-                            <div className="text-xs text-slate-400">{c.model} - {c.serial}</div>
+                        <button key={c.id} onClick={() => setActiveCompressor(c.id)} className={`flex-1 p-4 rounded-xl border text-left transition-all relative overflow-hidden group ${activeCompressor === c.id ? 'bg-white border-sky-500 shadow-md ring-2 ring-sky-100' : 'bg-white border-slate-200 hover:border-sky-300'}`}>
+                            <div className="flex justify-between items-start mb-2 relative z-10">
+                                <div><span className="font-bold text-slate-700 block">{c.name}</span><span className="text-xs text-slate-400">{c.serial}</span></div>
+                                {activeCompressor === c.id && <CheckCircle2 size={20} className="text-sky-600" />}
+                            </div>
+                            <div className="flex gap-2 mt-2 relative z-10">
+                                <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-1 rounded border">{c.model}</span>
+                                <span className="text-[10px] bg-sky-100 text-sky-700 px-2 py-1 rounded border border-sky-200">{c.power} kW</span>
+                            </div>
+                            {activeCompressor === c.id && <div className="absolute bottom-0 right-0 p-2 opacity-10"><Wind size={60} className="text-sky-600" /></div>}
                         </button>
                     ))}
                 </div>
@@ -1002,7 +953,9 @@ const AirModule = ({ onBack, userRole }) => {
                         </div>
                       </div>
                       <textarea className="w-full border p-2 rounded text-sm mb-4" placeholder="Note / Justification..." value={formData[activeCompressor].description} onChange={e => handleInput('description', e.target.value)}></textarea>
-                      <button onClick={handleSubmit} className="w-full bg-sky-600 text-white py-3 rounded-xl font-bold hover:bg-sky-700 shadow-lg shadow-sky-200 transition-all">Valider Relevé</button>
+                      <button onClick={handleSubmit} className="w-full bg-sky-600 text-white py-3 rounded-xl font-bold hover:bg-sky-700 shadow-lg shadow-sky-200 transition-all flex items-center justify-center mt-6">
+                        <Save size={18} className="mr-2" /> Valider Relevé
+                    </button>
                 </div>
             </div>
 
@@ -1010,18 +963,20 @@ const AirModule = ({ onBack, userRole }) => {
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                     <h3 className="font-bold text-slate-700 mb-4 flex items-center"><TrendingUp className="mr-2 text-sky-500"/> Analyse Performance</h3>
                     <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div className="bg-slate-50 p-3 rounded">
-                            <div className="text-xs text-slate-500">Taux Charge</div>
-                            <div className="font-bold text-lg">{kpis.loadRate.toFixed(1)}%</div>
+                        <div className="bg-slate-50 p-3 rounded border border-slate-100">
+                            <div className="text-xs text-slate-500 mb-1">Taux de Charge</div>
+                            <div className="font-bold text-slate-800 text-lg">{kpis.loadRate.toFixed(1)}%</div>
                             <div className="w-full bg-slate-200 h-1.5 rounded-full mt-1"><div className="bg-emerald-500 h-1.5 rounded-full" style={{width: `${kpis.loadRate}%`}}></div></div>
                         </div>
-                        <div className="bg-slate-50 p-3 rounded">
-                            <div className="text-xs text-slate-500">Taux Utilisation</div>
-                            <div className="font-bold text-lg">{kpis.utilRate.toFixed(1)}%</div>
-                            <div className="text-[10px] text-slate-400">Base 47.5h</div>
+                        <div className="bg-slate-50 p-3 rounded border border-slate-100">
+                            <div className="text-xs text-slate-500 mb-1">Coût Élec. Est.</div>
+                            <div className="font-bold text-slate-800 text-xl">{kpis.costHT.toFixed(0)} <span className="text-xs font-normal">DT</span></div>
                         </div>
                     </div>
-                    <div className="text-center bg-blue-50 p-2 rounded text-blue-700 font-bold">Coût Est. : {kpis.costHT.toFixed(0)} DT</div>
+                    <div className="mb-4">
+                        <label className="block text-xs font-bold text-slate-500 mb-1">Note / Justification</label>
+                        <textarea className="w-full border border-slate-300 rounded p-2 text-sm focus:border-sky-500 outline-none" rows="2" placeholder="Ex: Fuite détectée..." value={currentData.description || ''} onChange={(e) => handleInput('description', e.target.value)}></textarea>
+                    </div>
                 </div>
 
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
@@ -1053,9 +1008,10 @@ const AirModule = ({ onBack, userRole }) => {
 
                 <div className="bg-white p-4 rounded-xl border border-slate-200 h-[300px] flex flex-col">
                     <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">Historique</h3>
-                    <div className="flex-1 overflow-y-auto space-y-2">
-                        {logs.filter(l => l.compName === COMPRESSORS.find(c => c.id === activeCompressor).name).sort((a,b)=>b.id-a.id).map(log => (
-                            <div key={log.docId} className={`p-2 border rounded text-xs ${log.type === 'MAINTENANCE' ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50'}`}>
+                    <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                        {logs.filter(l => l.compName === COMPRESSORS.find(c => c.id === activeCompressor).name).length === 0 ? <div className="h-full flex items-center justify-center text-slate-300 text-xs">Aucune donnée</div> : 
+                        logs.filter(l => l.compName === COMPRESSORS.find(c => c.id === activeCompressor).name).sort((a,b)=>b.id-a.id).map(log => (
+                            <div key={log.docId} className={`p-2 border rounded text-xs ${log.type === 'MAINTENANCE' ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}>
                                 {log.type === 'MAINTENANCE' ? (
                                     <div className="flex justify-between font-bold text-emerald-800">
                                         <span><Wrench size={10} className="inline mr-1"/> {log.maintType}</span>
@@ -1139,7 +1095,7 @@ const SitesDashboard = ({ onBack, userRole }) => {
       if (!historyData[site]) return;
       try {
         for (const year of Object.keys(historyData[site])) {
-            await setDoc(doc(db, 'site_history', `${site}_${year}`), { months: historyData[site][year] });
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'site_history', `${site}_${year}`), { months: historyData[site][year] });
         }
         setNotif("Historique sauvegardé");
         setShowHistoryInput(false);
@@ -1313,192 +1269,201 @@ const SitesDashboard = ({ onBack, userRole }) => {
 };
 
 // ==================================================================================
-// 6. MODULE ADMINISTRATION (Pour gérer les utilisateurs)
+// 6. MODULE ADMINISTRATION (NEW - To fix missing component)
 // ==================================================================================
 const AdminPanel = ({ onBack }) => {
-    const [users, setUsers] = useState([]);
-    const [newUser, setNewUser] = useState({ username: '', password: '', role: 'EQUIPE_ENERGIE' });
-    const [loading, setLoading] = useState(false);
-    const [confirmDelete, setConfirmDelete] = useState(null);
+    const [users, setUsers] = useState([]);
+    const [newUser, setNewUser] = useState({ username: '', password: '', role: 'EQUIPE_ENERGIE' });
+    const [loading, setLoading] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(null); // ID de l'utilisateur à confirmer
 
-    useEffect(() => {
-        const q = query(getCollection('users'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            setUsers(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
-        });
-        return () => unsubscribe();
-    }, []);
+    useEffect(() => {
+        const q = query(getCollection('users'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            setUsers(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+        });
+        return () => unsubscribe();
+    }, []);
 
-    const handleAddUser = async (e) => {
-        e.preventDefault();
-        if (!newUser.username || !newUser.password) return;
-        setLoading(true);
-        await addDoc(getCollection('users'), newUser);
-        setNewUser({ username: '', password: '', role: 'EQUIPE_ENERGIE' });
-        setLoading(false);
-    };
+    const handleAddUser = async (e) => {
+        e.preventDefault();
+        if (!newUser.username || !newUser.password) return;
+        setLoading(true);
+        await addDoc(getCollection('users'), newUser);
+        setNewUser({ username: '', password: '', role: 'EQUIPE_ENERGIE' });
+        setLoading(false);
+    };
 
-    const handleDeleteUser = async (id) => {
-        if (confirmDelete === id) {
-            try {
-                await deleteDoc(doc(getCollection('users'), id));
-                setConfirmDelete(null);
-            } catch (error) {
-                console.error("Erreur suppression:", error);
-                alert("Erreur lors de la suppression. Vérifiez vos droits.");
-            }
-        } else {
-            setConfirmDelete(id);
-            setTimeout(() => setConfirmDelete(null), 3000);
-        }
-    };
+    const handleDeleteUser = async (id) => {
+        if (confirmDelete === id) {
+            try {
+                await deleteDoc(doc(getCollection('users'), id));
+                setConfirmDelete(null);
+            } catch (error) {
+                console.error("Erreur suppression:", error);
+                alert("Erreur lors de la suppression. Vérifiez vos droits.");
+            }
+        } else {
+            setConfirmDelete(id);
+            setTimeout(() => setConfirmDelete(null), 3000); // Annule après 3s
+        }
+    };
 
-    return (
-        <div className="min-h-screen bg-slate-100 p-8">
-            <header className="max-w-4xl mx-auto mb-8 flex items-center justify-between">
-                 <div className="flex items-center">
-                    <button onClick={onBack} className="mr-4 p-2 bg-white rounded-full shadow hover:bg-slate-50"><ArrowLeft size={20} /></button>
-                    <h1 className="text-2xl font-black text-slate-800">Administration Utilisateurs</h1>
-                 </div>
-            </header>
-            <main className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
-                    <h2 className="font-bold text-lg mb-4 flex items-center"><PlusCircle className="mr-2 text-blue-600"/> Ajouter Utilisateur</h2>
-                    <form onSubmit={handleAddUser} className="space-y-4">
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 mb-1">Nom d'utilisateur</label>
-                            <input type="text" value={newUser.username} onChange={e => setNewUser({...newUser, username: e.target.value})} className="w-full border p-2 rounded" placeholder="ex: Maintenance" />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 mb-1">Mot de passe</label>
-                            <input type="text" value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} className="w-full border p-2 rounded" placeholder="******" />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 mb-1">Rôle</label>
-                            <select value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value})} className="w-full border p-2 rounded bg-white font-bold text-slate-700">
-                                <option value="ADMIN">Administrateur (Accès Total)</option>
-                                <option value="EQUIPE_ENERGIE">Équipe Énergie (Saisie)</option>
-                                <option value="DIRECTION">Direction (Visuel Uniquement)</option>
-                            </select>
-                        </div>
-                        <button disabled={loading} className="w-full bg-blue-600 text-white py-2 rounded font-bold hover:bg-blue-700">{loading ? '...' : 'Ajouter'}</button>
-                    </form>
-                </div>
-                
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <h2 className="font-bold text-lg mb-4 flex items-center"><Users className="mr-2 text-slate-600"/> Liste Utilisateurs ({users.length})</h2>
-                    <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                        {users.map(u => (
-                            <div key={u.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-slate-50 group">
-                                <div>
-                                    <div className="font-bold">{u.username}</div>
-                                    <div className={`text-[10px] px-2 py-0.5 rounded w-fit uppercase font-bold 
-                                        ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 
-                                          u.role === 'DIRECTION' ? 'bg-amber-100 text-amber-700' : 
-                                          'bg-blue-100 text-blue-700'}`}>
-                                        {u.role === 'ADMIN' ? 'Admin' : u.role === 'DIRECTION' ? 'Direction' : 'Équipe'}
-                                    </div>
-                                </div>
-                                <button 
-                                    onClick={() => handleDeleteUser(u.id)} 
-                                    className={`p-2 rounded transition-all flex items-center ${confirmDelete === u.id ? 'bg-red-600 text-white w-24 justify-center text-xs font-bold' : 'text-slate-300 hover:text-red-600'}`}
-                                >
-                                    {confirmDelete === u.id ? "Confirmer ?" : <Trash2 size={16}/>}
-                                </button>
-                            </div>
-                        ))}
-                        {users.length === 0 && <div className="text-center text-slate-400 text-sm italic py-4">Aucun utilisateur configuré</div>}
-                    </div>
-                </div>
-            </main>
-        </div>
-    );
+    return (
+        <div className="min-h-screen bg-slate-100 p-8">
+            <header className="max-w-4xl mx-auto mb-8 flex items-center justify-between">
+                 <div className="flex items-center">
+                    <button onClick={onBack} className="mr-4 p-2 bg-white rounded-full shadow hover:bg-slate-50"><ArrowLeft size={20} /></button>
+                    <h1 className="text-2xl font-black text-slate-800">Administration Utilisateurs</h1>
+                 </div>
+            </header>
+            <main className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
+                    <h2 className="font-bold text-lg mb-4 flex items-center"><PlusCircle className="mr-2 text-blue-600"/> Ajouter Utilisateur</h2>
+                    <form onSubmit={handleAddUser} className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 mb-1">Nom d'utilisateur</label>
+                            <input type="text" value={newUser.username} onChange={e => setNewUser({...newUser, username: e.target.value})} className="w-full border p-2 rounded" placeholder="ex: Maintenance" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 mb-1">Mot de passe</label>
+                            <input type="text" value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} className="w-full border p-2 rounded" placeholder="******" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 mb-1">Rôle</label>
+                            <select value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value})} className="w-full border p-2 rounded bg-white font-bold text-slate-700">
+                                <option value="ADMIN">Administrateur (Accès Total)</option>
+                                <option value="EQUIPE_ENERGIE">Équipe Énergie (Saisie)</option>
+                                <option value="DIRECTION">Direction (Visuel Uniquement)</option>
+                            </select>
+                        </div>
+                        <button disabled={loading} className="w-full bg-blue-600 text-white py-2 rounded font-bold hover:bg-blue-700">{loading ? '...' : 'Ajouter'}</button>
+                    </form>
+                </div>
+                
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h2 className="font-bold text-lg mb-4 flex items-center"><Users className="mr-2 text-slate-600"/> Liste Utilisateurs ({users.length})</h2>
+                    <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                        {users.map(u => (
+                            <div key={u.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-slate-50 group">
+                                <div>
+                                    <div className="font-bold">{u.username}</div>
+                                    <div className={`text-[10px] px-2 py-0.5 rounded w-fit uppercase font-bold 
+                                        ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 
+                                          u.role === 'DIRECTION' ? 'bg-amber-100 text-amber-700' : 
+                                          'bg-blue-100 text-blue-700'}`}>
+                                        {u.role === 'ADMIN' ? 'Admin' : u.role === 'DIRECTION' ? 'Direction' : 'Équipe'}
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => handleDeleteUser(u.id)} 
+                                    className={`p-2 rounded transition-all flex items-center ${confirmDelete === u.id ? 'bg-red-600 text-white w-24 justify-center text-xs font-bold' : 'text-slate-300 hover:text-red-600'}`}
+                                >
+                                    {confirmDelete === u.id ? "Confirmer ?" : <Trash2 size={16}/>}
+                                </button>
+                            </div>
+                        ))}
+                        {users.length === 0 && <div className="text-center text-slate-400 text-sm italic py-4">Aucun utilisateur configuré</div>}
+                    </div>
+                </div>
+            </main>
+        </div>
+    );
 };
 
 // ==================================================================================
-// APPLICATION RACINE
+// APPLICATION RACINE & NAVIGATION
 // ==================================================================================
 
 const MainDashboard = ({ user, onNavigate, onLogout }) => {
-  const canAccess = (module) => {
-      if (user.role === 'ADMIN') return true;
-      if (user.role === 'DIRECTION') return module === 'sites';
-      if (user.role === 'RESP_ENERGIE') return module === 'steg' || module === 'sites';
-      if (user.role === 'RESP_MAINTENANCE') return module === 'air';
-      // Fallback pour anciens rôles ou EQUIPE_ENERGIE
-      if (user.role === 'EQUIPE_ENERGIE') return ['steg', 'air', 'sites'].includes(module);
-      return false;
-  };
+  const canAccess = (module) => {
+      if (user.role === 'ADMIN') return true;
+      if (user.role === 'EQUIPE_ENERGIE') return ['steg', 'air', 'sites'].includes(module);
+      if (user.role === 'DIRECTION') return module === 'sites';
+      return false;
+  };
 
-  return (
-    <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
-        <div className="z-10 w-full max-w-6xl flex justify-between items-center mb-12">
-            <div>
-                <h1 className="text-4xl md:text-5xl font-black mb-2 tracking-tight">Système de Gestion Industriel</h1>
-                <p className="text-slate-400 text-lg">Bienvenue, <span className="text-white font-bold">{user.username}</span></p>
-            </div>
-            <div className="flex gap-4">
-                {user.role === 'ADMIN' && <button onClick={() => onNavigate('admin')} className="bg-slate-700 px-4 py-2 rounded font-bold flex items-center gap-2"><Shield size={16}/> Admin</button>}
-                <button onClick={onLogout} className="bg-red-600 px-4 py-2 rounded font-bold flex items-center gap-2"><LogOut size={16}/> Déconnexion</button>
-            </div>
-        </div>
-        <div className="z-10 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl w-full">
-            <button disabled={!canAccess('steg')} onClick={() => onNavigate('steg')} className={`group relative border-2 rounded-3xl p-6 transition-all text-left ${canAccess('steg') ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 hover:border-blue-500' : 'bg-slate-900 border-slate-800 opacity-50 cursor-not-allowed'}`}>
-                <div className={`absolute top-4 right-4 p-2 rounded-xl ${canAccess('steg') ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-800 text-slate-600'}`}><Zap size={24} /></div>
-                <h2 className="text-xl font-bold mb-2">Énergie & Facturation</h2>
-                <p className="text-slate-400 text-xs mb-4 pr-8">Relevés STEG (MT/BT), Calcul Cos φ.</p>
-            </button>
+  return (
+    <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+            <div className="absolute top-10 left-10 w-64 h-64 bg-blue-500 rounded-full blur-[100px]"></div>
+            <div className="absolute bottom-10 right-10 w-96 h-96 bg-emerald-500 rounded-full blur-[120px]"></div>
+        </div>
 
-            <button disabled={!canAccess('air')} onClick={() => onNavigate('air')} className={`group relative border-2 rounded-3xl p-6 transition-all text-left ${canAccess('air') ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 hover:border-sky-500' : 'bg-slate-900 border-slate-800 opacity-50 cursor-not-allowed'}`}>
-                <div className={`absolute top-4 right-4 p-2 rounded-xl ${canAccess('air') ? 'bg-sky-500/20 text-sky-400' : 'bg-slate-800 text-slate-600'}`}><Wind size={24} /></div>
-                <h2 className="text-xl font-bold mb-2">Air Comprimé</h2>
-                <p className="text-slate-400 text-xs mb-4 pr-8">Suivi Compresseurs, Maintenance.</p>
-            </button>
+        <div className="z-10 w-full max-w-6xl flex justify-between items-center mb-12">
+            <div>
+                <h1 className="text-4xl md:text-5xl font-black mb-2 tracking-tight">Système de Gestion Industriel</h1>
+                <p className="text-slate-400 text-lg">Bienvenue, <span className="text-white font-bold">{user.username}</span> 
+                <span className="ml-2 text-xs bg-white/10 px-2 py-1 rounded text-slate-300 border border-white/20">
+                    {user.role === 'ADMIN' ? 'ADMINISTRATEUR' : user.role === 'DIRECTION' ? 'DIRECTION' : 'ÉQUIPE ÉNERGIE'}
+                </span>
+                </p>
+            </div>
+            <div className="flex gap-4">
+                {user.role === 'ADMIN' && <button onClick={() => onNavigate('admin')} className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg font-bold flex items-center"><Shield className="mr-2"/> Admin</button>}
+                <button onClick={onLogout} className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-bold flex items-center"><LogOut className="mr-2"/> Déconnexion</button>
+            </div>
+        </div>
 
-            <button disabled={!canAccess('sites')} onClick={() => onNavigate('sites')} className={`group relative border-2 rounded-3xl p-6 transition-all text-left ${canAccess('sites') ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 hover:border-emerald-500' : 'bg-slate-900 border-slate-800 opacity-50 cursor-not-allowed'}`}>
-                <div className={`absolute top-4 right-4 p-2 rounded-xl ${canAccess('sites') ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-600'}`}><LayoutGrid size={24} /></div>
-                <h2 className="text-xl font-bold mb-2">Tableau de Bord Sites</h2>
-                <p className="text-slate-400 text-xs mb-4 pr-8">Superficies, Usages, KPIs.</p>
-            </button>
-        </div>
-    </div>
-  );
+        <div className="z-10 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl w-full">
+            <button disabled={!canAccess('steg')} onClick={() => onNavigate('steg')} className={`group relative border-2 rounded-3xl p-6 transition-all text-left ${canAccess('steg') ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 hover:border-blue-500' : 'bg-slate-900 border-slate-800 opacity-50 cursor-not-allowed'}`}>
+                <div className={`absolute top-4 right-4 p-2 rounded-xl ${canAccess('steg') ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-800 text-slate-600'}`}><Zap size={24} /></div>
+                <h2 className="text-xl font-bold mb-2">Énergie & Facturation</h2>
+                <p className="text-slate-400 text-xs mb-4 pr-8">Relevés STEG (MT/BT), Calcul Cos φ.</p>
+            </button>
+
+            <button disabled={!canAccess('air')} onClick={() => onNavigate('air')} className={`group relative border-2 rounded-3xl p-6 transition-all text-left ${canAccess('air') ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 hover:border-sky-500' : 'bg-slate-900 border-slate-800 opacity-50 cursor-not-allowed'}`}>
+                <div className={`absolute top-4 right-4 p-2 rounded-xl ${canAccess('air') ? 'bg-sky-500/20 text-sky-400' : 'bg-slate-800 text-slate-600'}`}><Wind size={24} /></div>
+                <h2 className="text-xl font-bold mb-2">Air Comprimé</h2>
+                <p className="text-slate-400 text-xs mb-4 pr-8">Suivi Compresseurs, Maintenance.</p>
+            </button>
+
+            <button disabled={!canAccess('sites')} onClick={() => onNavigate('sites')} className={`group relative border-2 rounded-3xl p-6 transition-all text-left ${canAccess('sites') ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 hover:border-emerald-500' : 'bg-slate-900 border-slate-800 opacity-50 cursor-not-allowed'}`}>
+                <div className={`absolute top-4 right-4 p-2 rounded-xl ${canAccess('sites') ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-600'}`}><LayoutGrid size={24} /></div>
+                <h2 className="text-xl font-bold mb-2">Tableau de Bord Sites</h2>
+                <p className="text-slate-400 text-xs mb-4 pr-8">Superficies, Usages, KPIs.</p>
+            </button>
+        </div>
+    </div>
+  );
 };
 
 const App = () => {
-  const [user, setUser] = useState(null); 
-  const [currentModule, setCurrentModule] = useState('dashboard');
-  
-  useEffect(() => {
-      const storedUser = localStorage.getItem('smen_user');
-      if (storedUser) {
-          setUser(JSON.parse(storedUser));
-      }
-  }, []);
+  const [user, setUser] = useState(null); 
+  const [currentModule, setCurrentModule] = useState('dashboard');
+  
+  useEffect(() => {
+    const initAuth = async () => {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+            await signInAnonymously(auth);
+        }
+    };
+    initAuth();
+  }, []);
 
-  const handleLogin = (userData) => {
-      setUser(userData);
-      localStorage.setItem('smen_user', JSON.stringify(userData));
-      setCurrentModule('dashboard');
-  };
+  const handleLogin = (userData) => {
+      setUser(userData);
+      setCurrentModule('dashboard');
+  };
 
-  const handleLogout = () => {
-      setUser(null);
-      localStorage.removeItem('smen_user');
-      setCurrentModule('dashboard');
-  };
+  const handleLogout = () => {
+      setUser(null);
+      setCurrentModule('dashboard');
+  };
 
-  if (!user) return <LoginScreen onLogin={handleLogin} />;
+  if (!user) return <LoginScreen onLogin={handleLogin} />;
 
-  return (
-    <>
-      {currentModule === 'dashboard' && <MainDashboard user={user} onNavigate={setCurrentModule} onLogout={handleLogout} />}
-      {currentModule === 'admin' && <AdminPanel onBack={() => setCurrentModule('dashboard')} />}
-      {currentModule === 'steg' && <StegModule onBack={() => setCurrentModule('dashboard')} userRole={user.role} />}
-      {currentModule === 'air' && <AirModule onBack={() => setCurrentModule('dashboard')} userRole={user.role} />}
-      {currentModule === 'sites' && <SitesDashboard onBack={() => setCurrentModule('dashboard')} userRole={user.role} />}
-    </>
-  );
+  return (
+    <>
+      {currentModule === 'dashboard' && <MainDashboard user={user} onNavigate={setCurrentModule} onLogout={handleLogout} />}
+      {currentModule === 'admin' && <AdminPanel onBack={() => setCurrentModule('dashboard')} />}
+      {currentModule === 'steg' && <StegModule onBack={() => setCurrentModule('dashboard')} userRole={user.role} />}
+      {currentModule === 'air' && <AirModule onBack={() => setCurrentModule('dashboard')} userRole={user.role} />}
+      {currentModule === 'sites' && <SitesDashboard onBack={() => setCurrentModule('dashboard')} userRole={user.role} />}
+    </>
+  );
 };
 
 export default App;
