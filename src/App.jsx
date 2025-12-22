@@ -8,7 +8,8 @@ import {
   FileText, Calculator, AlertCircle, Eye, Hash, BookOpen, Sun, Battery, MousePointerClick,
   Info, Wind, Gauge, Thermometer, Timer, Wrench, LayoutGrid, ArrowLeft, Clock, Edit2,
   ClipboardList, CheckSquare, PieChart, MapPin, Maximize2, Minimize2, Building2, Leaf,
-  Database, User, Users, LogOut, Key, Shield, PlusCircle, X, Trash2
+  Database, User, Users, LogOut, Key, Shield, PlusCircle, X, Trash2,
+  Store, Filter, Droplets // <--- C'EST ICI QUE J'AI AJOUTÉ LES ICÔNES MANQUANTES
 } from 'lucide-react';
 
 // --- HELPER SIMPLE POUR LES COLLECTIONS ---
