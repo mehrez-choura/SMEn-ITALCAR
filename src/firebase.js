@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore"; // AJOUT IMPORTANT
+import { getFirestore } from "firebase/firestore";
 
-// Votre configuration Firebase officielle
+// Vos codes secrets officiels SMEn-ITALCAR
 const firebaseConfig = {
   apiKey: "AIzaSyCUSBzbKBE2JRiiHZAwtkvJzy72RgrRoEU",
   authDomain: "smen-italcar.firebaseapp.com",
@@ -11,8 +11,6 @@ const firebaseConfig = {
   appId: "1:188301662792:web:1eca55e7e122582a8ed67d"
 };
 
-// Initialisation de Firebase
+// Initialisation
 const app = initializeApp(firebaseConfig);
-
-// Export de la base de données pour l'utiliser dans App.jsx
 export const db = getFirestore(app);
