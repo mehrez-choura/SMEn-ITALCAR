@@ -12,15 +12,14 @@ import {
   Store, Droplets, Filter, Check, Image as ImageIcon
 } from 'lucide-react';
 
-// --- INITIALISATION FIREBASE ---
-const firebaseConfig = JSON.parse(__firebase_config);
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+// --- IMPORT CORRECT DEPUIS VOTRE FICHIER ---
+import { db } from './firebase'; // On utilise votre fichier firebase.js qui marche déjà
+import { collection } from "firebase/firestore";
 
-// Helper pour les chemins sécurisés
-const getCollection = (name) => collection(db, 'artifacts', appId, 'public', 'data', name);
+// Helper simple pour garder votre code compatible
+const getCollection = (name) => collection(db, name); 
+// Note : J'ai retiré 'artifacts/appId...' car c'est spécifique à un autre outil.
+// On utilise directement vos collections : "steg_logs", "air_logs", etc.
 
 // --- COMPOSANT HORLOGE ---
 const DateTimeDisplay = () => {
