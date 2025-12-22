@@ -1,7 +1,8 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { getAuth } from "firebase/auth"; // Ajout de l'authentification
 
-// Vos codes secrets officiels SMEn-ITALCAR
+// Vos codes secrets (Je reprends ceux que vous m'avez donnés)
 const firebaseConfig = {
   apiKey: "AIzaSyCUSBzbKBE2JRiiHZAwtkvJzy72RgrRoEU",
   authDomain: "smen-italcar.firebaseapp.com",
@@ -13,4 +14,7 @@ const firebaseConfig = {
 
 // Initialisation
 const app = initializeApp(firebaseConfig);
+
+// On exporte la base de données (db) ET l'authentification (auth)
 export const db = getFirestore(app);
+export const auth = getAuth(app);
