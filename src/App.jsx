@@ -10,7 +10,7 @@ import {
   Info, Wind, Thermometer, Timer, Wrench, LayoutGrid, ArrowLeft, Clock, Edit2,
   ClipboardList, CheckSquare, PieChart, MapPin, Maximize2, Minimize2, Building2, Leaf,
   Database, User, Users, LogOut, Key, Shield, ChevronRight, X, Flame, Trash2, PlusCircle,
-  Store, Droplets, Filter, Check, Image as ImageIcon, FileCheck Printer, TrendingDown, Download, Sliders
+  Store, Droplets, Filter, Check, Image as ImageIcon, FileCheck, Printer, TrendingDown, Download, Sliders
 } from 'lucide-react';
 
 // --- CONFIGURATION CHARTE GRAPHIQUE ---
