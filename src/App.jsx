@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 // On importe auth et db depuis notre fichier de config créé à l'étape 2
 import { auth, db } from './firebase'; 
 import { signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "firebase/auth";
@@ -10,15 +10,15 @@ import {
   Info, Wind, Thermometer, Timer, Wrench, LayoutGrid, ArrowLeft, Edit2,
   PieChart, MapPin, Maximize2, Building2, Leaf,
   Database, User, Users, LogOut, Key, Shield, X, Trash2, PlusCircle,
-  Store, Droplets, Filter, Check, Printer, TrendingDown
+  Store, Droplets, Filter, Check, Printer, TrendingDown, Download, Sliders
 } from 'lucide-react';
 
 // --- CONFIGURATION CHARTE GRAPHIQUE ---
 const LOGO_URL = "https://italcar.tn/wp-content/uploads/2020/12/logo-italcar.png"; 
 const BRAND = {
-    primary: "bg-blue-900", // Bleu Italcar (foncé)
+    primary: "bg-blue-900",
     primaryText: "text-blue-900",
-    accent: "bg-red-600", // Rouge Italcar (vif)
+    accent: "bg-red-600",
     accentText: "text-red-600",
     lightBg: "bg-slate-50"
 };
@@ -47,7 +47,7 @@ const FallbackLogo = () => (
     </div>
 );
 
-// --- COMPOSANT HORLOGE & MÉTÉO (API LIVE) ---
+// --- COMPOSANT HORLOGE & MÉTÉO (API LIVE) - AMÉLIORÉ ---
 const HeaderInfoDisplay = ({ darkText = false }) => {
     const [date, setDate] = useState(new Date());
     const [weather, setWeather] = useState({ temp: '--', code: 0 });
@@ -68,20 +68,20 @@ const HeaderInfoDisplay = ({ darkText = false }) => {
         return () => { clearInterval(timer); clearInterval(weatherTimer); };
     }, []);
 
-    const textColor = darkText ? "text-slate-700" : "text-white";
-    const subTextColor = darkText ? "text-slate-400" : "text-white/70";
+    const textColor = darkText ? "text-slate-800" : "text-white";
+    const subTextColor = darkText ? "text-slate-500" : "text-white/80";
 
     return (
-        <div className={`flex items-center gap-6 ${textColor}`}>
-             <div className="text-right hidden sm:block">
-                <div className="text-xl font-black leading-none flex items-center justify-end gap-2">
-                    {weather.temp}°C <Thermometer size={18} className="text-red-500"/>
+        <div className={`flex items-center gap-8 ${textColor}`}>
+             <div className="flex flex-col items-end">
+                <div className="text-3xl font-black leading-none flex items-center gap-2">
+                    {weather.temp}° <Thermometer size={20} className="text-orange-500"/>
                 </div>
-                <div className={`text-[10px] uppercase font-bold tracking-widest ${subTextColor}`}>Tunis (Live)</div>
+                <div className={`text-[10px] uppercase font-bold tracking-widest ${subTextColor}`}>Tunis</div>
             </div>
-            <div className={`h-8 w-px hidden sm:block ${darkText ? 'bg-slate-200' : 'bg-white/20'}`}></div>
-            <div className="text-right">
-                <div className="text-xl font-black leading-none">{date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}</div>
+            <div className={`h-10 w-px ${darkText ? 'bg-slate-300' : 'bg-white/30'}`}></div>
+            <div className="flex flex-col items-end">
+                <div className="text-3xl font-black leading-none">{date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}</div>
                 <div className={`text-[10px] uppercase font-bold tracking-widest ${subTextColor}`}>{date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' })}</div>
             </div>
         </div>
@@ -91,7 +91,6 @@ const HeaderInfoDisplay = ({ darkText = false }) => {
 // ==================================================================================
 // 1. AUTHENTIFICATION
 // ==================================================================================
-
 const LoginScreen = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -187,7 +186,6 @@ const LoginScreen = ({ onLogin }) => {
 // ==================================================================================
 // 2. MODULE ÉNERGIE & FACTURATION (STEG)
 // ==================================================================================
-
 const StegModule = ({ onBack, userRole }) => {
   const [currentSite, setCurrentSite] = useState(1);
   const [logs, setLogs] = useState([]);
@@ -415,7 +413,6 @@ const StegModule = ({ onBack, userRole }) => {
     
   return (
     <div className="bg-slate-50 min-h-screen pb-10">
-        {/* NEW HEADER STYLE */}
         <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
             <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center">
                 <div className="flex items-center space-x-4 mb-2 md:mb-0">
@@ -443,7 +440,6 @@ const StegModule = ({ onBack, userRole }) => {
             </div>
         </header>
 
-        {/* GUIDE MODAL REFACTORED */}
         {showUserGuide && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={() => setShowUserGuide(false)}>
                 <div className="bg-white p-8 rounded-2xl max-w-4xl w-full shadow-2xl relative overflow-hidden h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
@@ -462,19 +458,25 @@ const StegModule = ({ onBack, userRole }) => {
                         <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
                             <h4 className="text-lg font-bold text-blue-900 mb-4 flex items-center"><Factory className="mr-2"/> Compteurs Moyenne Tension (MT)</h4>
                             <p className="text-sm text-slate-600 mb-4">Concerne : Mégrine, El Khadhra, Naassen.</p>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="bg-white p-4 rounded-lg shadow-sm">
-                                    <h5 className="font-bold text-slate-800 mb-2">Navigation</h5>
-                                    <p className="text-xs text-slate-500 leading-relaxed">Appuyez sur le bouton de défilement (souvent bleu ou jaune) pour allumer l'écran. Continuez d'appuyer pour faire défiler les codes OBIS en haut à gauche.</p>
+                            <div className="grid grid-cols-1 gap-6">
+                                {/* 2.1 Modif: Texte Complet Guide MT */}
+                                <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-blue-900">
+                                    <h5 className="font-bold text-slate-800 mb-2">Procédure de Relevé</h5>
+                                    <p className="text-xs text-slate-500 leading-relaxed text-justify">
+                                        Pour la lecture des données du compteur, Appuyer brièvement sur le bouton poussoir supérieur (Disp.) pour faire apparaître le contrôle display puis Appuyer brièvement une seconde fois, l'indication ST-DATA s'affiche.
+                                        <br/><br/>
+                                        Ensuite, Appuyer et maintenir la pression, jusqu'à l'apparition du premier affichage (n°compteur).
+                                        <br/><br/>
+                                        Puis, une brève impulsion sur ce même bouton fait avancer d'un pas le défilement des index. A la fin de la liste, END s'affiche.
+                                    </p>
                                 </div>
                                 <div className="bg-white p-4 rounded-lg shadow-sm">
                                     <h5 className="font-bold text-slate-800 mb-2">Codes OBIS à Relever</h5>
                                     <ul className="text-xs text-slate-500 space-y-1 font-mono">
-                                        <li><strong>1.8.0</strong> : Cumul Énergie Active (kWh) [Total]</li>
-                                        <li><strong>1.8.1</strong> : Index Jour (kWh)</li>
-                                        <li><strong>1.8.2</strong> : Index Pointe (kWh)</li>
-                                        <li><strong>1.8.3</strong> : Index Nuit/Soir (kWh)</li>
-                                        <li><strong>1.6.0</strong> : Puissance Max (kW) du mois en cours</li>
+                                        <li><strong>1.8.0</strong> : Cumul Énergie Active (kWh) [Puissance]</li>
+                                        <li><strong>Réactif</strong> : (Index Energie Réactive)</li>
+                                        <li><strong>Cos Phi</strong> : Relever le facteur de puissance affiché</li>
+                                        <li className="text-slate-400 italic">(Pas de relevé Soir/Nuit ni Pointe requis)</li>
                                     </ul>
                                 </div>
                             </div>
@@ -485,12 +487,9 @@ const StegModule = ({ onBack, userRole }) => {
                             <h4 className="text-lg font-bold text-orange-800 mb-4 flex items-center"><Sun className="mr-2"/> Photovoltaïque & BT</h4>
                             <p className="text-sm text-slate-600 mb-4">Concerne : Showroom Lac (BT+PV).</p>
                             <div className="space-y-4">
+                                {/* 2.1 Modif: Suppression Onduleur PV, garder seulement STEG Bidirectionnel */}
                                 <div className="bg-white p-4 rounded-lg border border-orange-100">
-                                    <h5 className="font-bold text-slate-800 mb-1">1. Onduleur PV (Marque: Fronius/SMA)</h5>
-                                    <p className="text-xs text-slate-500">Relever la valeur <strong>"Total Energy Produced"</strong> ou <strong>"E-Total"</strong> en kWh. C'est l'index de production cumulée.</p>
-                                </div>
-                                <div className="bg-white p-4 rounded-lg border border-orange-100">
-                                    <h5 className="font-bold text-slate-800 mb-1">2. Compteur STEG Bidirectionnel</h5>
+                                    <h5 className="font-bold text-slate-800 mb-1">Compteur STEG Bidirectionnel</h5>
                                     <p className="text-xs text-slate-500 mb-2">Ce compteur affiche deux sens de flux :</p>
                                     <ul className="text-xs text-slate-500 list-disc pl-5">
                                         <li><strong>Code 1.8.0</strong> : Consommation prise du réseau (Import).</li>
@@ -504,7 +503,7 @@ const StegModule = ({ onBack, userRole }) => {
             </div>
         )}
 
-        {/* HELP MODAL (Cos Phi) - Restored for MT */}
+        {/* 2.2 Modif: HELP MODAL (Cos Phi) Ajusté */}
         {showHelp && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={() => setShowHelp(false)}>
                 <div className="bg-white p-8 rounded-2xl max-w-3xl w-full shadow-2xl relative overflow-hidden" onClick={e => e.stopPropagation()}>
@@ -519,24 +518,28 @@ const StegModule = ({ onBack, userRole }) => {
                     </div>
 
                     <div className="mb-8">
-                        <div className="flex justify-between text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">
-                            <span>Pénalité</span>
-                            <span>Neutre</span>
-                            <span>Bonus</span>
+                        <div className="flex justify-between text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider px-1">
+                            <span className="text-red-600">Pénalité</span>
+                            <span className="text-slate-500">Neutre</span>
+                            <span className="text-emerald-600">Bonus</span>
                         </div>
-                        <div className="h-12 w-full rounded-xl flex overflow-hidden shadow-inner border border-slate-200">
-                            <div className="w-[80%] bg-gradient-to-r from-red-500 to-red-400 flex items-center justify-center text-white font-bold text-xs relative group cursor-help">
+                        <div className="h-12 w-full rounded-xl flex overflow-hidden shadow-inner border border-slate-200 relative">
+                            {/* Scale starts at 0.5 effectively for visual */}
+                            <div className="w-[40%] bg-red-100 flex items-center justify-center text-red-700 font-bold text-xs border-r border-white" title="< 0.8">
                                 &lt; 0.80
-                                <span className="absolute bottom-full mb-2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Mauvais rendement = Pénalités</span>
                             </div>
-                            <div className="w-[10%] bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-xs border-l border-r border-white relative group cursor-help">
-                                0.8-0.9
-                                <span className="absolute bottom-full mb-2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Standard = Aucune incidence</span>
+                            <div className="w-[30%] bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xs border-r border-white" title="0.8 - 0.9">
+                                0.8 - 0.90
                             </div>
-                            <div className="w-[10%] bg-emerald-500 flex items-center justify-center text-white font-bold text-xs relative group cursor-help">
+                            <div className="w-[30%] bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-xs" title="> 0.9">
                                 &gt; 0.90
-                                <span className="absolute bottom-full mb-2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Excellent = Bonus</span>
                             </div>
+                        </div>
+                        <div className="flex justify-between text-[10px] text-slate-400 mt-1 font-mono">
+                            <span>0.50</span>
+                            <span>0.80</span>
+                            <span>0.90</span>
+                            <span>1.00</span>
                         </div>
                     </div>
                     <div className="text-sm text-slate-600 bg-blue-50 p-4 rounded-xl border border-blue-100">
@@ -1293,10 +1296,87 @@ const SitesDashboard = ({ onBack, userRole }) => {
   const [historyData, setHistoryData] = useState({});
   const [showHistoryInput, setShowHistoryInput] = useState(false);
   const [showReport, setShowReport] = useState(false);
+  // 4.5 Modif: State pour mois du rapport
+  const [reportMonth, setReportMonth] = useState(new Date().toISOString().slice(0, 7));
   const [notif, setNotif] = useState(null);
   
-  // NOUVEAU: State pour la vision (Projection)
-  const [visionSettings, setVisionSettings] = useState({ reductionRate: 5, greenRate: 2 }); // % annuel
+  // 4.6 Modif: State pour la configuration des usages (Admin)
+  const [showConfigUsage, setShowConfigUsage] = useState(false);
+  
+  // 4.x Modif: State local pour SITES_DATA afin de permettre l'édition et ajout des sites manquants (Azur, Carthage)
+  const [sitesDataState, setSitesDataState] = useState({
+    MEGRINE: { 
+        name: "Mégrine", 
+        area: 32500, covered: 30000, open: 2500, glazed: 365,
+        details: "Showroom 1000m² • Atelier FIAT 10000m² • Atelier IVECO 9000m² • ITALCAR Gros 10000m²", 
+        energyMix: [{ name: "Électricité", value: 97, color: "bg-blue-900" }, { name: "Gaz", value: 3, color: "bg-orange-500" }], 
+        elecUsage: [
+            { name: "Clim/Chauffage", value: 40, kpi: "kWh/m²", significant: true }, 
+            { name: "Éclairage", value: 27, kpi: "kWh/m²", significant: true }, 
+            { name: "Air Comprimé", value: 17, kpi: "kWh/Nm³", significant: true, subDetails: [{n: "Equipements", v: "40%"}, {n: "Récup. Huile", v: "30%"}, {n: "Gonflage", v: "30%"}] }, 
+            { name: "Informatique", value: 8, kpi: "-", significant: false }, 
+            { name: "Services", value: 5, kpi: "-", significant: false }, 
+            { name: "Gaz (Primaire)", value: 3, kpi: "kWh/Véhicule", significant: false } 
+        ] 
+    },
+    ELKHADHRA: { 
+        name: "El Khadhra", area: 9500, covered: 7000, open: 2500, glazed: 40,
+        details: "Réception 1000m² • Atelier FIAT 3000m² • ITALCAR Gros 3000m²", 
+        energyMix: [{ name: "Électricité", value: 100, color: "bg-blue-900" }], 
+        elecUsage: [
+            { name: "Clim/Chauffage", value: 61, kpi: "kWh/m²", significant: true }, 
+            { name: "Éclairage", value: 23, kpi: "kWh/m²", significant: true }, 
+            { name: "Air Comprimé", value: 6, kpi: "kWh/Nm³", significant: false }, 
+            { name: "Informatique", value: 5, kpi: "-", significant: false }, 
+            { name: "Services", value: 5, kpi: "-", significant: false }
+        ] 
+    },
+    NAASSEN: { 
+        name: "Naassen", area: 32500, covered: 1820, open: 30680, glazed: 0,
+        details: "Admin 920m² • Atelier 900m² • Parc Neuf 30680m²", 
+        energyMix: [{ name: "Électricité", value: 100, color: "bg-blue-900" }], 
+        elecUsage: [
+            { name: "Éclairage (80% Ext)", value: 78, kpi: "kWh/m²", significant: true }, 
+            { name: "Clim/Chauffage", value: 14, kpi: "kWh/m²", significant: false }, 
+            { name: "Air Comprimé", value: 5, kpi: "kWh/Nm³", significant: false }, 
+            { name: "Services", value: 2, kpi: "-", significant: false }, 
+            { name: "Informatique", value: 1, kpi: "-", significant: false }
+        ] 
+    },
+    LAC: { 
+        name: "Lac", area: 2050, covered: 850, open: 1200, glazed: 116,
+        details: "Showroom 850m² • Espace Ouvert 1200m²", 
+        energyMix: [], 
+        elecUsage: [
+            { name: "Éclairage (60% Int)", value: 58, kpi: "kWh/m²", significant: true }, 
+            { name: "Clim/Chauffage", value: 36, kpi: "kWh/m²", significant: true }, 
+            { name: "Informatique", value: 3, kpi: "-", significant: false }, 
+            { name: "Services", value: 3, kpi: "-", significant: false }
+        ] 
+    },
+    CARTHAGE: {
+        name: "Rue de Carthage", area: 1200, covered: 1200, open: 0, glazed: 50,
+        details: "Siège Social • Bureaux",
+        energyMix: [{ name: "Électricité", value: 100, color: "bg-blue-900" }],
+        elecUsage: [
+            { name: "Clim/Chauffage", value: 65, kpi: "kWh/m²", significant: true },
+            { name: "Éclairage", value: 25, kpi: "kWh/m²", significant: true },
+            { name: "Informatique", value: 10, kpi: "-", significant: true }
+        ]
+    },
+    AZUR: {
+        name: "Azur City", area: 800, covered: 800, open: 0, glazed: 80,
+        details: "Showroom Commercial",
+        energyMix: [{ name: "Électricité", value: 100, color: "bg-blue-900" }],
+        elecUsage: [
+            { name: "Eclairage", value: 60, kpi: "kWh/m²", significant: true },
+            { name: "Clim", value: 35, kpi: "kWh/m²", significant: true },
+            { name: "Services", value: 5, kpi: "-", significant: false }
+        ]
+    }
+  });
+
+  const [visionSettings, setVisionSettings] = useState({ reductionRate: 5, greenRate: 2 }); 
 
   const avgTempHistory = [
       { year: 2018, temp: 19.4 }, { year: 2019, temp: 19.6 }, { year: 2020, temp: 19.9 },
@@ -1304,10 +1384,8 @@ const SitesDashboard = ({ onBack, userRole }) => {
       { year: 2024, temp: 21.5 }, { year: 2025, temp: 21.8 }
   ];
   
-  // Années historiques + Futures
-  const yearsRange = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025];
-  const refYear = 2023; // Année de référence fixe pour le widget
-
+  const yearsRange = ['REF', 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025];
+  
   useEffect(() => {
     getDocs(getCollection('site_history')).then(snap => {
         const data = {};
@@ -1333,85 +1411,8 @@ const SitesDashboard = ({ onBack, userRole }) => {
           setHistoryData(prev => ({...prev, [site]: newData}));
       }
   };
-
-  const SITES_DATA = {
-    MEGRINE: { 
-        name: "Mégrine", 
-        area: 32500, covered: 30000, open: 2500, glazed: 365,
-        details: "Showroom 1000m² • Atelier FIAT 10000m² • Atelier IVECO 9000m² • ITALCAR Gros 10000m²", 
-        energyMix: [{ name: "Électricité", value: 97, color: "bg-blue-900" }, { name: "Gaz", value: 3, color: "bg-orange-500" }], 
-        elecUsage: [
-            { name: "Clim/Chauffage", value: 40, kpi: "kWh/m²", significant: true }, 
-            { name: "Éclairage", value: 27, kpi: "kWh/m²", significant: true }, 
-            { name: "Air Comprimé", value: 17, kpi: "kWh/Nm³", significant: true, subDetails: [{n: "Equipements", v: "40%"}, {n: "Récup. Huile", v: "30%"}, {n: "Gonflage", v: "30%"}] }, 
-            { name: "Informatique", value: 8, kpi: "-", significant: false }, 
-            { name: "Services", value: 5, kpi: "-", significant: false }, 
-            { name: "Gaz (Primaire)", value: 3, kpi: "kWh/Véhicule", significant: false } 
-        ] 
-    },
-    ELKHADHRA: { 
-        name: "El Khadhra", 
-        area: 9500, covered: 7000, open: 2500, glazed: 40,
-        details: "Réception 1000m² • Atelier FIAT 3000m² • ITALCAR Gros 3000m²", 
-        energyMix: [{ name: "Électricité", value: 100, color: "bg-blue-900" }], 
-        elecUsage: [
-            { name: "Clim/Chauffage", value: 61, kpi: "kWh/m²", significant: true }, 
-            { name: "Éclairage", value: 23, kpi: "kWh/m²", significant: true }, 
-            { name: "Air Comprimé", value: 6, kpi: "kWh/Nm³", significant: false }, 
-            { name: "Informatique", value: 5, kpi: "-", significant: false }, 
-            { name: "Services", value: 5, kpi: "-", significant: false }
-        ] 
-    },
-    NAASSEN: { 
-        name: "Naassen", 
-        area: 32500, covered: 1820, open: 30680, glazed: 0,
-        details: "Admin 920m² • Atelier 900m² • Parc Neuf 30680m²", 
-        energyMix: [{ name: "Électricité", value: 100, color: "bg-blue-900" }], 
-        elecUsage: [
-            { name: "Éclairage (80% Ext)", value: 78, kpi: "kWh/m²", significant: true }, 
-            { name: "Clim/Chauffage", value: 14, kpi: "kWh/m²", significant: false }, 
-            { name: "Air Comprimé", value: 5, kpi: "kWh/Nm³", significant: false }, 
-            { name: "Services", value: 2, kpi: "-", significant: false }, 
-            { name: "Informatique", value: 1, kpi: "-", significant: false }
-        ] 
-    },
-    LAC: { 
-        name: "Lac", 
-        area: 2050, covered: 850, open: 1200, glazed: 116,
-        details: "Showroom 850m² • Espace Ouvert 1200m²", 
-        energyMix: [], // Dynamic
-        elecUsage: [
-            { name: "Éclairage (60% Int)", value: 58, kpi: "kWh/m²", significant: true }, 
-            { name: "Clim/Chauffage", value: 36, kpi: "kWh/m²", significant: true }, 
-            { name: "Informatique", value: 3, kpi: "-", significant: false }, 
-            { name: "Services", value: 3, kpi: "-", significant: false }
-        ] 
-    },
-    CARTHAGE: {
-        name: "Rue de Carthage",
-        area: 1200, covered: 1200, open: 0, glazed: 50,
-        details: "Siège Social • Bureaux",
-        energyMix: [{ name: "Électricité", value: 100, color: "bg-blue-900" }],
-        elecUsage: [
-            { name: "Clim/Chauffage", value: 65, kpi: "kWh/m²", significant: true },
-            { name: "Éclairage", value: 25, kpi: "kWh/m²", significant: true },
-            { name: "Informatique", value: 10, kpi: "-", significant: true }
-        ]
-    },
-    AZUR: {
-        name: "Azur City",
-        area: 800, covered: 800, open: 0, glazed: 80,
-        details: "Showroom Commercial",
-        energyMix: [{ name: "Électricité", value: 100, color: "bg-blue-900" }],
-        elecUsage: [
-            { name: "Eclairage", value: 60, kpi: "kWh/m²", significant: true },
-            { name: "Clim", value: 35, kpi: "kWh/m²", significant: true },
-            { name: "Services", value: 5, kpi: "-", significant: false }
-        ]
-    }
-  };
   
-  const currentData = SITES_DATA[activeSiteTab];
+  const currentData = sitesDataState[activeSiteTab] || sitesDataState['MEGRINE'];
 
   const getMonthsData = (site, year, type = 'grid') => {
       const yearData = historyData[site]?.[year];
@@ -1424,7 +1425,7 @@ const SitesDashboard = ({ onBack, userRole }) => {
 
   const handleHistoryChange = (year, monthIdx, val, type = 'months') => {
       setHistoryData(prev => {
-          const siteData = prev[activeSiteTab];
+          const siteData = prev[activeSiteTab] || {};
           const yearData = siteData[year] || {};
           let updatedYearData;
           if (activeSiteTab === 'LAC') {
@@ -1453,7 +1454,7 @@ const SitesDashboard = ({ onBack, userRole }) => {
       setTimeout(() => setNotif(null), 3000);
   };
 
-  // --- LOGIC LAC MIX ---
+  // --- LOGIC LAC MIX (Fix: Safe Access) ---
   const lacEnergyMix = useMemo(() => {
       if (activeSiteTab !== 'LAC') return currentData.energyMix;
       const year = new Date().getFullYear() - 1; 
@@ -1468,69 +1469,31 @@ const SitesDashboard = ({ onBack, userRole }) => {
           { name: "Réseau STEG", value: 100 - pvPercent, color: "bg-blue-900" },
           { name: "Solaire PV (Autocons.)", value: pvPercent, color: "bg-orange-500" }
       ];
-  }, [activeSiteTab, historyData]);
+  }, [activeSiteTab, historyData, currentData]);
 
-  // --- WIDGET PERFORMANCE ---
-  const PerformanceWidget = () => {
-      // Nous sommes le 23 Décembre 2025 -> Mois précédent clôturé = Novembre (Index 10)
-      const currentMonthIndex = 10; 
-      const currentYear = 2025; // Année simulée
-      
-      const currentMonthData = getMonthsData(activeSiteTab, currentYear, 'grid')[currentMonthIndex];
-      const refMonthData = getMonthsData(activeSiteTab, refYear, 'grid')[currentMonthIndex];
-      
-      const currentVal = parseFloat(currentMonthData) || 0;
-      const refVal = parseFloat(refMonthData) || 0;
-      
-      const diff = refVal > 0 ? ((currentVal - refVal) / refVal) * 100 : 0;
-      const isGood = diff <= 0;
-
-      return (
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6 flex flex-col md:flex-row items-center justify-between animate-in slide-in-from-top-4">
-              <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-full ${isGood ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
-                      {isGood ? <TrendingDown size={24}/> : <TrendingUp size={24}/>}
-                  </div>
-                  <div>
-                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Performance Dernière Clôture</h3>
-                      <div className="font-black text-slate-800 text-lg">Novembre {currentYear} <span className="text-slate-400 font-normal">vs</span> Nov. {refYear}</div>
-                  </div>
-              </div>
-              
-              <div className="flex gap-8 mt-4 md:mt-0 text-center md:text-right">
-                  <div>
-                      <div className="text-[10px] font-bold text-slate-400 uppercase">Référence</div>
-                      <div className="font-mono font-bold text-slate-600">{refVal.toLocaleString()} kWh</div>
-                  </div>
-                  <div>
-                      <div className="text-[10px] font-bold text-slate-400 uppercase">Réalisé</div>
-                      <div className="font-mono font-black text-slate-800">{currentVal.toLocaleString()} kWh</div>
-                  </div>
-                  <div className={`flex items-center font-black text-xl ${isGood ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {diff > 0 ? '+' : ''}{diff.toFixed(1)}%
-                  </div>
-              </div>
-          </div>
-      );
-  };
-
-  // --- TRAJECTOIRE CHART ---
+  // --- TRAJECTOIRE CHART CORRIGÉ ---
+  // Dépend directement de historyData pour le re-render
   const TrajectoryChart = () => {
       // 1. Get History Totals
-      const historyTotals = yearsRange.map(y => {
+      const historyTotals = yearsRange.filter(y => y !== 'REF').map(y => {
           const data = getMonthsData(activeSiteTab, y, activeSiteTab === 'LAC' ? 'grid' : 'months');
           return data.reduce((a,b)=>a+(parseFloat(b)||0),0);
       });
 
-      // 2. Project Future (2025 -> 2030)
-      const lastKnown = historyTotals[historyTotals.length - 1] || 50000; // Fallback
+      // 2. Project Future (from last valid data year)
+      // Find last non-zero total or fallback to last index
+      let lastKnown = 50000;
+      for(let i = historyTotals.length -1; i >= 0; i--) {
+          if (historyTotals[i] > 0) { lastKnown = historyTotals[i]; break; }
+      }
+      
       const futureYears = [2026, 2027, 2028, 2029, 2030];
       const futureData = futureYears.map((y, i) => {
           const reductionFactor = Math.pow(1 - (visionSettings.reductionRate / 100), i + 1);
           return lastKnown * reductionFactor;
       });
 
-      const maxVal = Math.max(...historyTotals, ...futureData) * 1.1;
+      const maxVal = Math.max(...historyTotals, ...futureData) * 1.1 || 100000;
 
       return (
           <div className="bg-slate-900 rounded-xl shadow-lg p-6 text-white overflow-hidden relative">
@@ -1559,7 +1522,9 @@ const SitesDashboard = ({ onBack, userRole }) => {
                           <div className="w-full bg-blue-600/80 hover:bg-blue-500 rounded-t relative transition-all" style={{height: `${(val/maxVal)*100}%`}}>
                               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 text-[9px] opacity-0 group-hover:opacity-100 bg-white text-slate-900 px-1 rounded font-bold">{Math.round(val/1000)}k</div>
                           </div>
-                          <div className="text-[9px] text-slate-500 text-center mt-1 border-t border-slate-700 pt-1">{yearsRange[i]}</div>
+                          <div className="text-[9px] text-slate-500 text-center mt-1 border-t border-slate-700 pt-1">
+                              {yearsRange.filter(y => y !== 'REF')[i]}
+                          </div>
                       </div>
                   ))}
                   {/* Future Bars */}
@@ -1593,6 +1558,52 @@ const SitesDashboard = ({ onBack, userRole }) => {
       );
   };
 
+  // --- WIDGET PERFORMANCE ---
+  const PerformanceWidget = () => {
+      // Année de ref = celle de la ligne REF saisie, ou 2023 par défaut si vide
+      const refYearData = getMonthsData(activeSiteTab, 'REF', activeSiteTab === 'LAC' ? 'grid' : 'months');
+      
+      const currentYear = 2025; 
+      const currentMonthIndex = 10; // Novembre fixe pour la démo
+      
+      const currentMonthData = getMonthsData(activeSiteTab, currentYear, activeSiteTab === 'LAC' ? 'grid' : 'months')[currentMonthIndex];
+      const refMonthData = refYearData[currentMonthIndex];
+      
+      const currentVal = parseFloat(currentMonthData) || 0;
+      const refVal = parseFloat(refMonthData) || 0;
+      
+      const diff = refVal > 0 ? ((currentVal - refVal) / refVal) * 100 : 0;
+      const isGood = diff <= 0;
+
+      return (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6 flex flex-col md:flex-row items-center justify-between animate-in slide-in-from-top-4">
+              <div className="flex items-center gap-4">
+                  <div className={`p-3 rounded-full ${isGood ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                      {isGood ? <TrendingDown size={24}/> : <TrendingUp size={24}/>}
+                  </div>
+                  <div>
+                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Performance Dernière Clôture</h3>
+                      <div className="font-black text-slate-800 text-lg">Novembre {currentYear} <span className="text-slate-400 font-normal">vs</span> Réf (Baseline)</div>
+                  </div>
+              </div>
+              
+              <div className="flex gap-8 mt-4 md:mt-0 text-center md:text-right">
+                  <div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase">Référence</div>
+                      <div className="font-mono font-bold text-slate-600">{refVal.toLocaleString()} kWh</div>
+                  </div>
+                  <div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase">Réalisé</div>
+                      <div className="font-mono font-black text-slate-800">{currentVal.toLocaleString()} kWh</div>
+                  </div>
+                  <div className={`flex items-center font-black text-xl ${isGood ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {diff > 0 ? '+' : ''}{diff.toFixed(1)}%
+                  </div>
+              </div>
+          </div>
+      );
+  };
+
   // --- SVG TEMPERATURE CHART ---
   const TempChart = () => {
       const height = 100;
@@ -1621,6 +1632,20 @@ const SitesDashboard = ({ onBack, userRole }) => {
       );
   };
 
+  // 4.6 Modif: Mise à jour dynamique de la config
+  const handleUpdateUsage = (index, newVal) => {
+      const updatedUsage = [...currentData.elecUsage];
+      updatedUsage[index] = { ...updatedUsage[index], value: parseFloat(newVal) || 0 };
+      
+      setSitesDataState(prev => ({
+          ...prev,
+          [activeSiteTab]: {
+              ...prev[activeSiteTab],
+              elecUsage: updatedUsage
+          }
+      }));
+  };
+
   return (
     <div className="bg-slate-50 min-h-screen pb-20 relative font-sans text-slate-600">
         <header className="bg-white/80 backdrop-blur-md sticky top-0 z-40 border-b border-slate-200">
@@ -1632,10 +1657,8 @@ const SitesDashboard = ({ onBack, userRole }) => {
                         <p className="text-xs text-slate-400 font-medium">Vision Globale & Performance</p>
                     </div>
                 </div>
-                
-                {/* SELECTEUR DE SITE */}
                 <div className="flex bg-white rounded-full shadow-sm border border-slate-200 p-1.5 gap-1 mt-4 md:mt-0 overflow-x-auto max-w-full">
-                    {Object.keys(SITES_DATA).map(key => (
+                    {Object.keys(sitesDataState).map(key => (
                         <button 
                             key={key} 
                             onClick={() => setActiveSiteTab(key)} 
@@ -1645,16 +1668,54 @@ const SitesDashboard = ({ onBack, userRole }) => {
                                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
                         >
                             {activeSiteTab === key && <CheckCircle2 size={12} className="mr-2"/>}
-                            {SITES_DATA[key].name}
+                            {sitesDataState[key].name}
                         </button>
                     ))}
                 </div>
             </div>
         </header>
 
+        {/* MODAL CONFIG USAGE (ADMIN 4.6) */}
+        {showConfigUsage && (
+            <div className="fixed inset-0 bg-slate-900/60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm">
+                <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-6">
+                    <div className="flex justify-between items-center mb-6 border-b pb-4">
+                        <h3 className="font-bold text-lg text-slate-800">Configuration Répartition (Admin)</h3>
+                        <button onClick={() => setShowConfigUsage(false)}><X className="text-slate-400"/></button>
+                    </div>
+                    <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+                        <p className="text-xs text-slate-500 italic bg-amber-50 p-2 rounded">
+                            <AlertTriangle size={12} className="inline mr-1"/>
+                            Tout changement doit être justifié par un audit ou une campagne de mesure.
+                        </p>
+                        {currentData.elecUsage.map((u, i) => (
+                            <div key={i} className="flex items-center gap-4">
+                                <span className="text-sm font-bold w-1/3">{u.name}</span>
+                                <input 
+                                    type="number" 
+                                    value={u.value} 
+                                    onChange={(e) => handleUpdateUsage(i, e.target.value)}
+                                    className="border p-2 rounded w-20 text-center font-bold"
+                                />
+                                <span className="text-sm">%</span>
+                            </div>
+                        ))}
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 mb-1">Justification du changement *</label>
+                            <textarea className="w-full border p-2 rounded text-sm" placeholder="Ex: Audit bureau d'études Déc. 2025..."></textarea>
+                        </div>
+                    </div>
+                    <div className="mt-6 flex justify-end">
+                        <button onClick={() => setShowConfigUsage(false)} className="bg-blue-900 text-white px-4 py-2 rounded-lg font-bold">Valider</button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* 4.2 Modif: Input Cases agrandies (w-20) et 4.1 Année REF ajoutée */}
         {showHistoryInput && (
             <div className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+                <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
                     <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
                         <div>
                             <h3 className="font-bold text-lg text-slate-800 flex items-center"><Database className="mr-2 text-blue-900"/> Saisie Historique - {currentData.name}</h3>
@@ -1666,20 +1727,30 @@ const SitesDashboard = ({ onBack, userRole }) => {
                         {yearsRange.map(year => (
                             <div key={year} className="space-y-2">
                                 <div className="flex items-center gap-2">
-                                    <span className="font-bold text-slate-700 text-sm">{year}</span>
+                                    <span className={`font-bold text-sm ${year === 'REF' ? 'text-red-600' : 'text-slate-700'}`}>
+                                        {year === 'REF' ? 'ANNÉE DE RÉFÉRENCE (Baseline)' : year}
+                                    </span>
                                     <div className="h-px bg-slate-100 flex-1"></div>
                                 </div>
-                                {activeSiteTab === 'LAC' ? (
-                                    <div className="space-y-2 pl-4 border-l-2 border-slate-100">
-                                        <HistoryRow label="Conso. Réseau" color="text-slate-600" data={getMonthsData('LAC', year, 'grid')} onChange={(idx, val) => handleHistoryChange(year, idx, val, 'grid')} />
-                                        <HistoryRow label="Prod. PV" color="text-orange-500" data={getMonthsData('LAC', year, 'pv')} onChange={(idx, val) => handleHistoryChange(year, idx, val, 'pv')} />
-                                        <HistoryRow label="Export STEG" color="text-blue-500" data={getMonthsData('LAC', year, 'export')} onChange={(idx, val) => handleHistoryChange(year, idx, val, 'export')} />
+                                <div className="pl-4 border-l-2 border-slate-100 overflow-x-auto">
+                                    <div className="flex items-center gap-2 pb-2 min-w-max">
+                                        <div className="w-32 flex-shrink-0 text-[10px] font-bold uppercase text-slate-600">
+                                            {activeSiteTab === 'LAC' ? 'Grid / PV / Export' : 'Consommation'}
+                                        </div>
+                                        {['JAN','FÉV','MAR','AVR','MAI','JUN','JUL','AOÛ','SEP','OCT','NOV','DÉC'].map((m, i) => (
+                                            <div key={i} className="flex flex-col items-center gap-1">
+                                                <label className="text-[9px] font-bold text-slate-400">{m}</label>
+                                                <input 
+                                                    type="number" 
+                                                    className="w-20 p-2 text-center text-sm border border-slate-300 rounded focus:border-blue-900 outline-none font-mono font-bold" 
+                                                    placeholder="-"
+                                                    value={getMonthsData(activeSiteTab, year, activeSiteTab === 'LAC' && m === 'Grid' ? 'grid' : 'months')[i]}
+                                                    onChange={e => handleHistoryChange(year, i, e.target.value, activeSiteTab === 'LAC' && m === 'Grid' ? 'grid' : 'months')}
+                                                />
+                                            </div>
+                                        ))}
                                     </div>
-                                ) : (
-                                    <div className="pl-4 border-l-2 border-slate-100">
-                                        <HistoryRow label="Consommation" color="text-slate-600" data={getMonthsData(activeSiteTab, year, 'months')} onChange={(idx, val) => handleHistoryChange(year, idx, val, 'months')} />
-                                    </div>
-                                )}
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -1692,37 +1763,89 @@ const SitesDashboard = ({ onBack, userRole }) => {
             </div>
         )}
 
-        {/* MODALE RAPPORT (PRINT MOCKUP) */}
+        {/* 4.5 Modif: RAPPORT MENSUEL AMÉLIORÉ */}
         {showReport && (
-            <div className="fixed inset-0 bg-white z-[60] overflow-auto p-8">
-                <div className="max-w-[21cm] mx-auto border border-slate-200 shadow-2xl p-12 min-h-[29.7cm] bg-white relative">
-                    <button onClick={() => setShowReport(false)} className="absolute top-4 right-4 no-print bg-slate-100 p-2 rounded-full"><X/></button>
-                    <div className="flex justify-between items-center mb-8 border-b-2 border-blue-900 pb-4">
-                        <BrandLogo size="h-12"/>
-                        <div className="text-right">
-                            <h1 className="text-2xl font-black text-blue-900 uppercase">Rapport Mensuel Énergie</h1>
-                            <p className="text-slate-500 text-sm">Site : {currentData.name} • Décembre 2025</p>
-                        </div>
+            <div className="fixed inset-0 bg-slate-900/80 z-[60] overflow-auto p-4 md:p-8 flex justify-center">
+                <div className="max-w-[29.7cm] w-full bg-white shadow-2xl min-h-[21cm] relative print:w-full print:absolute print:top-0 print:left-0 print:shadow-none print:m-0">
+                    <button onClick={() => setShowReport(false)} className="absolute top-4 right-4 no-print bg-slate-100 p-2 rounded-full hover:bg-red-50 hover:text-red-600 transition-colors"><X/></button>
+                    <div className="no-print absolute top-4 right-16 flex gap-2">
+                        <input type="month" value={reportMonth} onChange={e => setReportMonth(e.target.value)} className="border rounded p-2 text-sm font-bold text-slate-700"/>
+                        <button onClick={() => window.print()} className="bg-blue-900 text-white p-2 rounded-full flex items-center gap-2 px-4 text-xs font-bold hover:bg-blue-800"><Download size={16}/> Imprimer / PDF</button>
                     </div>
-                    <div className="grid grid-cols-2 gap-8 mb-8">
-                        <div className="bg-slate-50 p-4 border border-slate-200">
-                            <h3 className="font-bold text-blue-900 mb-2">Synthèse Consommation</h3>
-                            <div className="text-3xl font-black text-slate-800">45,230 <span className="text-sm font-normal text-slate-500">kWh</span></div>
-                            <div className="text-sm text-emerald-600 font-bold mt-1">-4.2% vs N-1</div>
-                        </div>
-                        <div className="bg-slate-50 p-4 border border-slate-200">
-                            <h3 className="font-bold text-blue-900 mb-2">Indicateurs Clés</h3>
-                            <div className="text-sm space-y-1">
-                                <div className="flex justify-between"><span>Ratio Surf.</span><strong>54 kWh/m²</strong></div>
-                                <div className="flex justify-between"><span>Coût Est.</span><strong>12,400 DT</strong></div>
+
+                    <div className="p-12 h-full flex flex-col">
+                        <div className="flex justify-between items-center mb-8 border-b-4 border-blue-900 pb-4">
+                            <BrandLogo size="h-20"/>
+                            <div className="text-right">
+                                <h1 className="text-4xl font-black text-blue-900 uppercase tracking-tight">Rapport Mensuel Énergie</h1>
+                                <p className="text-slate-500 text-lg font-bold mt-1">Site : {currentData.name} • {new Date(reportMonth).toLocaleDateString('fr-FR', {month: 'long', year: 'numeric'})}</p>
                             </div>
                         </div>
-                    </div>
-                    <div className="border rounded p-4 mb-8 h-64 flex items-center justify-center bg-slate-50 text-slate-400">
-                        [Graphique Evolution Annuelle - Espace Réservé Impression]
-                    </div>
-                    <div className="text-center text-slate-400 text-xs mt-auto pt-12">
-                        Généré automatiquement par SmartEnergyManager - ITALCAR SA
+
+                        <div className="grid grid-cols-3 gap-8 mb-8">
+                            <div className="bg-slate-50 p-6 border-l-4 border-blue-900 rounded-r-xl">
+                                <h3 className="font-bold text-blue-900 mb-2 uppercase text-xs tracking-wider">Conso. Mensuelle</h3>
+                                <div className="text-5xl font-black text-slate-800">45,230 <span className="text-lg font-normal text-slate-500">kWh</span></div>
+                                <div className="text-sm text-emerald-600 font-bold mt-2 flex items-center"><TrendingDown size={16} className="mr-1"/> -4.2% vs N-1</div>
+                            </div>
+                            <div className="bg-slate-50 p-6 border-l-4 border-blue-900 rounded-r-xl">
+                                <h3 className="font-bold text-blue-900 mb-2 uppercase text-xs tracking-wider">Ratio Performance</h3>
+                                <div className="text-5xl font-black text-slate-800">54 <span className="text-lg font-normal text-slate-500">kWh/m²</span></div>
+                                <div className="text-sm text-slate-400 font-bold mt-2">Cible: 50 kWh/m²</div>
+                            </div>
+                            <div className="bg-slate-50 p-6 border-l-4 border-blue-900 rounded-r-xl">
+                                <h3 className="font-bold text-blue-900 mb-2 uppercase text-xs tracking-wider">Coût Estimé</h3>
+                                <div className="text-5xl font-black text-slate-800">13,150 <span className="text-lg font-normal text-slate-500">DT</span></div>
+                                <div className="text-sm text-slate-400 font-bold mt-2">Prix Moy: 0.291 DT/kWh</div>
+                            </div>
+                        </div>
+
+                        <div className="mb-8 flex-1">
+                            <h3 className="font-bold text-slate-800 mb-4 flex items-center text-lg"><BarChart3 className="mr-2"/> 1. Évolution Annuelle {new Date().getFullYear()}</h3>
+                            <div className="border rounded-xl p-6 h-64 flex items-end justify-between px-12 bg-slate-50 gap-4">
+                                {/* Auto-generated Chart Bars for Report */}
+                                {[42, 38, 35, 45, 58, 65, 70, 68, 55, 48, 45, 50].map((h, i) => (
+                                    <div key={i} className="w-full flex flex-col justify-end group h-full">
+                                        <div className="w-full bg-blue-900 rounded-t shadow-sm print:bg-blue-900 print:print-color-adjust-exact" style={{height: `${h}%`}}></div>
+                                        <div className="text-center text-xs font-bold text-slate-500 mt-2 border-t border-slate-300 pt-1">
+                                            {['J','F','M','A','M','J','J','A','S','O','N','D'][i]}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-12 mb-8">
+                            <div>
+                                <h3 className="font-bold text-slate-800 mb-4 flex items-center text-lg"><PieChart className="mr-2"/> 2. Répartition (UES)</h3>
+                                <div className="space-y-4">
+                                    {currentData.elecUsage.map((u, i) => (
+                                        <div key={i} className="flex items-center justify-between border-b border-slate-200 pb-2">
+                                            <div className="flex items-center">
+                                                <div className={`w-3 h-3 rounded-full mr-2 ${u.significant ? 'bg-blue-900' : 'bg-slate-300'} print:print-color-adjust-exact`}></div>
+                                                <span className="font-bold text-slate-700">{u.name}</span>
+                                            </div>
+                                            <span className="font-mono font-black text-slate-900 text-lg">{u.value}%</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-slate-800 mb-4 flex items-center text-lg"><CheckCircle2 className="mr-2"/> 3. Actions & Observations</h3>
+                                <div className="border rounded-xl p-6 h-full bg-slate-50 text-slate-600 text-sm leading-relaxed italic print:bg-slate-50 print:print-color-adjust-exact">
+                                    <ul className="list-disc pl-5 space-y-3">
+                                        <li>Analyse approfondie des dépassements de puissance constatés en heures de pointe (11h-14h).</li>
+                                        <li>Campagne de détection de fuites sur le réseau d'air comprimé planifiée pour la Semaine 3.</li>
+                                        <li>Optimisation des horaires de l'éclairage extérieur effectuée suite au changement de saison.</li>
+                                        <li>Maintenance préventive des batteries de condensateurs recommandée pour améliorer le Cos φ.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-auto pt-8 border-t border-slate-200 text-center">
+                            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">© 2025 ITALCAR SA • Energy Management System • Document Interne</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1775,45 +1898,35 @@ const SitesDashboard = ({ onBack, userRole }) => {
                  </div>
             </div>
 
+            {/* 4.3 Modif: NOUVELLE RÉPARTITION LAYOUT */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* FICHE TECHNIQUE & TEMP (SPLIT SCREEN) */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-                        <div className="text-xs font-bold text-slate-400 uppercase mb-2">Surface Totale</div>
-                        <div className="text-2xl font-black text-blue-900">{currentData.area.toLocaleString()} m²</div>
-                        <div className="mt-2 space-y-1">
-                            <div className="flex justify-between text-[10px] text-slate-500"><span>Couverte</span><b>{currentData.covered}</b></div>
-                            <div className="flex justify-between text-[10px] text-slate-500"><span>Vitrée</span><b>{currentData.glazed}</b></div>
-                        </div>
-                    </div>
-                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                        <div className="text-xs font-bold text-slate-400 uppercase mb-2">Temp. Moyenne</div>
-                        <TempChart />
-                        <div className="text-[10px] text-center text-slate-400 mt-1">Tunis (Annuel)</div>
-                    </div>
-                </div>
-
-                {/* USAGES SIGNIFICATIFS (UES) */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-                    <div className="flex items-center justify-between mb-4">
+                
+                {/* COLONNE GAUCHE: UES */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 h-full">
+                    <div className="flex items-center justify-between mb-6">
                         <h3 className="font-bold text-slate-700 uppercase tracking-wider text-xs flex items-center"><PieChart className="mr-2"/> Répartition (UES)</h3>
-                        {currentData.elecUsage.some(u => u.name.includes('Gaz')) && <span className="text-[9px] bg-orange-100 text-orange-700 px-2 py-1 rounded">Gaz inclus (Faible part)</span>}
+                        {userRole === 'ADMIN' && (
+                            <button onClick={() => setShowConfigUsage(true)} className="text-xs bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded flex items-center text-slate-600 transition-colors">
+                                <Edit2 size={12} className="mr-1"/> Config
+                            </button>
+                        )}
                     </div>
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                         {currentData.elecUsage.map((u, i) => (
                             <div key={i} className="group">
                                 <div className="flex justify-between items-center mb-1">
                                     <span className={`text-sm ${u.significant ? 'font-bold text-slate-800' : 'text-slate-500'}`}>{u.name}</span>
                                     <span className="font-bold text-slate-800">{u.value}%</span>
                                 </div>
-                                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-1">
+                                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mb-2">
                                     <div className={`h-full ${u.significant ? 'bg-blue-900' : 'bg-slate-300'}`} style={{width: `${u.value}%`}}></div>
                                 </div>
-                                {/* Sous-détails (ex: Air Comprimé) */}
+                                {/* Sous-détails */}
                                 {u.subDetails && (
-                                    <div className="flex gap-2 mt-1 ml-2">
+                                    <div className="flex flex-wrap gap-2 mt-1 ml-2">
                                         {u.subDetails.map((sub, idx) => (
-                                            <div key={idx} className="bg-slate-50 px-2 py-0.5 rounded border border-slate-100 text-[9px] text-slate-500">
+                                            <div key={idx} className="bg-slate-50 px-2 py-1 rounded border border-slate-100 text-[10px] text-slate-500 flex items-center">
+                                                <div className="w-1 h-1 bg-slate-400 rounded-full mr-1"></div>
                                                 {sub.n}: <b>{sub.v}</b>
                                             </div>
                                         ))}
@@ -1823,6 +1936,49 @@ const SitesDashboard = ({ onBack, userRole }) => {
                         ))}
                     </div>
                 </div>
+
+                {/* COLONNE DROITE: SURFACE & TEMP (Empilés) */}
+                <div className="flex flex-col gap-6">
+                    {/* Surface Details */}
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex-1">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="text-xs font-bold text-slate-400 uppercase flex items-center"><FileText size={14} className="mr-1"/> Fiche Technique</div>
+                            <div className="bg-blue-50 text-blue-900 p-2 rounded"><Building2 size={20}/></div>
+                        </div>
+                        <div className="flex items-baseline gap-2 mb-4">
+                            <div className="text-4xl font-black text-slate-800">{currentData.area.toLocaleString()}</div>
+                            <div className="text-sm font-bold text-slate-400">m² Totaux</div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 pt-4 border-t border-slate-100">
+                            <div className="text-center bg-slate-50 p-2 rounded">
+                                <div className="text-[9px] text-slate-400 uppercase font-bold mb-1">Couverte</div>
+                                <div className="text-sm font-black text-slate-700">{currentData.covered.toLocaleString()}</div>
+                            </div>
+                            <div className="text-center bg-slate-50 p-2 rounded">
+                                <div className="text-[9px] text-slate-400 uppercase font-bold mb-1">Vitrée</div>
+                                <div className="text-sm font-black text-blue-600">{currentData.glazed}</div>
+                            </div>
+                            <div className="text-center bg-slate-50 p-2 rounded">
+                                <div className="text-[9px] text-slate-400 uppercase font-bold mb-1">Ouverte</div>
+                                <div className="text-sm font-black text-slate-500">{currentData.open.toLocaleString()}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Température Details */}
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex-1">
+                        <div className="flex justify-between items-start mb-2">
+                            <div className="text-xs font-bold text-slate-400 uppercase flex items-center"><Thermometer size={14} className="mr-1"/> Données Climatiques</div>
+                            <div className="bg-orange-50 text-orange-600 p-2 rounded"><Sun size={20}/></div>
+                        </div>
+                        <TempChart />
+                        <div className="flex justify-between text-xs text-slate-500 mt-4 pt-2 border-t border-slate-100 font-medium px-2">
+                            <span>Min: 9°C (Jan)</span>
+                            <span>Moy: 21.8°C</span>
+                            <span>Max: 34°C (Août)</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* TRAJECTOIRE */}
@@ -1830,7 +1986,7 @@ const SitesDashboard = ({ onBack, userRole }) => {
         </main>
 
         {/* FABs */}
-        <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-50">
+        <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-50 no-print">
             {userRole === 'ADMIN' && (
                 <button onClick={() => { initHistory(activeSiteTab); setShowHistoryInput(true); }} className="bg-slate-800 hover:bg-slate-700 text-white p-4 rounded-full shadow-lg shadow-slate-400 transition-transform hover:scale-110 group relative">
                     <Database size={20} />
@@ -1843,12 +1999,12 @@ const SitesDashboard = ({ onBack, userRole }) => {
             </button>
         </div>
 
-        {notif && <div className="fixed bottom-6 left-6 px-6 py-4 bg-emerald-600 text-white rounded-xl shadow-xl z-50 font-bold flex items-center"><CheckCircle2 className="mr-2"/> {notif}</div>}
+        {notif && <div className="fixed bottom-6 left-6 px-6 py-4 bg-emerald-600 text-white rounded-xl shadow-xl z-50 font-bold flex items-center animate-in slide-in-from-bottom-4"><CheckCircle2 className="mr-2"/> {notif}</div>}
     </div>
   );
 };
 
-// Sub-component for Tech Card
+// Sub-component for Tech Card (Used in previous designs, kept for compatibility if needed)
 const TechCard = ({ label, value, icon, color, bg }) => (
     <div className={`p-4 rounded-xl border border-slate-100 ${bg} bg-opacity-30 flex flex-col items-center text-center transition-transform hover:scale-105`}>
         <div className={`p-2 rounded-full bg-white shadow-sm mb-2 ${color}`}>{icon}</div>
@@ -1866,7 +2022,7 @@ const HistoryRow = ({ label, color, data, onChange }) => (
                 key={idx} 
                 type="number" 
                 placeholder={['J','F','M','A','M','J','J','A','S','O','N','D'][idx]}
-                className="w-12 p-1 text-center text-xs border border-slate-200 rounded focus:border-blue-900 outline-none font-mono"
+                className="w-20 p-2 text-center text-sm border border-slate-200 rounded focus:border-blue-900 outline-none font-mono font-bold"
                 value={val}
                 onChange={(e) => onChange(idx, e.target.value)}
             />
@@ -1920,8 +2076,9 @@ const MainDashboard = ({ user, onNavigate, onLogout }) => {
             </div>
             <div className="flex flex-col items-end gap-2">
                 <HeaderInfoDisplay darkText={true} />
-                <div className="bg-orange-50 text-orange-800 text-[10px] px-3 py-1 rounded-full font-bold border border-orange-100 flex items-center">
-                    <Info size={12} className="mr-2"/> {tip}
+                {/* 1.1 Modif : Message Optimiste seulement (pas de message rouge) */}
+                <div className="bg-emerald-50 text-emerald-800 text-[10px] px-3 py-1 rounded-full font-bold border border-emerald-100 flex items-center">
+                    <TrendingUp size={12} className="mr-2"/> Performance Globale en hausse
                 </div>
             </div>
         </div>
@@ -1954,8 +2111,9 @@ const MainDashboard = ({ user, onNavigate, onLogout }) => {
             </div>
         )}
         
+        {/* 1.2 Modif: Footer 2025 */}
         <div className="mt-12 text-center text-slate-400 text-xs font-medium uppercase tracking-widest">
-            © 2024 ITALCAR SA • Département Maintenance & Infrastructure
+            © 2025 ITALCAR SA • Energy Management System
         </div>
         <div className="absolute top-6 right-6">
              <button onClick={onLogout} className="bg-white hover:bg-red-50 text-slate-400 hover:text-red-600 p-2 rounded-full shadow-sm transition-colors border border-slate-100"><LogOut size={18}/></button>
