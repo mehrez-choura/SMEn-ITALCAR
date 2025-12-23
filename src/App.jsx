@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 // On importe auth et db depuis notre fichier de config créé à l'étape 2
 import { auth, db } from './firebase'; 
 import { signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "firebase/auth";
