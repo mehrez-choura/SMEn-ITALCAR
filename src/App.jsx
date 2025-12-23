@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "firebase/auth";
+import { getAuth, signInWithCustomToken, signInAnonymously } from "firebase/auth";
 import { getFirestore, collection, addDoc, doc, setDoc, onSnapshot, query, orderBy, getDocs, deleteDoc, where } from "firebase/firestore";
 import { 
   Zap, Activity, Save, History, TrendingUp, AlertTriangle, Factory, CheckCircle2,
-  BarChart3, Settings, Lock, Unlock, Calendar, DollarSign, TrendingDown, HelpCircle,
-  FileText, Calculator, AlertCircle, Eye, Hash, BookOpen, Sun, Battery, MousePointerClick,
-  Info, Wind, Gauge, Thermometer, Timer, Wrench, LayoutGrid, ArrowLeft, Clock, Edit2,
-  ClipboardList, CheckSquare, PieChart, MapPin, Maximize2, Minimize2, Building2, Leaf,
-  Database, User, Users, LogOut, Key, Shield, ChevronRight, X, Flame, Trash2, PlusCircle,
-  Store, Droplets, Filter, Check, Image as ImageIcon, FileCheck, Search as SearchIcon, Minus, Printer, Download
+  BarChart3, Settings, Lock, Unlock, Calendar, HelpCircle,
+  FileText, Eye, BookOpen, Sun, MousePointerClick,
+  Info, Wind, Thermometer, Timer, Wrench, LayoutGrid, ArrowLeft, Edit2,
+  PieChart, MapPin, Maximize2, Building2, Leaf,
+  Database, User, Users, LogOut, Key, Shield, X, Trash2, PlusCircle,
+  Store, Droplets, Filter, Check, Printer, TrendingDown
 } from 'lucide-react';
 
 
