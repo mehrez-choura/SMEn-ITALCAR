@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-// 1. IMPORT CORRECT DEPUIS VOTRE FICHIER LOCAL (Suppression du doublon)
-import { db, auth } from './firebase'; 
-import { signInWithCustomToken, signInAnonymously } from "firebase/auth";
+// On importe auth et db depuis notre fichier de config créé à l'étape 2
+import { auth, db } from './firebase'; 
+import { signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "firebase/auth";
 import { collection, addDoc, doc, setDoc, onSnapshot, query, orderBy, getDocs, deleteDoc, where } from "firebase/firestore";
 import { 
   Zap, Activity, Save, History, TrendingUp, AlertTriangle, Factory, CheckCircle2,
@@ -13,48 +13,50 @@ import {
   Store, Droplets, Filter, Check, Image as ImageIcon, FileCheck
 } from 'lucide-react';
 
-// 2. HELPER COLLECTION CORRIGÉ (Pointe vers la racine)
+// --- MODIFICATION ICI : SIMPLIFICATION DES COLLECTIONS ---
+// Dans Gemini Canvas, on utilisait une structure complexe ('artifacts/appId...').
+// Sur ton propre Firebase, utilise des collections simples à la racine.
 const getCollection = (name) => collection(db, name);
 
 // --- COMPOSANT HORLOGE & MÉTÉO (API LIVE) ---
 const HeaderInfoDisplay = () => {
-    const [date, setDate] = useState(new Date());
-    const [weather, setWeather] = useState({ temp: '--', code: 0 });
+    const [date, setDate] = useState(new Date());
+    const [weather, setWeather] = useState({ temp: '--', code: 0 });
 
-    useEffect(() => {
-        const timer = setInterval(() => setDate(new Date()), 1000);
-        
-        // Fetch Tunis Weather (Open-Meteo Free API)
-        const fetchWeather = async () => {
-            try {
-                const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=36.8065&longitude=10.1815&current_weather=true');
-                const data = await res.json();
-                if(data.current_weather) {
-                    setWeather({ temp: data.current_weather.temperature, code: data.current_weather.weathercode });
-                }
-            } catch (e) { console.log("Weather fetch failed"); }
-        };
-        fetchWeather();
-        const weatherTimer = setInterval(fetchWeather, 600000); // Update every 10 min
+    useEffect(() => {
+        const timer = setInterval(() => setDate(new Date()), 1000);
+        
+        // Fetch Tunis Weather (Open-Meteo Free API)
+        const fetchWeather = async () => {
+            try {
+                const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=36.8065&longitude=10.1815&current_weather=true');
+                const data = await res.json();
+                if(data.current_weather) {
+                    setWeather({ temp: data.current_weather.temperature, code: data.current_weather.weathercode });
+                }
+            } catch (e) { console.log("Weather fetch failed"); }
+        };
+        fetchWeather();
+        const weatherTimer = setInterval(fetchWeather, 600000); // Update every 10 min
 
-        return () => { clearInterval(timer); clearInterval(weatherTimer); };
-    }, []);
+        return () => { clearInterval(timer); clearInterval(weatherTimer); };
+    }, []);
 
-    return (
-        <div className="flex items-center gap-6 text-white">
-             <div className="text-right hidden sm:block">
-                <div className="text-2xl font-black leading-none flex items-center justify-end gap-2">
-                    {weather.temp}°C <Thermometer size={20} className="text-orange-400"/>
-                </div>
-                <div className="text-[10px] opacity-70 uppercase font-bold tracking-widest">Tunis (Live)</div>
-            </div>
-            <div className="h-8 w-px bg-white/20 hidden sm:block"></div>
-            <div className="text-right">
-                <div className="text-2xl font-black leading-none">{date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}</div>
-                <div className="text-[10px] opacity-70 uppercase font-bold tracking-widest">{date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' })}</div>
-            </div>
-        </div>
-    );
+    return (
+        <div className="flex items-center gap-6 text-white">
+             <div className="text-right">
+                <div className="text-2xl font-black leading-none flex items-center justify-end gap-2">
+                    {weather.temp}°C <Thermometer size={20} className="text-orange-400"/>
+                </div>
+                <div className="text-[10px] opacity-70 uppercase font-bold tracking-widest">Tunis (Live)</div>
+            </div>
+            <div className="h-8 w-px bg-white/20"></div>
+            <div className="text-right">
+                <div className="text-2xl font-black leading-none">{date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}</div>
+                <div className="text-[10px] opacity-70 uppercase font-bold tracking-widest">{date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' })}</div>
+            </div>
+        </div>
+    );
 };
 
 // ==================================================================================
@@ -62,95 +64,95 @@ const HeaderInfoDisplay = () => {
 // ==================================================================================
 
 const LoginScreen = ({ onLogin }) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
 
-    if (username === 'RMI' && password === 'RMI2026$') {
-        setTimeout(() => {
-            onLogin({ username: 'RMI', role: 'ADMIN' });
-            setLoading(false);
-        }, 800);
-        return;
-    }
+    if (username === 'RMI' && password === 'RMI2026$') {
+        setTimeout(() => {
+            onLogin({ username: 'RMI', role: 'ADMIN' });
+            setLoading(false);
+        }, 800);
+        return;
+    }
 
-    try {
-      const q = query(getCollection('users'), where("username", "==", username));
-      const querySnapshot = await getDocs(q);
+    try {
+      const q = query(getCollection('users'), where("username", "==", username));
+      const querySnapshot = await getDocs(q);
 
-      if (querySnapshot.empty) {
-        if (username === 'admin' && password === '0000') {
-            onLogin({ username: 'Admin Test', role: 'ADMIN' });
-            return;
-        }
-        setError("Utilisateur inconnu");
-        setLoading(false);
-        return;
-      }
+      if (querySnapshot.empty) {
+        if (username === 'admin' && password === '0000') {
+            onLogin({ username: 'Admin Test', role: 'ADMIN' });
+            return;
+        }
+        setError("Utilisateur inconnu");
+        setLoading(false);
+        return;
+      }
 
-      let userFound = null;
-      querySnapshot.forEach((doc) => {
-        const userData = doc.data();
-        if (userData.password === password) {
-            userFound = { ...userData, id: doc.id };
-        }
-      });
+      let userFound = null;
+      querySnapshot.forEach((doc) => {
+        const userData = doc.data();
+        if (userData.password === password) {
+            userFound = { ...userData, id: doc.id };
+        }
+      });
 
-      if (userFound) {
-        onLogin(userFound);
-      } else {
-        setError("Mot de passe incorrect");
-      }
-    } catch (err) {
-      console.error(err);
-      setError("Erreur de connexion base de données");
-    }
-    setLoading(false);
-  };
+      if (userFound) {
+        onLogin(userFound);
+      } else {
+        setError("Mot de passe incorrect");
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Erreur de connexion base de données");
+    }
+    setLoading(false);
+  };
 
-  return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-            <div className="absolute top-10 left-10 w-64 h-64 bg-blue-500 rounded-full blur-[100px]"></div>
-            <div className="absolute bottom-10 right-10 w-96 h-96 bg-emerald-500 rounded-full blur-[120px]"></div>
-        </div>
+  return (
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+            <div className="absolute top-10 left-10 w-64 h-64 bg-blue-500 rounded-full blur-[100px]"></div>
+            <div className="absolute bottom-10 right-10 w-96 h-96 bg-emerald-500 rounded-full blur-[120px]"></div>
+        </div>
 
-        <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md z-10">
-            <div className="text-center mb-8">
-                <div className="bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-600/30">
-                    <Factory size={32} className="text-white" />
-                </div>
-                <h1 className="text-2xl font-black text-slate-800">SMEn ITALCAR</h1>
-                <p className="text-slate-400 text-sm">Système de Management de l'Énergie</p>
-            </div>
-            <form onSubmit={handleLogin} className="space-y-4">
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Identifiant</label>
-                    <div className="relative">
-                        <User className="absolute left-3 top-3 text-slate-400" size={18} />
-                        <input type="text" className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:border-blue-500 font-bold text-slate-700" placeholder="Nom d'utilisateur" value={username} onChange={(e) => setUsername(e.target.value)} />
-                    </div>
-                </div>
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Mot de passe</label>
-                    <div className="relative">
-                        <Key className="absolute left-3 top-3 text-slate-400" size={18} />
-                        <input type="password" className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:border-blue-500 font-bold text-slate-700" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
-                    </div>
-                </div>
-                {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center font-bold flex items-center justify-center"><AlertCircle size={16} className="mr-2"/>{error}</div>}
-                <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-600/20 transition-all">{loading ? "Connexion..." : "Se Connecter"}</button>
-            </form>
-            <div className="mt-6 text-center text-xs text-slate-300">v8.0.2 Final • Production</div>
-        </div>
-    </div>
-  );
+        <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md z-10">
+            <div className="text-center mb-8">
+                <div className="bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-600/30">
+                    <Factory size={32} className="text-white" />
+                </div>
+                <h1 className="text-2xl font-black text-slate-800">SMEn ITALCAR</h1>
+                <p className="text-slate-400 text-sm">Système de Management de l'Énergie</p>
+            </div>
+            <form onSubmit={handleLogin} className="space-y-4">
+                <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Identifiant</label>
+                    <div className="relative">
+                        <User className="absolute left-3 top-3 text-slate-400" size={18} />
+                        <input type="text" className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:border-blue-500 font-bold text-slate-700" placeholder="Nom d'utilisateur" value={username} onChange={(e) => setUsername(e.target.value)} />
+                    </div>
+                </div>
+                <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Mot de passe</label>
+                    <div className="relative">
+                        <Key className="absolute left-3 top-3 text-slate-400" size={18} />
+                        <input type="password" className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:border-blue-500 font-bold text-slate-700" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
+                    </div>
+                </div>
+                {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center font-bold flex items-center justify-center"><AlertCircle size={16} className="mr-2"/>{error}</div>}
+                <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-600/20 transition-all">{loading ? "Connexion..." : "Se Connecter"}</button>
+            </form>
+            <div className="mt-6 text-center text-xs text-slate-300">v7.3.3 Final • Production</div>
+        </div>
+    </div>
+  );
 };
 
 // ==================================================================================
@@ -158,599 +160,652 @@ const LoginScreen = ({ onLogin }) => {
 // ==================================================================================
 
 const StegModule = ({ onBack, userRole }) => {
-  const [currentSite, setCurrentSite] = useState(1);
-  const [logs, setLogs] = useState([]);
-  const [showHelp, setShowHelp] = useState(false);
-  const [showUserGuide, setShowUserGuide] = useState(false);
-  const [notification, setNotification] = useState(null);
-  const [editingPrev, setEditingPrev] = useState(false);
+  const [currentSite, setCurrentSite] = useState(1);
+  const [logs, setLogs] = useState([]);
+  const [showHelp, setShowHelp] = useState(false);
+  const [showUserGuide, setShowUserGuide] = useState(false);
+  const [notification, setNotification] = useState(null);
+  const [editingPrev, setEditingPrev] = useState(false);
 
-  useEffect(() => {
-    const q = query(getCollection('steg_logs'), orderBy('id', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        setLogs(snapshot.docs.map(doc => ({ ...doc.data(), docId: doc.id })));
-    });
-    return () => unsubscribe();
-  }, []);
+  useEffect(() => {
+    const q = query(getCollection('steg_logs'), orderBy('id', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        setLogs(snapshot.docs.map(doc => ({ ...doc.data(), docId: doc.id })));
+    });
+    return () => unsubscribe();
+  }, []);
 
-  const SITES = [
-    { id: 1, name: "MT 1 - Mégrine", code: "MEG-001", type: "MT", icon: Factory },
-    { id: 2, name: "MT 2 - El Khadhra", code: "ELK-002", type: "MT", icon: Building2 },
-    { id: 3, name: "MT 3 - Naassen", code: "NAS-003", type: "MT", icon: Building2 },
-    { id: 4, name: "BT 1 - Showroom Lac", code: "SHR-001", type: "BT_PV", icon: Store }, 
-    { id: 5, name: "BT 2 - Azur City", code: "AZU-002", type: "BT", icon: Store },
-    { id: 6, name: "BT 3 - Rue de Carthage", code: "CAR-003", type: "BT", icon: Store }
-  ];
+  const SITES = [
+    { id: 1, name: "MT 1 - Mégrine", code: "MEG-001", type: "MT", icon: Factory },
+    { id: 2, name: "MT 2 - El Khadhra", code: "ELK-002", type: "MT", icon: Building2 },
+    { id: 3, name: "MT 3 - Naassen", code: "NAS-003", type: "MT", icon: Building2 },
+    { id: 4, name: "BT 1 - Showroom Lac", code: "SHR-001", type: "BT_PV", icon: Store }, 
+    { id: 5, name: "BT 2 - Azur City", code: "AZU-002", type: "BT", icon: Store },
+    { id: 6, name: "BT 3 - Rue de Carthage", code: "CAR-003", type: "BT", icon: Store }
+  ];
 
-  const [globalConfig, setGlobalConfig] = useState({
-    unitPriceKwh: 0.291, powerUnitPrice: 5.000, 
-    unitPriceKwhBT: 0.391, fixedFeesBT: 115.500, servicesBT: 0.000, fteGazBT: 0.000,
-    vatRate: 19, rtt: 3.500, municipalTaxRate: 0.010,
-    taxCLRate: 0.005, taxFTERate: 0.005,
-    powerOverrunPenalty: 25.000 
-  });
+  const [globalConfig, setGlobalConfig] = useState({
+    unitPriceKwh: 0.291, powerUnitPrice: 5.000, 
+    unitPriceKwhBT: 0.391, fixedFeesBT: 115.500, servicesBT: 0.000, fteGazBT: 0.000,
+    vatRate: 19, rtt: 3.500, municipalTaxRate: 0.010,
+    taxCLRate: 0.005, taxFTERate: 0.005,
+    powerOverrunPenalty: 25.000 
+  });
 
-  const [siteConfigs, setSiteConfigs] = useState({
-    1: { subscribedPower: 250, emptyLosses: 1300 }, 
-    2: { subscribedPower: 70, emptyLosses: 670 }, 
-    3: { subscribedPower: 30, emptyLosses: 160 }, 
-    4: { subscribedPower: 30, emptyLosses: 0 },
-    5: { subscribedPower: 20, emptyLosses: 0 },
-    6: { subscribedPower: 15, emptyLosses: 0 }
-  });
+  const [siteConfigs, setSiteConfigs] = useState({
+    1: { subscribedPower: 250, emptyLosses: 1300 }, 
+    2: { subscribedPower: 70, emptyLosses: 670 }, 
+    3: { subscribedPower: 30, emptyLosses: 160 }, 
+    4: { subscribedPower: 30, emptyLosses: 0 },
+    5: { subscribedPower: 20, emptyLosses: 0 },
+    6: { subscribedPower: 15, emptyLosses: 0 }
+  });
 
-  const [isConfigUnlocked, setIsConfigUnlocked] = useState(false);
-  
-  const [formData, setFormData] = useState({
-    date: new Date().toISOString().slice(0, 7),
-    lastIndex: '', newIndex: '', 
-    lastIndexPv: '', newIndexPv: '', 
-    previousBalance: '',
-    cosPhi: '', reactiveCons: '', maxPower: '', 
-    lateFees: '', relanceFees: '', adjustment: '',
-  });
+  const [isConfigUnlocked, setIsConfigUnlocked] = useState(false);
+   
+  const [formData, setFormData] = useState({
+    date: new Date().toISOString().slice(0, 7),
+    lastIndex: '', newIndex: '', 
+    lastIndexPv: '', newIndexPv: '', 
+    previousBalance: '',
+    cosPhi: '', reactiveCons: '', maxPower: '', 
+    lateFees: '', relanceFees: '', adjustment: '',
+  });
 
-  const formatMoney = (amount) => amount?.toLocaleString('fr-TN', { style: 'currency', currency: 'TND', minimumFractionDigits: 3 });
-  const formatNumber = (num) => num?.toLocaleString('fr-TN', { maximumFractionDigits: 2 });
-  const formatInputDisplay = (val) => { if (val === '' || val === undefined || val === null) return ''; const cleanVal = val.toString().replace(/[^0-9.-]/g, ''); return cleanVal.replace(/\B(?=(\d{3})+(?!\d))/g, " "); };
-  const parseInputValue = (val) => val.replace(/\s/g, ''); 
+  const formatMoney = (amount) => amount?.toLocaleString('fr-TN', { style: 'currency', currency: 'TND', minimumFractionDigits: 3 });
+  const formatNumber = (num) => num?.toLocaleString('fr-TN', { maximumFractionDigits: 2 });
+  const formatInputDisplay = (val) => { if (val === '' || val === undefined || val === null) return ''; const cleanVal = val.toString().replace(/[^0-9.-]/g, ''); return cleanVal.replace(/\B(?=(\d{3})+(?!\d))/g, " "); };
+  const parseInputValue = (val) => val.replace(/\s/g, ''); 
 
-  useEffect(() => {
-    const siteLogs = logs.filter(l => l.siteId === currentSite).sort((a, b) => b.id - a.id);
-    if (siteLogs.length > 0) {
-      const lastLog = siteLogs[0];
-      const currentSiteType = SITES.find(s => s.id === currentSite).type;
-      setFormData(prev => ({
-        ...prev,
-        lastIndex: lastLog.newIndex,
-        ...(currentSiteType === 'BT_PV' ? { lastIndexPv: lastLog.newIndexPv, previousBalance: lastLog.newCarryOver } : {}),
-        manualLastIndex: false
-      }));
-    } else {
-         setFormData(prev => ({ ...prev, lastIndex: '', lastIndexPv: '', previousBalance: '' }));
-    }
-  }, [currentSite, logs]);
+  useEffect(() => {
+    const siteLogs = logs.filter(l => l.siteId === currentSite).sort((a, b) => b.id - a.id);
+    if (siteLogs.length > 0) {
+      const lastLog = siteLogs[0];
+      const currentSiteType = SITES.find(s => s.id === currentSite).type;
+      setFormData(prev => ({
+        ...prev,
+        lastIndex: lastLog.newIndex,
+        ...(currentSiteType === 'BT_PV' ? { lastIndexPv: lastLog.newIndexPv, previousBalance: lastLog.newCarryOver } : {}),
+        manualLastIndex: false
+      }));
+    } else {
+         setFormData(prev => ({ ...prev, lastIndex: '', lastIndexPv: '', previousBalance: '' }));
+    }
+  }, [currentSite, logs]);
 
-  const handleInputChange = (field, value) => {
-    const cleanValue = ['lastIndex', 'newIndex', 'lastIndexPv', 'newIndexPv', 'previousBalance', 'maxPower', 'reactiveCons'].includes(field) ? parseInputValue(value) : value;
-    setFormData(prev => ({ ...prev, [field]: cleanValue }));
-  };
+  const handleInputChange = (field, value) => {
+    const cleanValue = ['lastIndex', 'newIndex', 'lastIndexPv', 'newIndexPv', 'previousBalance', 'maxPower', 'reactiveCons'].includes(field) ? parseInputValue(value) : value;
+    setFormData(prev => ({ ...prev, [field]: cleanValue }));
+  };
 
-  const handleGlobalConfigChange = (field, value) => setGlobalConfig(prev => ({ ...prev, [field]: value }));
-  const handleSiteConfigChange = (field, value) => setSiteConfigs(prev => ({ ...prev, [currentSite]: { ...prev[currentSite], [field]: value } }));
+  const handleGlobalConfigChange = (field, value) => setGlobalConfig(prev => ({ ...prev, [field]: value }));
+  const handleSiteConfigChange = (field, value) => setSiteConfigs(prev => ({ ...prev, [currentSite]: { ...prev[currentSite], [field]: value } }));
 
-  const calculateMetrics = () => {
-    const site = SITES.find(s => s.id === currentSite);
-    const sConf = siteConfigs[currentSite];
-    const gConf = globalConfig;
-    
-    const newIdx = parseFloat(formData.newIndex) || 0;
-    const oldIdx = parseFloat(formData.lastIndex) || 0;
-    const consumptionGrid = Math.max(0, newIdx - oldIdx);
+  const calculateMetrics = () => {
+    const site = SITES.find(s => s.id === currentSite);
+    const sConf = siteConfigs[currentSite];
+    const gConf = globalConfig;
+    
+    const newIdx = parseFloat(formData.newIndex) || 0;
+    const oldIdx = parseFloat(formData.lastIndex) || 0;
+    const consumptionGrid = Math.max(0, newIdx - oldIdx);
 
-    const lateFees = parseFloat(formData.lateFees) || 0;
-    const relanceFees = parseFloat(formData.relanceFees) || 0;
-    const adjustment = parseFloat(formData.adjustment) || 0;
-    const rtt = parseFloat(gConf.rtt) || 0;
-    const vat = (parseFloat(gConf.vatRate) || 0) / 100;
+    const lateFees = parseFloat(formData.lateFees) || 0;
+    const relanceFees = parseFloat(formData.relanceFees) || 0;
+    const adjustment = parseFloat(formData.adjustment) || 0;
+    const rtt = parseFloat(gConf.rtt) || 0;
+    const vat = (parseFloat(gConf.vatRate) || 0) / 100;
 
-    if (site.type.startsWith('BT')) {
-        let billedKwh = consumptionGrid;
-        let newCarryOver = 0;
-        let productionPv = 0;
-        let prevBalance = 0;
-        let currentMonthBalance = 0;
-        let totalBalance = 0;
+    if (site.type.startsWith('BT')) {
+        let billedKwh = consumptionGrid;
+        let newCarryOver = 0;
+        let productionPv = 0;
+        let prevBalance = 0;
+        let currentMonthBalance = 0;
+        let totalBalance = 0;
 
-        if (site.type === 'BT_PV') {
-            const newIdxPv = parseFloat(formData.newIndexPv) || 0;
-            const oldIdxPv = parseFloat(formData.lastIndexPv) || 0;
-            prevBalance = parseFloat(formData.previousBalance) || 0;
-            productionPv = Math.max(0, newIdxPv - oldIdxPv);
-            currentMonthBalance = consumptionGrid - productionPv;
-            totalBalance = currentMonthBalance + prevBalance;
-            if (totalBalance > 0) { billedKwh = totalBalance; newCarryOver = 0; } 
-            else { billedKwh = 0; newCarryOver = totalBalance; }
-        }
+        if (site.type === 'BT_PV') {
+            const newIdxPv = parseFloat(formData.newIndexPv) || 0;
+            const oldIdxPv = parseFloat(formData.lastIndexPv) || 0;
+            prevBalance = parseFloat(formData.previousBalance) || 0;
+            productionPv = Math.max(0, newIdxPv - oldIdxPv);
+            currentMonthBalance = consumptionGrid - productionPv;
+            totalBalance = currentMonthBalance + prevBalance;
+            if (totalBalance > 0) { billedKwh = totalBalance; newCarryOver = 0; } 
+            else { billedKwh = 0; newCarryOver = totalBalance; }
+        }
 
-        const unitPriceBT = parseFloat(gConf.unitPriceKwhBT) || 0.391;
-        const fixedFees = parseFloat(gConf.fixedFeesBT) || 115.5;
-        const services = parseFloat(gConf.servicesBT) || 0;
-        
-        const consoAmountHT = billedKwh * unitPriceBT;
-        const fixedAmountHT = fixedFees + services;
-        const totalHT = consoAmountHT + fixedAmountHT;
-        const totalTTC = totalHT * (1 + vat);
-        
-        const contributionCL = billedKwh * (parseFloat(gConf.taxCLRate)||0.005);
-        const fteElec = billedKwh * (parseFloat(gConf.taxFTERate)||0.005);
-        const fteGaz = parseFloat(gConf.fteGazBT) || 0;
-        
-        const totalFinalTTC = totalTTC + contributionCL + rtt + fteElec + fteGaz;
-        const netToPay = totalFinalTTC + adjustment + lateFees + relanceFees;
-        
-        return { 
-            type: site.type, consumptionGrid, productionPv, currentMonthBalance, prevBalance, totalBalance, 
-            billedKwh, newCarryOver, consoAmountHT, fixedAmountHT, totalTTC, contributionCL, fteElec, fteGaz, netToPay, totalFinalTTC, totalHT 
-        };
-    }
-    else {
-        const cosPhi = parseFloat(formData.cosPhi) || 1;
-        const maxPower = parseFloat(formData.maxPower) || 0;
-        const reactiveCons = parseFloat(formData.reactiveCons) || 0;
-        
-        const unitPrice = parseFloat(gConf.unitPriceKwh) || 0.291;
-        const subPower = parseFloat(sConf.subscribedPower) || 0;
-        const powerPrice = parseFloat(gConf.powerUnitPrice) || 5.000;
-        const muniTaxRate = parseFloat(gConf.municipalTaxRate) || 0.010;
-        const emptyLosses = parseFloat(sConf.emptyLosses) || 0;
-        const powerOverrunPrice = parseFloat(gConf.powerOverrunPenalty) || 25.000;
+        const unitPriceBT = parseFloat(gConf.unitPriceKwhBT) || 0.391;
+        const fixedFees = parseFloat(gConf.fixedFeesBT) || 115.5;
+        const services = parseFloat(gConf.servicesBT) || 0;
+        
+        const consoAmountHT = billedKwh * unitPriceBT;
+        const fixedAmountHT = fixedFees + services;
+        const totalHT = consoAmountHT + fixedAmountHT;
+        const totalTTC = totalHT * (1 + vat);
+        
+        const contributionCL = billedKwh * (parseFloat(gConf.taxCLRate)||0.005);
+        const fteElec = billedKwh * (parseFloat(gConf.taxFTERate)||0.005);
+        const fteGaz = parseFloat(gConf.fteGazBT) || 0;
+        
+        const totalFinalTTC = totalTTC + contributionCL + rtt + fteElec + fteGaz;
+        const netToPay = totalFinalTTC + adjustment + lateFees + relanceFees;
+        
+        return { 
+            type: site.type, consumptionGrid, productionPv, currentMonthBalance, prevBalance, totalBalance, 
+            billedKwh, newCarryOver, consoAmountHT, fixedAmountHT, totalTTC, contributionCL, fteElec, fteGaz, netToPay, totalFinalTTC, totalHT 
+        };
+    }
+    else {
+        const cosPhi = parseFloat(formData.cosPhi) || 1;
+        const maxPower = parseFloat(formData.maxPower) || 0;
+        const reactiveCons = parseFloat(formData.reactiveCons) || 0;
+        
+        const unitPrice = parseFloat(gConf.unitPriceKwh) || 0.291;
+        const subPower = parseFloat(sConf.subscribedPower) || 0;
+        const powerPrice = parseFloat(gConf.powerUnitPrice) || 5.000;
+        const muniTaxRate = parseFloat(gConf.municipalTaxRate) || 0.010;
+        const emptyLosses = parseFloat(sConf.emptyLosses) || 0;
+        const powerOverrunPrice = parseFloat(gConf.powerOverrunPenalty) || 25.000;
 
-        const loadLosses = consumptionGrid * 0.02; 
-        const billedKwh = consumptionGrid + emptyLosses + loadLosses;
-        const baseEnergyAmountHT = billedKwh * unitPrice;
+        const loadLosses = consumptionGrid * 0.02; 
+        const billedKwh = consumptionGrid + emptyLosses + loadLosses;
+        const baseEnergyAmountHT = billedKwh * unitPrice;
 
-        let adjustmentRate = 0;
-        let adjustmentType = 'none';
-        if (cosPhi >= 0.91 && cosPhi <= 1) { 
-            adjustmentRate = -(Math.round((cosPhi - 0.90) * 100) * 0.005); adjustmentType = 'bonus'; 
-        } else if (cosPhi >= 0.80 && cosPhi <= 0.90) { 
-            adjustmentRate = 0; adjustmentType = 'neutral'; 
-        } else { 
-            adjustmentType = 'penalty'; 
-            let p = 0; 
-            if(cosPhi<0.8) p+=Math.round((0.8-Math.max(cosPhi,0.75))*100)*0.005; 
-            if(cosPhi<0.75) p+=Math.round((0.75-Math.max(cosPhi,0.7))*100)*0.01; 
-            if(cosPhi<0.7) p+=Math.round((0.7-Math.max(cosPhi,0.6))*100)*0.015; 
-            if(cosPhi<0.6) p+=Math.round((0.6-cosPhi)*100)*0.02; 
-            adjustmentRate = p; 
-        }
-        const cosPhiAdjustmentAmount = baseEnergyAmountHT * adjustmentRate;
+        let adjustmentRate = 0;
+        let adjustmentType = 'none';
+        if (cosPhi >= 0.91 && cosPhi <= 1) { 
+            adjustmentRate = -(Math.round((cosPhi - 0.90) * 100) * 0.005); adjustmentType = 'bonus'; 
+        } else if (cosPhi >= 0.80 && cosPhi <= 0.90) { 
+            adjustmentRate = 0; adjustmentType = 'neutral'; 
+        } else { 
+            adjustmentType = 'penalty'; 
+            let p = 0; 
+            if(cosPhi<0.8) p+=Math.round((0.8-Math.max(cosPhi,0.75))*100)*0.005; 
+            if(cosPhi<0.75) p+=Math.round((0.75-Math.max(cosPhi,0.7))*100)*0.01; 
+            if(cosPhi<0.7) p+=Math.round((0.7-Math.max(cosPhi,0.6))*100)*0.015; 
+            if(cosPhi<0.6) p+=Math.round((0.6-cosPhi)*100)*0.02; 
+            adjustmentRate = p; 
+        }
+        const cosPhiAdjustmentAmount = baseEnergyAmountHT * adjustmentRate;
 
-        const powerOverrun = Math.max(0, maxPower - subPower);
-        const powerOverrunAmount = powerOverrun * powerOverrunPrice;
+        const powerOverrun = Math.max(0, maxPower - subPower);
+        const powerOverrunAmount = powerOverrun * powerOverrunPrice;
 
-        const total1_HT = baseEnergyAmountHT + cosPhiAdjustmentAmount;
-        const total1_TTC = total1_HT * (1 + vat);
-        
-        const powerPremium = subPower * powerPrice;
-        const total2_HT = powerPremium + lateFees + relanceFees + powerOverrunAmount;
-        const total2_TTC = total2_HT * (1 + vat);
-        
-        const municipalTax = billedKwh * muniTaxRate;
+        const total1_HT = baseEnergyAmountHT + cosPhiAdjustmentAmount;
+        const total1_TTC = total1_HT * (1 + vat);
+        
+        const powerPremium = subPower * powerPrice;
+        const total2_HT = powerPremium + lateFees + relanceFees + powerOverrunAmount;
+        const total2_TTC = total2_HT * (1 + vat);
+        
+        const municipalTax = billedKwh * muniTaxRate;
 
-        const netToPay = total1_TTC + total2_TTC + rtt + municipalTax + adjustment;
+        const netToPay = total1_TTC + total2_TTC + rtt + municipalTax + adjustment;
 
-        return { 
-            type: 'MT', energyRecorded: consumptionGrid, loadLosses, billedKwh, 
-            baseEnergyAmountHT, adjustmentRate, adjustmentType, cosPhiAdjustmentAmount, 
-            total1_TTC, total1_HT, powerPremium, total2_HT, total2_TTC, municipalTax, 
-            netToPay, powerOverrun, powerOverrunAmount, reactiveCons, subPower
-        };
-    }
-  };
+        return { 
+            type: 'MT', energyRecorded: consumptionGrid, loadLosses, billedKwh, 
+            baseEnergyAmountHT, adjustmentRate, adjustmentType, cosPhiAdjustmentAmount, 
+            total1_TTC, total1_HT, powerPremium, total2_HT, total2_TTC, municipalTax, 
+            netToPay, powerOverrun, powerOverrunAmount, reactiveCons, subPower
+        };
+    }
+  };
 
-  const handleSubmit = async (e) => {
-      e.preventDefault();
-      const site = SITES.find(s => s.id === currentSite);
-      const metrics = calculateMetrics();
-      const newLog = {
-          id: Date.now(),
-          recordDate: formData.date,
-          timestamp: new Date().toLocaleTimeString('fr-FR'),
-          siteId: currentSite, siteName: site.name, siteType: site.type,
-          ...formData, ...metrics
-      };
-      try {
-          await addDoc(getCollection('steg_logs'), newLog);
-          setNotification({ msg: "Relevé enregistré dans le Cloud", type: 'success' });
-          setFormData(prev => ({
-            ...prev,
-            lastIndex: formData.newIndex, newIndex: '',
-            ...(site.type === 'BT_PV' ? { lastIndexPv: formData.newIndexPv, newIndexPv: '', previousBalance: metrics.newCarryOver } : {}),
-            cosPhi: '', reactiveCons: '', maxPower: '', lateFees: '', relanceFees: '', adjustment: '', manualLastIndex: false
-          }));
-      } catch (err) { setNotification({ msg: "Erreur sauvegarde", type: 'error' }); }
-      setTimeout(() => setNotification(null), 3000);
-  };
-  
-  const liveMetrics = calculateMetrics();
-  const siteLogs = logs.filter(l => l.siteId === currentSite);
-  const currentSiteObj = SITES.find(s => s.id === currentSite);
-  const isBT = currentSiteObj.type.startsWith('BT');
-  const displayMetrics = liveMetrics;
-  const CurrentIcon = currentSiteObj.icon;
-  
-  return (
-    <div className="bg-slate-50 min-h-screen pb-10">
-        <header className={`text-white shadow-lg sticky top-0 z-30 transition-colors duration-500 ${isBT ? 'bg-gradient-to-r from-red-800 to-orange-900' : 'bg-gradient-to-r from-blue-900 to-slate-900'}`}>
-            <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center">
-                <div className="flex items-center space-x-4 mb-2 md:mb-0">
-                    <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full mr-2 transition-colors"><ArrowLeft size={20} /></button>
-                    <div className={`p-2 rounded-xl text-slate-900 shadow-lg ${isBT ? 'bg-white' : 'bg-yellow-500'}`}>
-                        <CurrentIcon size={28} className={isBT ? 'text-red-600' : 'text-blue-900'} />
-                    </div>
-                    <div>
-                        <h1 className="text-xl font-bold tracking-tight leading-tight">Facturation {currentSiteObj.name}</h1>
-                        <div className="flex items-center space-x-2 text-xs opacity-90 mt-1">
-                            <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[10px] ${isBT ? 'bg-red-700 border border-red-600' : 'bg-blue-800 border border-blue-700'}`}>
-                                {isBT ? 'BASSE TENSION' : 'MOYENNE TENSION'}
-                            </span>
-                            <span className="flex items-center"><MapPin size={10} className="mr-1"/> {currentSiteObj.code}</span>
-                        </div>
-                    </div>
-                </div>
-                <div className="flex items-center gap-6">
-                   <HeaderInfoDisplay />
-                   <div className="flex gap-2">
-                       <button onClick={() => setShowUserGuide(true)} className="flex items-center bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg text-xs font-bold border border-white/20"><BookOpen size={16} className="mr-2" /> Guide</button>
-                       {!isBT && <button onClick={() => setShowHelp(true)} className="flex items-center bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg text-xs font-bold border border-white/20"><HelpCircle size={16} className="mr-2" /> Cos φ</button>}
-                   </div>
-                </div>
-            </div>
-        </header>
+  const handleSubmit = async (e) => {
+      e.preventDefault();
+      const site = SITES.find(s => s.id === currentSite);
+      const metrics = calculateMetrics();
+      const newLog = {
+          id: Date.now(),
+          recordDate: formData.date,
+          timestamp: new Date().toLocaleTimeString('fr-FR'),
+          siteId: currentSite, siteName: site.name, siteType: site.type,
+          ...formData, ...metrics
+      };
+      try {
+          await addDoc(getCollection('steg_logs'), newLog);
+          setNotification({ msg: "Relevé enregistré dans le Cloud", type: 'success' });
+          setFormData(prev => ({
+            ...prev,
+            lastIndex: formData.newIndex, newIndex: '',
+            ...(site.type === 'BT_PV' ? { lastIndexPv: formData.newIndexPv, newIndexPv: '', previousBalance: metrics.newCarryOver } : {}),
+            cosPhi: '', reactiveCons: '', maxPower: '', lateFees: '', relanceFees: '', adjustment: '', manualLastIndex: false
+          }));
+      } catch (err) { setNotification({ msg: "Erreur sauvegarde", type: 'error' }); }
+      setTimeout(() => setNotification(null), 3000);
+  };
+   
+  const liveMetrics = calculateMetrics();
+  const siteLogs = logs.filter(l => l.siteId === currentSite);
+  const currentSiteObj = SITES.find(s => s.id === currentSite);
+  const isBT = currentSiteObj.type.startsWith('BT');
+  const displayMetrics = liveMetrics;
+  const CurrentIcon = currentSiteObj.icon;
+   
+  return (
+    <div className="bg-slate-50 min-h-screen pb-10">
+        <header className={`text-white shadow-lg sticky top-0 z-30 transition-colors duration-500 ${isBT ? 'bg-gradient-to-r from-red-800 to-orange-900' : 'bg-gradient-to-r from-blue-900 to-slate-900'}`}>
+            <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center">
+                <div className="flex items-center space-x-4 mb-2 md:mb-0">
+                    <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full mr-2 transition-colors"><ArrowLeft size={20} /></button>
+                    <div className={`p-2 rounded-xl text-slate-900 shadow-lg ${isBT ? 'bg-white' : 'bg-yellow-500'}`}>
+                        <CurrentIcon size={28} className={isBT ? 'text-red-600' : 'text-blue-900'} />
+                    </div>
+                    <div>
+                        <h1 className="text-xl font-bold tracking-tight leading-tight">Facturation {currentSiteObj.name}</h1>
+                        <div className="flex items-center space-x-2 text-xs opacity-90 mt-1">
+                            <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[10px] ${isBT ? 'bg-red-700 border border-red-600' : 'bg-blue-800 border border-blue-700'}`}>
+                                {isBT ? 'BASSE TENSION' : 'MOYENNE TENSION'}
+                            </span>
+                            <span className="flex items-center"><MapPin size={10} className="mr-1"/> {currentSiteObj.code}</span>
+                        </div>
+                    </div>
+                </div>
+                <div className="flex items-center gap-6">
+                   <div className="flex gap-2">
+                       <button onClick={() => setShowUserGuide(true)} className="flex items-center bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg text-xs font-bold border border-white/20"><BookOpen size={16} className="mr-2" /> Guide</button>
+                       {!isBT && <button onClick={() => setShowHelp(true)} className="flex items-center bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg text-xs font-bold border border-white/20"><HelpCircle size={16} className="mr-2" /> Cos φ</button>}
+                   </div>
+                </div>
+            </div>
+        </header>
 
-        {showUserGuide && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={() => setShowUserGuide(false)}>
-                <div className="bg-white p-8 rounded-2xl max-w-4xl w-full shadow-2xl relative overflow-hidden" onClick={e => e.stopPropagation()}>
-                    <div className="flex justify-between items-start mb-6 border-b border-slate-100 pb-4">
-                        <div>
-                            <h3 className="text-2xl font-black text-slate-800 flex items-center">
-                                <BookOpen className="mr-3 text-blue-600" size={28}/> 
-                                Guide d'Utilisation
-                            </h3>
-                            <p className="text-slate-500 text-sm mt-1">Comment utiliser le module Facturation & Énergie</p>
-                        </div>
-                        <button onClick={() => setShowUserGuide(false)} className="bg-slate-100 hover:bg-slate-200 p-2 rounded-full transition-colors"><X size={20} className="text-slate-600"/></button>
-                    </div>
+        {showUserGuide && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={() => setShowUserGuide(false)}>
+                <div className="bg-white p-8 rounded-2xl max-w-4xl w-full shadow-2xl relative overflow-hidden" onClick={e => e.stopPropagation()}>
+                    <div className="flex justify-between items-start mb-6 border-b border-slate-100 pb-4">
+                        <div>
+                            <h3 className="text-2xl font-black text-slate-800 flex items-center">
+                                <BookOpen className="mr-3 text-blue-600" size={28}/> 
+                                Guide d'Utilisation
+                            </h3>
+                            <p className="text-slate-500 text-sm mt-1">Comment utiliser le module Facturation & Énergie</p>
+                        </div>
+                        <button onClick={() => setShowUserGuide(false)} className="bg-slate-100 hover:bg-slate-200 p-2 rounded-full transition-colors"><X size={20} className="text-slate-600"/></button>
+                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-6">
-                            <h4 className="text-lg font-bold text-blue-800 mb-4 flex items-center"><Activity className="mr-2"/> Workflow Application</h4>
-                            
-                            <div className="relative border-l-4 border-blue-200 pl-6 space-y-6">
-                                <div className="relative">
-                                    <span className="absolute -left-[34px] bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ring-4 ring-white">1</span>
-                                    <h5 className="font-bold text-slate-800">Sélection du Site</h5>
-                                    <p className="text-sm text-slate-600">Choisissez le compteur (MT ou BT) dans la grille supérieure. L'interface s'adapte automatiquement au type de comptage.</p>
-                                </div>
-                                <div className="relative">
-                                    <span className="absolute -left-[34px] bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ring-4 ring-white">2</span>
-                                    <h5 className="font-bold text-slate-800">Saisie des Données</h5>
-                                    <p className="text-sm text-slate-600">Entrez le <strong>Nouvel Index</strong> (kWh). Pour les sites MT, ajoutez la <strong>Puissance Max</strong> et le <strong>Cos φ</strong>.</p>
-                                </div>
-                                <div className="relative">
-                                    <span className="absolute -left-[34px] bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ring-4 ring-white">3</span>
-                                    <h5 className="font-bold text-slate-800">Analyse Instantanée</h5>
-                                    <p className="text-sm text-slate-600">Le système calcule immédiatement la consommation, les pénalités éventuelles et le montant estimé de la facture.</p>
-                                </div>
-                            </div>
-                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-6">
+                            <h4 className="text-lg font-bold text-blue-800 mb-4 flex items-center"><Activity className="mr-2"/> Workflow Application</h4>
+                            
+                            <div className="relative border-l-4 border-blue-200 pl-6 space-y-6">
+                                <div className="relative">
+                                    <span className="absolute -left-[34px] bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ring-4 ring-white">1</span>
+                                    <h5 className="font-bold text-slate-800">Sélection du Site</h5>
+                                    <p className="text-sm text-slate-600">Choisissez le compteur (MT ou BT) dans la grille supérieure. L'interface s'adapte automatiquement au type de comptage.</p>
+                                </div>
+                                <div className="relative">
+                                    <span className="absolute -left-[34px] bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ring-4 ring-white">2</span>
+                                    <h5 className="font-bold text-slate-800">Saisie des Données</h5>
+                                    <p className="text-sm text-slate-600">Entrez le <strong>Nouvel Index</strong> (kWh). Pour les sites MT, ajoutez la <strong>Puissance Max</strong> et le <strong>Cos φ</strong>.</p>
+                                </div>
+                                <div className="relative">
+                                    <span className="absolute -left-[34px] bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ring-4 ring-white">3</span>
+                                    <h5 className="font-bold text-slate-800">Analyse Instantanée</h5>
+                                    <p className="text-sm text-slate-600">Le système calcule immédiatement la consommation, les pénalités éventuelles et le montant estimé de la facture.</p>
+                                </div>
+                            </div>
+                        </div>
 
-                        <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 overflow-y-auto max-h-[400px]">
-                            <h4 className="text-lg font-bold text-slate-800 mb-4 flex items-center"><Eye className="mr-2 text-slate-500"/> Relevé Physique Détaillé</h4>
-                            <div className="space-y-4">
-                                <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
-                                    <div className="flex items-center mb-2">
-                                        <MousePointerClick className="text-blue-500 mr-2" size={18}/>
-                                        <span className="font-bold text-slate-700 text-sm">1. Navigation Compteur</span>
-                                    </div>
-                                    <p className="text-xs text-slate-500 leading-relaxed pl-6">
-                                        Appuyez sur le bouton de défilement (souvent bleu ou jaune) pour réveiller l'écran.
-                                        Continuez d'appuyer pour faire défiler les codes OBIS (les chiffres en haut à gauche type <code>1.8.0</code>).
-                                    </p>
-                                </div>
+                        <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 overflow-y-auto max-h-[400px]">
+                            <h4 className="text-lg font-bold text-slate-800 mb-4 flex items-center"><Eye className="mr-2 text-slate-500"/> Relevé Physique Détaillé</h4>
+                            <div className="space-y-4">
+                                <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
+                                    <div className="flex items-center mb-2">
+                                        <MousePointerClick className="text-blue-500 mr-2" size={18}/>
+                                        <span className="font-bold text-slate-700 text-sm">1. Navigation Compteur</span>
+                                    </div>
+                                    <p className="text-xs text-slate-500 leading-relaxed pl-6">
+                                        Appuyez sur le bouton de défilement (souvent bleu ou jaune) pour réveiller l'écran.
+                                        Continuez d'appuyer pour faire défiler les codes OBIS (les chiffres en haut à gauche type <code>1.8.0</code>).
+                                    </p>
+                                </div>
 
-                                <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
-                                    <div className="flex items-center mb-2">
-                                        <FileText className="text-emerald-500 mr-2" size={18}/>
-                                        <span className="font-bold text-slate-700 text-sm">2. Codes à Relever (MT)</span>
-                                    </div>
-                                    <ul className="text-xs text-slate-500 space-y-1 pl-6 list-disc">
-                                        <li><strong>1.8.0</strong> : Cumul Énergie Active (kWh) - <em>Vital pour la facturation</em>.</li>
-                                        <li><strong>1.8.1</strong> : Index Jour (kWh).</li>
-                                        <li><strong>1.8.2</strong> : Index Pointe (kWh).</li>
-                                        <li><strong>1.8.3</strong> : Index Nuit/Soir (kWh).</li>
-                                        <li><strong>P.Max (1.6.0)</strong> : Puissance Maximale (kVA) du mois en cours.</li>
-                                    </ul>
-                                </div>
+                                <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
+                                    <div className="flex items-center mb-2">
+                                        <FileText className="text-emerald-500 mr-2" size={18}/>
+                                        <span className="font-bold text-slate-700 text-sm">2. Codes à Relever (MT)</span>
+                                    </div>
+                                    <ul className="text-xs text-slate-500 space-y-1 pl-6 list-disc">
+                                        <li><strong>1.8.0</strong> : Cumul Énergie Active (kWh) - <em>Vital pour la facturation</em>.</li>
+                                        <li><strong>1.8.1</strong> : Index Jour (kWh).</li>
+                                        <li><strong>1.8.2</strong> : Index Pointe (kWh).</li>
+                                        <li><strong>1.8.3</strong> : Index Nuit/Soir (kWh).</li>
+                                        <li><strong>P.Max (1.6.0)</strong> : Puissance Maximale (kVA) du mois en cours.</li>
+                                    </ul>
+                                </div>
 
-                                <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
-                                    <div className="flex items-center mb-2">
-                                        <AlertTriangle className="text-orange-500 mr-2" size={18}/>
-                                        <span className="font-bold text-slate-700 text-sm">3. Points de Vigilance</span>
-                                    </div>
-                                    <ul className="text-xs text-slate-500 space-y-1 pl-6">
-                                        <li>• Vérifiez l'unité : <strong>kWh</strong> (Énergie) vs <strong>kVA</strong> (Puissance).</li>
-                                        <li>• Notez les chiffres <strong>avant la virgule</strong> pour éviter les erreurs d'échelle.</li>
-                                        <li>• Si le compteur affiche <code>Erreur</code> ou un triangle clignotant, signalez-le à la maintenance.</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        )}
+                                <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
+                                    <div className="flex items-center mb-2">
+                                        <AlertTriangle className="text-orange-500 mr-2" size={18}/>
+                                        <span className="font-bold text-slate-700 text-sm">3. Points de Vigilance</span>
+                                    </div>
+                                    <ul className="text-xs text-slate-500 space-y-1 pl-6">
+                                        <li>• Vérifiez l'unité : <strong>kWh</strong> (Énergie) vs <strong>kVA</strong> (Puissance).</li>
+                                        <li>• Notez les chiffres <strong>avant la virgule</strong> pour éviter les erreurs d'échelle.</li>
+                                        <li>• Si le compteur affiche <code>Erreur</code> ou un triangle clignotant, signalez-le à la maintenance.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
 
-        {showHelp && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={() => setShowHelp(false)}>
-                <div className="bg-white p-8 rounded-2xl max-w-3xl w-full shadow-2xl relative overflow-hidden" onClick={e => e.stopPropagation()}>
-                    <div className="flex justify-between items-start mb-8">
-                        <div>
-                            <h3 className="text-2xl font-black text-slate-800 flex items-center">
-                                <HelpCircle className="mr-3 text-emerald-600" size={28}/> 
-                                Comprendre le Cos φ
-                            </h3>
-                            <p className="text-slate-500 text-sm mt-1">Impact sur la facturation et l'efficacité énergétique</p>
-                        </div>
-                        <button onClick={() => setShowHelp(false)} className="bg-slate-100 hover:bg-slate-200 p-2 rounded-full transition-colors"><X size={20} className="text-slate-600"/></button>
-                    </div>
+        {showHelp && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={() => setShowHelp(false)}>
+                <div className="bg-white p-8 rounded-2xl max-w-3xl w-full shadow-2xl relative overflow-hidden" onClick={e => e.stopPropagation()}>
+                    <div className="flex justify-between items-start mb-8">
+                        <div>
+                            <h3 className="text-2xl font-black text-slate-800 flex items-center">
+                                <HelpCircle className="mr-3 text-emerald-600" size={28}/> 
+                                Comprendre le Cos φ
+                            </h3>
+                            <p className="text-slate-500 text-sm mt-1">Impact sur la facturation et l'efficacité énergétique</p>
+                        </div>
+                        <button onClick={() => setShowHelp(false)} className="bg-slate-100 hover:bg-slate-200 p-2 rounded-full transition-colors"><X size={20} className="text-slate-600"/></button>
+                    </div>
 
-                    <div className="mb-8">
-                        <div className="flex justify-between text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">
-                            <span>Zone de Pénalité</span>
-                            <span>Zone Neutre</span>
-                            <span>Zone de Bonus</span>
-                        </div>
-                        <div className="h-12 w-full rounded-xl flex overflow-hidden shadow-inner border border-slate-200">
-                            <div className="w-[80%] bg-gradient-to-r from-red-500 to-red-400 flex items-center justify-center text-white font-bold text-xs relative group cursor-help">
-                                &lt; 0.80
-                                <span className="absolute bottom-full mb-2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Mauvais rendement = Pénalités</span>
-                            </div>
-                            <div className="w-[10%] bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-xs border-l border-r border-white relative group cursor-help">
-                                0.8-0.9
-                                <span className="absolute bottom-full mb-2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Standard = Aucune incidence</span>
-                            </div>
-                            <div className="w-[10%] bg-emerald-500 flex items-center justify-center text-white font-bold text-xs relative group cursor-help">
-                                &gt; 0.90
-                                <span className="absolute bottom-full mb-2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Excellent = Bonus sur facture</span>
-                            </div>
-                        </div>
-                    </div>
+                    <div className="mb-8">
+                        <div className="flex justify-between text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">
+                            <span>Zone de Pénalité</span>
+                            <span>Zone Neutre</span>
+                            <span>Zone de Bonus</span>
+                        </div>
+                        <div className="h-12 w-full rounded-xl flex overflow-hidden shadow-inner border border-slate-200">
+                            <div className="w-[80%] bg-gradient-to-r from-red-500 to-red-400 flex items-center justify-center text-white font-bold text-xs relative group cursor-help">
+                                &lt; 0.80
+                                <span className="absolute bottom-full mb-2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Mauvais rendement = Pénalités</span>
+                            </div>
+                            <div className="w-[10%] bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-xs border-l border-r border-white relative group cursor-help">
+                                0.8-0.9
+                                <span className="absolute bottom-full mb-2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Standard = Aucune incidence</span>
+                            </div>
+                            <div className="w-[10%] bg-emerald-500 flex items-center justify-center text-white font-bold text-xs relative group cursor-help">
+                                &gt; 0.90
+                                <span className="absolute bottom-full mb-2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Excellent = Bonus sur facture</span>
+                            </div>
+                        </div>
+                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-4">
-                            <h4 className="font-bold text-slate-800 text-lg">Qu'est-ce que c'est ?</h4>
-                            <p className="text-sm text-slate-600 leading-relaxed text-justify">
-                                Le Cosinus Phi (Facteur de Puissance) mesure l'efficacité avec laquelle votre installation utilise l'électricité. 
-                                C'est le rapport entre la <strong>puissance active</strong> (celle qui crée du travail : moteurs, lumière) et la <strong>puissance apparente</strong> (celle fournie par le réseau).
-                            </p>
-                            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                                <div className="flex items-center text-blue-800 font-bold text-sm mb-2">
-                                    <Info size={16} className="mr-2"/> Analogie simple
-                                </div>
-                                <p className="text-xs text-blue-700 italic">
-                                    Imaginez un verre de bière. Le liquide est la puissance active (utile). La mousse est la puissance réactive (inutile mais occupe de la place). Le Cos φ est le ratio de liquide par rapport au verre total. Plus il y a de mousse (réactif), moins c'est efficace.
-                                </p>
-                            </div>
-                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-4">
+                            <h4 className="font-bold text-slate-800 text-lg">Qu'est-ce que c'est ?</h4>
+                            <p className="text-sm text-slate-600 leading-relaxed text-justify">
+                                Le Cosinus Phi (Facteur de Puissance) mesure l'efficacité avec laquelle votre installation utilise l'électricité. 
+                                C'est le rapport entre la <strong>puissance active</strong> (celle qui crée du travail : moteurs, lumière) et la <strong>puissance apparente</strong> (celle fournie par le réseau).
+                            </p>
+                            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                                <div className="flex items-center text-blue-800 font-bold text-sm mb-2">
+                                    <Info size={16} className="mr-2"/> Analogie simple
+                                </div>
+                                <p className="text-xs text-blue-700 italic">
+                                    Imaginez un verre de bière. Le liquide est la puissance active (utile). La mousse est la puissance réactive (inutile mais occupe de la place). Le Cos φ est le ratio de liquide par rapport au verre total. Plus il y a de mousse (réactif), moins c'est efficace.
+                                </p>
+                            </div>
+                        </div>
 
-                        <div className="space-y-4">
-                            <h4 className="font-bold text-slate-800 text-lg">Impact Financier</h4>
-                            
-                            <div className="space-y-3">
-                                <div className="flex items-start p-3 bg-red-50 rounded-xl border border-red-100">
-                                    <div className="bg-red-200 p-2 rounded-lg text-red-700 mr-3"><TrendingDown size={18}/></div>
-                                    <div>
-                                        <span className="block font-bold text-red-800 text-sm">Pénalités (Cos φ &lt; 0.8)</span>
-                                        <span className="text-xs text-red-600 leading-tight">La STEG facture l'énergie réactive consommée au-delà du seuil toléré. Cela peut représenter un surcoût important.</span>
-                                    </div>
-                                </div>
+                        <div className="space-y-4">
+                            <h4 className="font-bold text-slate-800 text-lg">Impact Financier</h4>
+                            
+                            <div className="space-y-3">
+                                <div className="flex items-start p-3 bg-red-50 rounded-xl border border-red-100">
+                                    <div className="bg-red-200 p-2 rounded-lg text-red-700 mr-3"><TrendingDown size={18}/></div>
+                                    <div>
+                                        <span className="block font-bold text-red-800 text-sm">Pénalités (Cos φ &lt; 0.8)</span>
+                                        <span className="text-xs text-red-600 leading-tight">La STEG facture l'énergie réactive consommée au-delà du seuil toléré. Cela peut représenter un surcoût important.</span>
+                                    </div>
+                                </div>
 
-                                <div className="flex items-start p-3 bg-emerald-50 rounded-xl border border-emerald-100">
-                                    <div className="bg-emerald-200 p-2 rounded-lg text-emerald-700 mr-3"><TrendingUp size={18}/></div>
-                                    <div>
-                                        <span className="block font-bold text-emerald-800 text-sm">Bonus (Cos φ &gt; 0.9)</span>
-                                        <span className="text-xs text-emerald-600 leading-tight">Si votre installation est très efficace, la STEG applique une réduction sur le montant de l'énergie active.</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        )}
+                                <div className="flex items-start p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                                    <div className="bg-emerald-200 p-2 rounded-lg text-emerald-700 mr-3"><TrendingUp size={18}/></div>
+                                    <div>
+                                        <span className="block font-bold text-emerald-800 text-sm">Bonus (Cos φ &gt; 0.9)</span>
+                                        <span className="text-xs text-emerald-600 leading-tight">Si votre installation est très efficace, la STEG applique une réduction sur le montant de l'énergie active.</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
 
-        <main className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-7 space-y-6">
-                <div className="grid grid-cols-3 gap-2">
-                    {SITES.map((site) => (
-                        <button key={site.id} onClick={() => setCurrentSite(site.id)} 
-                            className={`p-3 rounded-xl border text-xs font-bold transition-all flex flex-col items-center justify-center text-center h-20 group relative overflow-hidden
-                            ${currentSite === site.id 
-                                ? (site.type.startsWith('BT') ? 'bg-white border-red-500 shadow-md ring-2 ring-red-100 text-red-700' : 'bg-white border-blue-500 shadow-md ring-2 ring-blue-100 text-blue-700') 
-                                : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`}>
-                            <site.icon size={20} className="mb-1 opacity-80 group-hover:scale-110 transition-transform"/>
-                            <span>{site.name}</span>
-                        </button>
-                    ))}
-                </div>
-                
-                <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-6 relative overflow-hidden">
-                    <div className="flex justify-between items-center border-b border-slate-100 pb-4">
-                        <h2 className="text-lg font-bold text-slate-800 flex items-center">
-                            <Calendar className="mr-2 text-slate-400" size={20} /> Période de Facturation
-                        </h2>
-                        <input type="month" value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="bg-slate-100 border border-slate-200 rounded px-3 py-1.5 font-bold text-slate-700 cursor-pointer focus:ring-2 focus:ring-blue-500 outline-none" />
-                    </div>
+        <main className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-7 space-y-6">
+                <div className="grid grid-cols-3 gap-2">
+                    {SITES.map((site) => (
+                        <button key={site.id} onClick={() => setCurrentSite(site.id)} 
+                            className={`p-3 rounded-xl border text-xs font-bold transition-all flex flex-col items-center justify-center text-center h-20 group relative overflow-hidden
+                            ${currentSite === site.id 
+                                ? (site.type.startsWith('BT') ? 'bg-white border-red-500 shadow-md ring-2 ring-red-100 text-red-700' : 'bg-white border-blue-500 shadow-md ring-2 ring-blue-100 text-blue-700') 
+                                : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`}>
+                            <site.icon size={20} className="mb-1 opacity-80 group-hover:scale-110 transition-transform"/>
+                            <span>{site.name}</span>
+                        </button>
+                    ))}
+                </div>
+                
+                <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-6 relative overflow-hidden">
+                    <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                        <h2 className="text-lg font-bold text-slate-800 flex items-center">
+                            <Calendar className="mr-2 text-slate-400" size={20} /> Période de Facturation
+                        </h2>
+                        <input type="month" value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="bg-slate-100 border border-slate-200 rounded px-3 py-1.5 font-bold text-slate-700 cursor-pointer focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center"><Zap size={12} className="mr-1"/> Index Actif</h3>
-                            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3 relative">
-                                <div>
-                                    <label className="flex justify-between text-xs font-bold text-slate-500 mb-1">
-                                        Ancien Index
-                                        {userRole === 'ADMIN' && <Edit2 size={12} className="cursor-pointer text-slate-400 hover:text-blue-600" onClick={() => setEditingPrev(!editingPrev)} />}
-                                    </label>
-                                    <div className="relative">
-                                        <input type="text" value={formatInputDisplay(formData.lastIndex)} 
-                                            onChange={(e) => handleInputChange('lastIndex', e.target.value)} 
-                                            readOnly={userRole !== 'ADMIN' && !editingPrev}
-                                            className={`w-full border rounded p-2 text-sm font-mono ${userRole !== 'ADMIN' && !editingPrev ? 'bg-slate-200 text-slate-500' : 'bg-white border-orange-300'}`} />
-                                    {userRole !== 'ADMIN' && !editingPrev && <Lock size={12} className="absolute right-3 top-3 text-slate-400"/>}
-                                    </div>
-                                    {editingPrev && <p className="text-[10px] text-orange-600 mt-1 flex items-center"><AlertTriangle size={10} className="mr-1"/> Modification manuelle activée</p>}
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-blue-700 mb-1 block">Nouvel Index *</label>
-                                    <input type="text" required value={formatInputDisplay(formData.newIndex)} onChange={(e) => handleInputChange('newIndex', e.target.value)} className="w-full text-lg border-2 border-blue-200 rounded p-2 font-mono focus:border-blue-600 outline-none" />
-                                </div>
-                                <div className="text-right text-xs font-bold text-blue-600">Conso: {formatNumber(liveMetrics.consumptionGrid || liveMetrics.energyRecorded)} kWh</div>
-                            </div>
-                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center"><Zap size={12} className="mr-1"/> Index Actif</h3>
+                            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3 relative">
+                                <div>
+                                    <label className="flex justify-between text-xs font-bold text-slate-500 mb-1">
+                                        Ancien Index
+                                        {userRole === 'ADMIN' && <Edit2 size={12} className="cursor-pointer text-slate-400 hover:text-blue-600" onClick={() => setEditingPrev(!editingPrev)} />}
+                                    </label>
+                                    <div className="relative">
+                                        <input type="text" value={formatInputDisplay(formData.lastIndex)} 
+                                            onChange={(e) => handleInputChange('lastIndex', e.target.value)} 
+                                            readOnly={userRole !== 'ADMIN' && !editingPrev}
+                                            className={`w-full border rounded p-2 text-sm font-mono ${userRole !== 'ADMIN' && !editingPrev ? 'bg-slate-200 text-slate-500' : 'bg-white border-orange-300'}`} />
+                                    {userRole !== 'ADMIN' && !editingPrev && <Lock size={12} className="absolute right-3 top-3 text-slate-400"/>}
+                                    </div>
+                                    {editingPrev && <p className="text-[10px] text-orange-600 mt-1 flex items-center"><AlertTriangle size={10} className="mr-1"/> Modification manuelle activée</p>}
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-blue-700 mb-1 block">Nouvel Index *</label>
+                                    <input type="text" required value={formatInputDisplay(formData.newIndex)} onChange={(e) => handleInputChange('newIndex', e.target.value)} className="w-full text-lg border-2 border-blue-200 rounded p-2 font-mono focus:border-blue-600 outline-none" />
+                                </div>
+                                <div className="text-right text-xs font-bold text-blue-600">Conso: {formatNumber(liveMetrics.consumptionGrid || liveMetrics.energyRecorded)} kWh</div>
+                            </div>
+                        </div>
 
-                        <div className="space-y-4">
-                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center">
-                                {isBT ? <Sun size={12} className="mr-1"/> : <Settings size={12} className="mr-1"/>} 
-                                {isBT ? 'Photovoltaïque & Solde' : 'Paramètres Techniques'}
-                            </h3>
-                            
-                            {currentSiteObj.type === 'BT_PV' ? (
-                                <div className="bg-orange-50 p-4 rounded-lg border border-orange-200 space-y-3">
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div><label className="text-[10px] font-bold text-orange-800">Ancien PV</label><input type="text" value={formatInputDisplay(formData.lastIndexPv)} onChange={e => handleInputChange('lastIndexPv', e.target.value)} className="w-full text-xs p-1 border rounded" /></div>
-                                        <div><label className="text-[10px] font-bold text-orange-800">Nouveau PV</label><input type="text" value={formatInputDisplay(formData.newIndexPv)} onChange={e => handleInputChange('newIndexPv', e.target.value)} className="w-full text-xs p-1 border rounded font-mono" /></div>
-                                    </div>
-                                    <div><label className="text-xs font-bold text-slate-600">Solde N-1</label><input type="text" value={formatInputDisplay(formData.previousBalance)} onChange={e => handleInputChange('previousBalance', e.target.value)} className="w-full text-sm p-2 border rounded" /></div>
-                                </div>
-                            ) : currentSiteObj.type === 'MT' ? (
-                                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div><label className="text-[10px] font-bold text-slate-500">Cos φ *</label><input type="number" step="0.01" required value={formData.cosPhi} onChange={e => handleInputChange('cosPhi', e.target.value)} className="w-full border p-2 rounded text-sm" /></div>
-                                        <div><label className="text-[10px] font-bold text-slate-500">P. Max (kVA) *</label><input type="number" required value={formData.maxPower} onChange={e => handleInputChange('maxPower', e.target.value)} className="w-full border p-2 rounded text-sm" /></div>
-                                    </div>
-                                    <div><label className="text-[10px] font-bold text-slate-500">Réactif (kVarh)</label><input type="number" value={formData.reactiveCons} onChange={e => handleInputChange('reactiveCons', e.target.value)} className="w-full border p-2 rounded text-sm" /></div>
-                                </div>
-                            ) : (
-                                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-xs text-slate-500 text-center italic">
-                                    Site BT Standard - Paramètres fixes appliqués.
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                        <div className="space-y-4">
+                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center">
+                                {isBT ? <Sun size={12} className="mr-1"/> : <Settings size={12} className="mr-1"/>} 
+                                {isBT ? 'Photovoltaïque & Solde' : 'Paramètres Techniques'}
+                            </h3>
+                            
+                            {currentSiteObj.type === 'BT_PV' ? (
+                                <div className="bg-orange-50 p-4 rounded-lg border border-orange-200 space-y-3">
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div><label className="text-[10px] font-bold text-orange-800">Ancien PV</label><input type="text" value={formatInputDisplay(formData.lastIndexPv)} onChange={e => handleInputChange('lastIndexPv', e.target.value)} className="w-full text-xs p-1 border rounded" /></div>
+                                        <div><label className="text-[10px] font-bold text-orange-800">Nouveau PV</label><input type="text" value={formatInputDisplay(formData.newIndexPv)} onChange={e => handleInputChange('newIndexPv', e.target.value)} className="w-full text-xs p-1 border rounded font-mono" /></div>
+                                    </div>
+                                    <div><label className="text-xs font-bold text-slate-600">Solde N-1</label><input type="text" value={formatInputDisplay(formData.previousBalance)} onChange={e => handleInputChange('previousBalance', e.target.value)} className="w-full text-sm p-2 border rounded" /></div>
+                                </div>
+                            ) : currentSiteObj.type === 'MT' ? (
+                                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div><label className="text-[10px] font-bold text-slate-500">Cos φ *</label><input type="number" step="0.01" required value={formData.cosPhi} onChange={e => handleInputChange('cosPhi', e.target.value)} className="w-full border p-2 rounded text-sm" /></div>
+                                        <div><label className="text-[10px] font-bold text-slate-500">P. Max (kVA) *</label><input type="number" required value={formData.maxPower} onChange={e => handleInputChange('maxPower', e.target.value)} className="w-full border p-2 rounded text-sm" /></div>
+                                    </div>
+                                    <div><label className="text-[10px] font-bold text-slate-500">Réactif (kVarh)</label><input type="number" value={formData.reactiveCons} onChange={e => handleInputChange('reactiveCons', e.target.value)} className="w-full border p-2 rounded text-sm" /></div>
+                                </div>
+                            ) : (
+                                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-xs text-slate-500 text-center italic">
+                                    Site BT Standard - Paramètres fixes appliqués.
+                                </div>
+                            )}
+                        </div>
+                    </div>
 
-                    <div className="border-t border-slate-100 pt-4">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Frais & Ajustements</h3>
-                        <div className="grid grid-cols-3 gap-4">
-                            <div className="relative"><span className="absolute left-2 top-2 text-slate-400 text-xs">DT</span><input type="number" placeholder="Retard" value={formData.lateFees} onChange={e => handleInputChange('lateFees', e.target.value)} className="w-full pl-8 p-2 border rounded text-sm" /></div>
-                            <div className="relative"><span className="absolute left-2 top-2 text-slate-400 text-xs">DT</span><input type="number" placeholder="Relance" value={formData.relanceFees} onChange={e => handleInputChange('relanceFees', e.target.value)} className="w-full pl-8 p-2 border rounded text-sm" /></div>
-                            <div className="relative"><span className="absolute left-2 top-2 text-slate-400 text-xs">DT</span><input type="number" placeholder="Ajustement" value={formData.adjustment} onChange={e => handleInputChange('adjustment', e.target.value)} className="w-full pl-8 p-2 border rounded text-sm" /></div>
-                        </div>
-                    </div>
+                    <div className="border-t border-slate-100 pt-4">
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Frais & Ajustements</h3>
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="relative"><span className="absolute left-2 top-2 text-slate-400 text-xs">DT</span><input type="number" placeholder="Retard" value={formData.lateFees} onChange={e => handleInputChange('lateFees', e.target.value)} className="w-full pl-8 p-2 border rounded text-sm" /></div>
+                            <div className="relative"><span className="absolute left-2 top-2 text-slate-400 text-xs">DT</span><input type="number" placeholder="Relance" value={formData.relanceFees} onChange={e => handleInputChange('relanceFees', e.target.value)} className="w-full pl-8 p-2 border rounded text-sm" /></div>
+                            <div className="relative"><span className="absolute left-2 top-2 text-slate-400 text-xs">DT</span><input type="number" placeholder="Ajustement" value={formData.adjustment} onChange={e => handleInputChange('adjustment', e.target.value)} className="w-full pl-8 p-2 border rounded text-sm" /></div>
+                        </div>
+                    </div>
 
-                    <button type="submit" className={`w-full text-white font-bold py-3 rounded-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center ${isBT ? 'bg-gradient-to-r from-red-600 to-red-700' : 'bg-gradient-to-r from-blue-600 to-blue-700'}`}>
-                        <Save size={18} className="mr-2" /> Valider & Sauvegarder
-                    </button>
-                </form>
+                    <button type="submit" className={`w-full text-white font-bold py-3 rounded-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center ${isBT ? 'bg-gradient-to-r from-red-600 to-red-700' : 'bg-gradient-to-r from-blue-600 to-blue-700'}`}>
+                        <Save size={18} className="mr-2" /> Valider & Sauvegarder
+                    </button>
+                </form>
 
-                {/* Configuration Admin - Séparée MT/BT */}
-                <div className="bg-slate-100 rounded-xl border border-slate-200 overflow-hidden">
-                    <button onClick={() => setIsConfigUnlocked(!isConfigUnlocked)} className="w-full px-6 py-3 flex justify-between items-center text-xs font-bold text-slate-500 uppercase hover:bg-slate-200">
-                        <span><Settings size={14} className="inline mr-2" /> Configuration Avancée ({isBT ? 'BT' : 'MT'})</span>
-                        {isConfigUnlocked ? <Unlock size={14} className="text-red-500" /> : <Lock size={14} />}
-                    </button>
-                    {isConfigUnlocked && (
-                        <div className="p-4 bg-white border-t border-slate-200 animate-in slide-in-from-top-2">
-                             {/* AFFICHAGE CONDITIONNEL SELON TYPE DE SITE */}
-                             {!isBT ? (
-                                // --- CONFIGURATION MT ---
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-                                    <div className="col-span-full mb-1 text-[10px] font-black text-blue-800 uppercase tracking-widest border-b pb-1">Paramètres Moyenne Tension</div>
-                                    
-                                    <div><label className="block text-slate-400 mb-1">P. Souscrite (kVA)</label><input type="number" value={siteConfigs[currentSite].subscribedPower} onChange={e => handleSiteConfigChange('subscribedPower', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
-                                    <div><label className="block text-slate-400 mb-1">Prix Énergie (DT/kWh)</label><input type="number" value={globalConfig.unitPriceKwh} onChange={e => handleGlobalConfigChange('unitPriceKwh', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
-                                    <div><label className="block text-slate-400 mb-1">Prix Puissance (DT/kVA)</label><input type="number" value={globalConfig.powerUnitPrice} onChange={e => handleGlobalConfigChange('powerUnitPrice', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
-                                    <div><label className="block text-slate-400 mb-1">TVA (%)</label><input type="number" value={globalConfig.vatRate} onChange={e => handleGlobalConfigChange('vatRate', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
-                                    
-                                    <div><label className="block text-slate-400 mb-1">Pénalité Dépassement</label><input type="number" value={globalConfig.powerOverrunPenalty} onChange={e => handleGlobalConfigChange('powerOverrunPenalty', e.target.value)} className="border p-1 w-full rounded font-mono bg-red-50" /></div>
-                                    <div><label className="block text-slate-400 mb-1">Pertes à Vide (kWh)</label><input type="number" value={siteConfigs[currentSite].emptyLosses} onChange={e => handleSiteConfigChange('emptyLosses', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
-                                    <div><label className="block text-slate-400 mb-1">RTT (DT)</label><input type="number" value={globalConfig.rtt} onChange={e => handleGlobalConfigChange('rtt', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
-                                </div>
-                             ) : (
-                                // --- CONFIGURATION BT ---
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs">
-                                    <div className="col-span-full mb-1 text-[10px] font-black text-red-800 uppercase tracking-widest border-b pb-1">Paramètres Basse Tension</div>
+                {/* Configuration Admin - Séparée MT/BT */}
+                <div className="bg-slate-100 rounded-xl border border-slate-200 overflow-hidden">
+                    <button onClick={() => setIsConfigUnlocked(!isConfigUnlocked)} className="w-full px-6 py-3 flex justify-between items-center text-xs font-bold text-slate-500 uppercase hover:bg-slate-200">
+                        <span><Settings size={14} className="inline mr-2" /> Configuration Avancée ({isBT ? 'BT' : 'MT'})</span>
+                        {isConfigUnlocked ? <Unlock size={14} className="text-red-500" /> : <Lock size={14} />}
+                    </button>
+                    {isConfigUnlocked && (
+                        <div className="p-4 bg-white border-t border-slate-200 animate-in slide-in-from-top-2">
+                             {/* AFFICHAGE CONDITIONNEL SELON TYPE DE SITE */}
+                             {!isBT ? (
+                                // --- CONFIGURATION MT ---
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                                    <div className="col-span-full mb-1 text-[10px] font-black text-blue-800 uppercase tracking-widest border-b pb-1">Paramètres Moyenne Tension</div>
+                                    
+                                    <div><label className="block text-slate-400 mb-1">P. Souscrite (kVA)</label><input type="number" value={siteConfigs[currentSite].subscribedPower} onChange={e => handleSiteConfigChange('subscribedPower', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
+                                    <div><label className="block text-slate-400 mb-1">Prix Énergie (DT/kWh)</label><input type="number" value={globalConfig.unitPriceKwh} onChange={e => handleGlobalConfigChange('unitPriceKwh', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
+                                    <div><label className="block text-slate-400 mb-1">Prix Puissance (DT/kVA)</label><input type="number" value={globalConfig.powerUnitPrice} onChange={e => handleGlobalConfigChange('powerUnitPrice', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
+                                    <div><label className="block text-slate-400 mb-1">TVA (%)</label><input type="number" value={globalConfig.vatRate} onChange={e => handleGlobalConfigChange('vatRate', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
+                                    
+                                    <div><label className="block text-slate-400 mb-1">Pénalité Dépassement</label><input type="number" value={globalConfig.powerOverrunPenalty} onChange={e => handleGlobalConfigChange('powerOverrunPenalty', e.target.value)} className="border p-1 w-full rounded font-mono bg-red-50" /></div>
+                                    <div><label className="block text-slate-400 mb-1">Pertes à Vide (kWh)</label><input type="number" value={siteConfigs[currentSite].emptyLosses} onChange={e => handleSiteConfigChange('emptyLosses', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
+                                    <div><label className="block text-slate-400 mb-1">RTT (DT)</label><input type="number" value={globalConfig.rtt} onChange={e => handleGlobalConfigChange('rtt', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
+                                </div>
+                             ) : (
+                                // --- CONFIGURATION BT ---
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs">
+                                    <div className="col-span-full mb-1 text-[10px] font-black text-red-800 uppercase tracking-widest border-b pb-1">Paramètres Basse Tension</div>
 
-                                    <div><label className="block text-slate-400 mb-1">Prix kWh BT</label><input type="number" value={globalConfig.unitPriceKwhBT} onChange={e => handleGlobalConfigChange('unitPriceKwhBT', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
-                                    <div><label className="block text-slate-400 mb-1">Redevance Fixe</label><input type="number" value={globalConfig.fixedFeesBT} onChange={e => handleGlobalConfigChange('fixedFeesBT', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
-                                    <div><label className="block text-slate-400 mb-1">Services</label><input type="number" value={globalConfig.servicesBT} onChange={e => handleGlobalConfigChange('servicesBT', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
-                                    
-                                    <div><label className="block text-slate-400 mb-1">Taxe CL (Taux)</label><input type="number" value={globalConfig.taxCLRate} onChange={e => handleGlobalConfigChange('taxCLRate', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
-                                    <div><label className="block text-slate-400 mb-1">FTE Elec (Taux)</label><input type="number" value={globalConfig.taxFTERate} onChange={e => handleGlobalConfigChange('taxFTERate', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
-                                    <div><label className="block text-slate-400 mb-1">FTE Gaz (Montant)</label><input type="number" value={globalConfig.fteGazBT} onChange={e => handleGlobalConfigChange('fteGazBT', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
-                                </div>
-                             )}
-                        </div>
-                    )}
-                </div>
-            </div>
-            
-            <div className="lg:col-span-5 space-y-4">
-                <div className={`bg-white p-6 rounded-xl shadow-lg border transition-all duration-300 relative overflow-hidden ${isBT ? 'border-red-200 ring-2 ring-red-50' : 'border-blue-200 ring-2 ring-blue-50'}`}>
-                    <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">{isBT ? <Sun size={100}/> : <Zap size={100}/>}</div>
-                    <div className="flex justify-between items-end border-b-2 border-slate-100 pb-4 mb-4">
-                         <div>
-                            <h3 className={`text-sm font-bold uppercase ${isBT ? 'text-red-700' : 'text-blue-600'}`}>{isBT ? "FACTURE BT" : "FACTURE MT"}</h3>
-                            <p className="text-xs text-slate-400">{currentSiteObj.name}</p>
-                         </div>
-                         <div className="text-right"><span className="text-lg font-black text-slate-900">{formatMoney(displayMetrics.netToPay)}</span></div>
-                    </div>
-                    {/* Détail simplifié pour la clarté */}
-                    <div className="space-y-2 text-xs text-slate-600">
-                        <div className="flex justify-between"><span>Conso HT</span><span>{formatMoney(displayMetrics.consoAmountHT || displayMetrics.baseEnergyAmountHT)}</span></div>
-                        <div className="flex justify-between"><span>Frais Fixes</span><span>{formatMoney(displayMetrics.fixedAmountHT || displayMetrics.powerPremium)}</span></div>
-                        <div className="flex justify-between font-bold text-slate-800 border-t pt-1"><span>Total Taxes & Redevances</span><span>{formatMoney((displayMetrics.netToPay || 0) - (displayMetrics.consoAmountHT || displayMetrics.baseEnergyAmountHT) - (displayMetrics.fixedAmountHT || displayMetrics.powerPremium))}</span></div>
-                    </div>
-                </div>
+                                    <div><label className="block text-slate-400 mb-1">Prix kWh BT</label><input type="number" value={globalConfig.unitPriceKwhBT} onChange={e => handleGlobalConfigChange('unitPriceKwhBT', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
+                                    <div><label className="block text-slate-400 mb-1">Redevance Fixe</label><input type="number" value={globalConfig.fixedFeesBT} onChange={e => handleGlobalConfigChange('fixedFeesBT', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
+                                    <div><label className="block text-slate-400 mb-1">Services</label><input type="number" value={globalConfig.servicesBT} onChange={e => handleGlobalConfigChange('servicesBT', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
+                                    
+                                    <div><label className="block text-slate-400 mb-1">Taxe CL (Taux)</label><input type="number" value={globalConfig.taxCLRate} onChange={e => handleGlobalConfigChange('taxCLRate', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
+                                    <div><label className="block text-slate-400 mb-1">FTE Elec (Taux)</label><input type="number" value={globalConfig.taxFTERate} onChange={e => handleGlobalConfigChange('taxFTERate', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
+                                    <div><label className="block text-slate-400 mb-1">FTE Gaz (Montant)</label><input type="number" value={globalConfig.fteGazBT} onChange={e => handleGlobalConfigChange('fteGazBT', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
+                                </div>
+                             )}
+                        </div>
+                    )}
+                </div>
+            </div>
+            
+            <div className="lg:col-span-5 space-y-4">
+                <div className={`bg-white p-6 rounded-xl shadow-lg border transition-all duration-300 relative overflow-hidden ${isBT ? 'border-red-200 ring-2 ring-red-50' : 'border-blue-200 ring-2 ring-blue-50'}`}>
+                    <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">{isBT ? <Sun size={100}/> : <Zap size={100}/>}</div>
+                    <div className="flex justify-between items-end border-b-2 border-slate-100 pb-4 mb-4">
+                         <div>
+                            <h3 className={`text-sm font-bold uppercase ${isBT ? 'text-red-700' : 'text-blue-600'}`}>{isBT ? "FACTURE BT" : "FACTURE MT"}</h3>
+                            <p className="text-xs text-slate-400">{currentSiteObj.name}</p>
+                         </div>
+                         <div className="text-right"><p className="text-xs text-slate-400 font-mono">{formData.date}</p></div>
+                    </div>
 
-                <div className="bg-white p-4 rounded-xl border border-slate-200 h-[400px] flex flex-col">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center justify-between">
-                      <span className="flex items-center"><Database size={12} className="mr-1"/> Historique Cloud</span>
-                      <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[10px]">En ligne</span>
-                    </h3>
-                    <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-                       {siteLogs.length === 0 ? <div className="text-center text-slate-400 text-xs py-10">Aucun historique disponible</div> : 
-                       siteLogs.map(log => (
-                         <div key={log.docId} className="p-3 border rounded-lg bg-slate-50 text-xs hover:bg-blue-50 transition-colors">
-                             <div className="flex justify-between font-bold text-slate-700 mb-1">
-                                 <span className="flex items-center"><Calendar size={12} className="mr-1"/> {log.recordDate}</span>
-                                 <span className="text-blue-600">{formatMoney(log.netToPay)}</span>
-                             </div>
-                             <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-500 mt-2 border-t pt-2 border-slate-200">
-                                 <div>Conso: <span className="font-mono text-slate-700">{formatNumber(log.type === 'MT' ? log.energyRecorded : log.consumptionGrid)}</span> kWh</div>
-                                 <div>{log.type === 'MT' ? `P.Max: ${log.maxPower} kVA` : 'Standard'}</div>
-                             </div>
-                         </div>
-                       ))}
-                    </div>
-                </div>
-            </div>
-        </main>
-        {notification && <div className="fixed bottom-6 right-6 px-6 py-4 bg-emerald-600 text-white rounded-xl shadow-xl">{notification.msg}</div>}
-    </div>
-  );
+                    <div className="space-y-3 text-sm">
+                        {currentSiteObj.type === 'BT_PV' ? (
+                             <>
+                               <div className="pb-3 border-b border-slate-50 border-dashed space-y-2">
+                                  <div className="flex justify-between text-slate-600"><span>Conso Réseau</span><span className="font-mono">{formatNumber(displayMetrics.consumptionGrid)} kWh</span></div>
+                                  <div className="flex justify-between text-orange-600"><span>Prod Photovoltaïque</span><span className="font-mono">-{formatNumber(displayMetrics.productionPv)} kWh</span></div>
+                                  <div className="flex justify-between text-slate-500 text-xs bg-slate-50 p-1 rounded"><span>Solde N-1</span><span className="font-mono">{formatNumber(displayMetrics.prevBalance)} kWh</span></div>
+                                  <div className={`flex justify-between font-bold p-2 rounded ${displayMetrics.totalBalance > 0 ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}><span>Solde Final</span><span>{formatNumber(displayMetrics.totalBalance)} kWh</span></div>
+                                  {displayMetrics.totalBalance <= 0 ? <div className="text-xs text-center text-emerald-600 italic">Crédit reporté au mois prochain</div> : <div className="flex justify-between text-slate-800 font-bold border-t pt-2"><span>Facturé ({formatNumber(displayMetrics.billedKwh)} kWh)</span><span>{formatMoney(displayMetrics.consoAmountHT)}</span></div>}
+                                </div>
+                                <div className="space-y-1 text-xs text-slate-500 pt-2">
+                                  <div className="flex justify-between"><span>Redevances Fixes</span><span>{formatMoney(displayMetrics.fixedAmountHT)}</span></div>
+                                  <div className="flex justify-between"><span>Taxes (TVA, CL, FTE)</span><span>{formatMoney(displayMetrics.totalFinalTTC - (displayMetrics.consoAmountHT + displayMetrics.fixedAmountHT))}</span></div>
+                               </div>
+                             </>
+                        ) : !isBT ? (
+                             <>
+                               <div className="pb-3 border-b border-slate-50 border-dashed">
+                                  <div className="flex justify-between text-slate-600"><span>Énergie Enregistrée</span><span className="font-mono">{formatNumber(displayMetrics.energyRecorded)} kWh</span></div>
+                                  <div className="flex justify-between text-slate-500 text-xs pl-2"><span>+ Pertes</span><span className="font-mono">{formatNumber(displayMetrics.billedKwh - displayMetrics.energyRecorded)}</span></div>
+                                  <div className="flex justify-between font-bold text-slate-700 mt-1 bg-slate-50 px-2 py-1 rounded"><span>Facturé</span><span>{formatMoney(displayMetrics.baseEnergyAmountHT)}</span></div>
+                               </div>
+                               <div className="pb-3 border-b border-slate-50 border-dashed space-y-1 pt-2">
+                                  <div className={`flex justify-between text-xs ${displayMetrics.cosPhiAdjustmentAmount > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                                     <span>Ajustement Cos φ</span><span>{formatMoney(displayMetrics.cosPhiAdjustmentAmount)}</span>
+                                  </div>
+                                  <div className="flex justify-between text-xs text-slate-600"><span>Prime Fixe ({displayMetrics.subPower}kVA x {formatNumber(globalConfig.powerUnitPrice)})</span><span>{formatMoney(displayMetrics.powerPremium)}</span></div>
+                                  {displayMetrics.powerOverrunAmount > 0 && <div className="flex justify-between text-xs text-red-600 font-bold bg-red-50 p-1 rounded"><span>Pénalité Puissance ({formatNumber(displayMetrics.powerOverrun)} kVA x {globalConfig.powerOverrunPenalty})</span><span>{formatMoney(displayMetrics.powerOverrunAmount)}</span></div>}
+                               </div>
+                               <div className="text-xs text-slate-500 pt-2 space-y-1 border-t mt-2">
+                                  <div className="flex justify-between"><span>Total Énergie TTC</span><span>{formatMoney(displayMetrics.total1_TTC)}</span></div>
+                                  <div className="flex justify-between"><span>Total Fixe TTC</span><span>{formatMoney(displayMetrics.total2_TTC)}</span></div>
+                                  <div className="flex justify-between"><span>Taxes (RTT+Muni)</span><span>{formatMoney(globalConfig.rtt + displayMetrics.municipalTax)}</span></div>
+                               </div>
+                             </>
+                        ) : (
+                             <>
+                                <div className="pb-3 border-b border-slate-50 border-dashed">
+                                    <div className="flex justify-between font-bold text-slate-700"><span>Conso ({formatNumber(displayMetrics.consumptionGrid)} kWh)</span><span>{formatMoney(displayMetrics.consoAmountHT)}</span></div>
+                                </div>
+                                <div className="space-y-1 text-xs text-slate-500 pt-2">
+                                    <div className="flex justify-between"><span>Redevances (Fixe + Serv)</span><span>{formatMoney(displayMetrics.fixedAmountHT)}</span></div>
+                                    <div className="flex justify-between"><span>Taxes (TVA,CL,FTE)</span><span>{formatMoney(displayMetrics.totalFinalTTC - displayMetrics.totalHT)}</span></div>
+                                </div>
+                             </>
+                        )}
+
+                        {(parseFloat(formData.lateFees) > 0 || parseFloat(formData.relanceFees) > 0 || parseFloat(formData.adjustment) !== 0) && (
+                            <div className="pt-2 text-xs text-orange-600 border-t mt-2 flex justify-between font-bold">
+                                <span>Frais & Ajustements</span>
+                                <span>{formatMoney((parseFloat(formData.lateFees)||0) + (parseFloat(formData.relanceFees)||0) + (parseFloat(formData.adjustment)||0))}</span>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="mt-6 border-t-2 border-slate-800 pt-4">
+                       <div className="flex justify-between items-end">
+                         <span className="text-lg font-black text-slate-900 uppercase">Net à Payer</span>
+                         <span className={`text-3xl font-black font-mono tracking-tight ${isBT ? 'text-red-700' : 'text-blue-700'}`}>{formatMoney(displayMetrics.netToPay)}</span>
+                       </div>
+                    </div>
+                </div>
+                
+                <div className="bg-white p-4 rounded-xl border border-slate-200 h-[400px] flex flex-col">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase mb-2 flex items-center"><Database size={12} className="mr-1"/> Historique Cloud</h3>
+                    <div className="flex-1 overflow-y-auto space-y-2">
+                        {siteLogs.map(log => (
+                            <div key={log.docId} className="p-3 border rounded-lg bg-slate-50 text-xs hover:bg-blue-50 transition-colors">
+                                <div className="flex justify-between font-bold text-slate-700 mb-1">
+                                    <span className="flex items-center"><Calendar size={12} className="mr-1"/> {log.recordDate}</span>
+                                    <span className="text-blue-600">{formatMoney(log.netToPay)}</span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-500 mt-2 border-t pt-2 border-slate-200">
+                                    <div>Conso: <span className="font-mono text-slate-700">{formatNumber(log.type === 'MT' ? log.energyRecorded : log.consumptionGrid)}</span> kWh</div>
+                                    <div>{log.type === 'MT' ? `P.Max: ${log.maxPower} kVA` : (log.type === 'BT_PV' ? `PV: ${formatNumber(log.productionPv)}` : 'Standard')}</div>
+                                    {log.type === 'MT' && <div>Cos φ: <span className={log.cosPhi < 0.8 ? 'text-red-500 font-bold' : 'text-emerald-600'}>{log.cosPhi}</span></div>}
+                                    {log.type === 'MT' && log.reactiveCons > 0 && <div>Réactif: {log.reactiveCons}</div>}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </main>
+        {notification && <div className="fixed bottom-6 right-6 px-6 py-4 bg-emerald-600 text-white rounded-xl shadow-xl">{notification.msg}</div>}
+    </div>
+  );
 };
 
 // ==================================================================================
@@ -758,288 +813,421 @@ const StegModule = ({ onBack, userRole }) => {
 // ==================================================================================
 
 const AirModule = ({ onBack, userRole }) => {
-  const [activeCompressor, setActiveCompressor] = useState(1);
-  const [logs, setLogs] = useState([]);
-  const [showMaintPopup, setShowMaintPopup] = useState(null);
-  const [showGuide, setShowGuide] = useState(false);
-  const [notif, setNotif] = useState(null);
-  const [week, setWeek] = useState(getWeekNumber(new Date()));
-  const [editingPrev, setEditingPrev] = useState(false);
-  const [config, setConfig] = useState({ elecPrice: 0.291, offLoadFactor: 0.3 });
-  
-  function getWeekNumber(d) {
-    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-    var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    var weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-    return `${d.getUTCFullYear()}-W${weekNo}`;
-  }
+  const [activeCompressor, setActiveCompressor] = useState(1);
+  const [logs, setLogs] = useState([]);
+  const [showMaintPopup, setShowMaintPopup] = useState(null);
+  const [showGuide, setShowGuide] = useState(false);
+  const [notif, setNotif] = useState(null);
+  const [week, setWeek] = useState(getWeekNumber(new Date()));
+  const [editingPrev, setEditingPrev] = useState(false);
+  const [config, setConfig] = useState({ elecPrice: 0.291, offLoadFactor: 0.3 });
+  
+  function getWeekNumber(d) {
+    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    var weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    return `${d.getUTCFullYear()}-W${weekNo}`;
+  }
 
-  useEffect(() => {
-    const q = query(getCollection('air_logs'), orderBy('id', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        setLogs(snapshot.docs.map(doc => ({ ...doc.data(), docId: doc.id })));
-    });
-    return () => unsubscribe();
-  }, []);
+  useEffect(() => {
+    const q = query(getCollection('air_logs'), orderBy('id', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        setLogs(snapshot.docs.map(doc => ({ ...doc.data(), docId: doc.id })));
+    });
+    return () => unsubscribe();
+  }, []);
 
-  const COMPRESSORS = [
-    { id: 1, name: "Compresseur 1", serial: "CAI 827281", model: "Ceccato CSB 30", power: 22 },
-    { id: 2, name: "Compresseur 2", serial: "CAI 808264", model: "Ceccato CSB 30", power: 22 }
-  ];
+  const COMPRESSORS = [
+    { id: 1, name: "Compresseur 1", serial: "CAI 827281", model: "Ceccato CSB 30", power: 22 },
+    { id: 2, name: "Compresseur 2", serial: "CAI 808264", model: "Ceccato CSB 30", power: 22 }
+  ];
 
-  const MAINT_INTERVALS = { oilFilter: 2000, airFilter: 2000, separator: 4000, oil: 2000, general: 500 };
-  const MAINT_LABELS = { oilFilter: "Filtre à Huile", airFilter: "Filtre à Air", separator: "Séparateur", oil: "Huile", general: "Inspection" };
-  const MAINT_ICONS = { oilFilter: Filter, airFilter: Wind, separator: Droplets, oil: Droplets, general: SearchIcon };
-  function SearchIcon(props) { return <Eye {...props}/> } 
+  // Updated Intervals
+  const MAINT_INTERVALS = { oilFilter: 2000, airFilter: 2000, separator: 2000, oil: 2000, general: 500 };
+  const MAINT_LABELS = { oilFilter: "Filtre à Huile", airFilter: "Filtre à Air", separator: "Séparateur", oil: "Huile", general: "Inspection" };
+  const MAINT_ICONS = { oilFilter: Filter, airFilter: Wind, separator: Droplets, oil: Droplets, general: SearchIcon };
+  function SearchIcon(props) { return <Eye {...props}/> } 
 
-  const [formData, setFormData] = useState({
-    1: { lastRun: 19960, newRun: '', lastLoad: 10500, newLoad: '', description: '', lastMaint: { oilFilter: 18000, airFilter: 18000, separator: 16000, oil: 18000, general: 19500 } },
-    2: { lastRun: 18500, newRun: '', lastLoad: 9200, newLoad: '', description: '', lastMaint: { oilFilter: 16000, airFilter: 16000, separator: 14000, oil: 16000, general: 18000 } }
-  });
-  
-  useEffect(() => {
-      const compLogs = logs.filter(l => l.compName === COMPRESSORS.find(c => c.id === activeCompressor).name).sort((a,b) => b.id - a.id);
-      if(compLogs.length > 0) {
-          setFormData(prev => ({
-              ...prev,
-              [activeCompressor]: {
-                  ...prev[activeCompressor],
-                  lastRun: compLogs[0].newRun || prev[activeCompressor].lastRun,
-                  lastLoad: compLogs[0].newLoad || prev[activeCompressor].lastLoad,
-              }
-          }));
-      }
-  }, [activeCompressor, logs]);
+  // Initialize form data with "fresh" state logic: 
+  // Initially we assume components are brand new relative to the compressor's life if no logs exist.
+  // Ideally, we'd fetch the latest maintenance date. For the demo/default state, we can simulate 
+  // a state where `lastMaint` matches `lastRun` so remaining = interval.
+  const [formData, setFormData] = useState({
+    1: { lastRun: 19960, newRun: '', lastLoad: 10500, newLoad: '', description: '', lastMaint: { oilFilter: 19960, airFilter: 19960, separator: 19960, oil: 19960, general: 19960 } },
+    2: { lastRun: 18500, newRun: '', lastLoad: 9200, newLoad: '', description: '', lastMaint: { oilFilter: 18500, airFilter: 18500, separator: 18500, oil: 18500, general: 18500 } }
+  });
+  
+  useEffect(() => {
+      // Fetch latest logs to update current running hours and last maintenance performed
+      const compLogs = logs.filter(l => l.compName === COMPRESSORS.find(c => c.id === activeCompressor).name);
+      
+      if(compLogs.length > 0) {
+          // Find most recent run hours
+          const latestRunLog = compLogs.find(l => l.type === 'WEEKLY_REPORT');
+          const currentRun = latestRunLog ? latestRunLog.newRun : formData[activeCompressor].lastRun;
+          const currentLoad = latestRunLog ? latestRunLog.newLoad : formData[activeCompressor].lastLoad;
 
-  const handleInput = (field, value) => setFormData(prev => ({...prev, [activeCompressor]: {...prev[activeCompressor], [field]: value}}));
-  
-  const calculateKPIs = () => {
-     const data = formData[activeCompressor];
-     const comp = COMPRESSORS.find(c => c.id === activeCompressor);
-     const runDelta = Math.max(0, (parseFloat(data.newRun)||0) - (parseFloat(data.lastRun)||0));
-     const loadDelta = Math.max(0, (parseFloat(data.newLoad)||0) - (parseFloat(data.lastLoad)||0));
-     const loadRate = runDelta > 0 ? (loadDelta / runDelta) * 100 : 0;
-     const utilRate = (runDelta / 47.5) * 100;
-     const energyKwh = (loadDelta * comp.power) + ((runDelta - loadDelta) * comp.power * config.offLoadFactor);
-     
-     const currentTotal = parseFloat(data.newRun) || parseFloat(data.lastRun) || 0;
-     const maintStatus = {};
-     Object.keys(MAINT_INTERVALS).forEach(key => {
-        const lastDone = data.lastMaint?.[key] || 0;
-        const remaining = (lastDone + MAINT_INTERVALS[key]) - currentTotal;
-        maintStatus[key] = { remaining };
-     });
+          // Find most recent maintenance for each type
+          const maintenanceStatus = { ...formData[activeCompressor].lastMaint };
+          Object.keys(MAINT_INTERVALS).forEach(type => {
+              const lastMaintLog = compLogs.find(l => l.type === 'MAINTENANCE' && l.maintType === MAINT_LABELS[type]);
+              if (lastMaintLog) {
+                  maintenanceStatus[type] = lastMaintLog.indexDone;
+              }
+              // If no log exists, we keep the default which assumes full health relative to current run 
+              // (or we could default to 0 if we wanted to show them as expired, but user asked for "reset" state)
+          });
 
-     return { runDelta, loadDelta, loadRate, utilRate, energyKwh, costHT: energyKwh * config.elecPrice, maintStatus };
-  };
+          setFormData(prev => ({
+              ...prev,
+              [activeCompressor]: {
+                  ...prev[activeCompressor],
+                  lastRun: currentRun,
+                  lastLoad: currentLoad,
+                  lastMaint: maintenanceStatus
+              }
+          }));
+      }
+  }, [activeCompressor, logs]);
 
-  const handleSubmit = async () => {
-     const kpis = calculateKPIs();
-     const data = formData[activeCompressor];
-     if(!data.newRun) { setNotif("Index manquant"); return; }
-     
-     const newLog = {
-         id: Date.now(),
-         type: 'WEEKLY_REPORT',
-         week: week,
-         compName: COMPRESSORS.find(c => c.id === activeCompressor).name,
-         ...data, ...kpis
-     };
-     await addDoc(getCollection('air_logs'), newLog);
-     setFormData(prev => ({
-         ...prev,
-         [activeCompressor]: { ...prev[activeCompressor], lastRun: data.newRun, newRun: '', lastLoad: data.newLoad, newLoad: '', description: '' }
-     }));
-     setNotif("Enregistré");
-     setTimeout(() => setNotif(null), 3000);
-  };
+  const handleInput = (field, value) => setFormData(prev => ({...prev, [activeCompressor]: {...prev[activeCompressor], [field]: value}}));
+  
+  const calculateKPIs = () => {
+      const data = formData[activeCompressor];
+      const comp = COMPRESSORS.find(c => c.id === activeCompressor);
+      const runDelta = Math.max(0, (parseFloat(data.newRun)||0) - (parseFloat(data.lastRun)||0));
+      const loadDelta = Math.max(0, (parseFloat(data.newLoad)||0) - (parseFloat(data.lastLoad)||0));
+      const loadRate = runDelta > 0 ? (loadDelta / runDelta) * 100 : 0;
+      const utilRate = (runDelta / 47.5) * 100;
+      const energyKwh = (loadDelta * comp.power) + ((runDelta - loadDelta) * comp.power * config.offLoadFactor);
+      
+      const currentTotal = parseFloat(data.newRun) || parseFloat(data.lastRun) || 0;
+      const maintStatus = {};
+      Object.keys(MAINT_INTERVALS).forEach(key => {
+        const lastDone = data.lastMaint[key] || 0;
+        // Logic: (Last Maintenance Hour + Interval) - Current Hour = Remaining Hours
+        const remaining = (lastDone + MAINT_INTERVALS[key]) - currentTotal;
+        maintStatus[key] = { remaining };
+      });
 
-  const handleMaintenanceDone = (type, details) => {
-      const currentRun = parseFloat(formData[activeCompressor].newRun) || parseFloat(formData[activeCompressor].lastRun);
-      // Mise à jour optimiste locale
-      setFormData(prev => ({
-          ...prev,
-          [activeCompressor]: { 
-              ...prev[activeCompressor], 
-              lastMaint: { ...prev[activeCompressor].lastMaint, [type]: currentRun } 
-          }
-      }));
-      
-      const newLog = {
-          id: Date.now(),
-          type: 'MAINTENANCE',
-          date: new Date().toLocaleDateString(),
-          compName: COMPRESSORS.find(c => c.id === activeCompressor).name,
-          maintType: MAINT_LABELS[type],
-          indexDone: currentRun,
-          details: details
-      };
-      addDoc(getCollection('air_logs'), newLog);
-      setShowMaintPopup(null);
-      setNotif("Maintenance validée");
-  };
+      return { runDelta, loadDelta, loadRate, utilRate, energyKwh, costHT: energyKwh * config.elecPrice, maintStatus };
+  };
 
-  const kpis = calculateKPIs();
-  const getStatusColor = (rem) => rem <= 0 ? 'text-red-600 font-bold' : (rem < 200 ? 'text-orange-500' : 'text-emerald-600');
+  const handleSubmit = async () => {
+      const kpis = calculateKPIs();
+      const data = formData[activeCompressor];
+      if(!data.newRun) { setNotif("Index manquant"); return; }
+      
+      const newLog = {
+          id: Date.now(),
+          type: 'WEEKLY_REPORT',
+          week: week,
+          compName: COMPRESSORS.find(c => c.id === activeCompressor).name,
+          ...data, ...kpis
+      };
+      await addDoc(getCollection('air_logs'), newLog);
+      setFormData(prev => ({
+          ...prev,
+          [activeCompressor]: { ...prev[activeCompressor], lastRun: data.newRun, newRun: '', lastLoad: data.newLoad, newLoad: '', description: '' }
+      }));
+      setNotif("Enregistré");
+      setTimeout(() => setNotif(null), 3000);
+  };
 
-  return (
-    <div className="bg-slate-50 min-h-screen pb-10">
-        <header className="bg-gradient-to-r from-sky-700 to-blue-800 text-white shadow-lg p-4 flex items-center justify-between">
-            <div className="flex items-center">
-              <button onClick={onBack} className="mr-4"><ArrowLeft /></button>
-              <div>
-                  <h1 className="font-bold text-xl">Gestion Air Comprimé</h1>
-                  <DateTimeDisplay />
-              </div>
-            </div>
-            <button onClick={() => setShowGuide(true)} className="flex items-center bg-white/10 px-3 py-2 rounded text-xs font-bold border border-white/20 hover:bg-white/20"><BookOpen size={14} className="mr-2" /> Procédure ES 3000</button>
-        </header>
+  const handleMaintenanceDone = (type, details) => {
+      const currentRun = parseFloat(formData[activeCompressor].newRun) || parseFloat(formData[activeCompressor].lastRun);
+      const newMaint = { ...formData[activeCompressor].lastMaint, [type]: currentRun };
+      setFormData(prev => ({
+          ...prev,
+          [activeCompressor]: { ...prev[activeCompressor], lastMaint: newMaint }
+      }));
+      
+      const newLog = {
+          id: Date.now(),
+          type: 'MAINTENANCE',
+          date: new Date().toLocaleDateString(),
+          compName: COMPRESSORS.find(c => c.id === activeCompressor).name,
+          maintType: MAINT_LABELS[type],
+          indexDone: currentRun,
+          details: details
+      };
+      addDoc(getCollection('air_logs'), newLog);
+      
+      setShowMaintPopup(null);
+      setNotif("Maintenance validée");
+  };
 
-        {showGuide && (
-            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowGuide(false)}>
-                <div className="bg-white rounded-xl max-w-2xl w-full p-6 shadow-2xl relative" onClick={e=>e.stopPropagation()}>
-                    <button onClick={() => setShowGuide(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">✕</button>
-                    <h3 className="font-bold text-slate-800 mb-4 flex items-center text-lg"><Eye className="mr-2 text-sky-600" /> Relevé Heures - Contrôleur ES 3000</h3>
-                    <div className="space-y-4 text-sm text-slate-600">
-                        <div className="bg-slate-50 p-4 rounded border">
-                            <p className="font-bold text-slate-800 mb-2">Navigation Contrôleur</p>
-                            <ul className="list-disc ml-5 space-y-2">
-                                <li><strong>Appui 1 :</strong> Pression & Température</li>
-                                <li><strong>Appui 2 :</strong> Heures Totales de Marche (Symbole Horloge)</li>
-                                <li><strong>Appui 3 :</strong> Heures en Charge (Symbole Piston/Charge)</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        )}
+  const kpis = calculateKPIs();
+  // 20% warning logic
+  const getStatusColor = (rem, total) => {
+      if (rem <= 0) return 'text-red-600 font-bold';
+      if (rem < (total * 0.2)) return 'text-amber-500 font-bold'; // < 20%
+      return 'text-emerald-600';
+  };
+  const getProgressColor = (rem, total) => {
+      if (rem <= 0) return 'bg-red-600';
+      if (rem < (total * 0.2)) return 'bg-amber-500';
+      return 'bg-emerald-500';
+  };
 
-        {showMaintPopup && (
-            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                <div className="bg-white p-6 rounded-xl w-full max-w-sm">
-                    <h3 className="font-bold mb-4">Valider : {MAINT_LABELS[showMaintPopup]}</h3>
-                    <form onSubmit={(e) => {
-                        e.preventDefault();
-                        const fd = new FormData(e.target);
-                        handleMaintenanceDone(showMaintPopup, { date: fd.get('date'), tech: fd.get('tech'), notes: fd.get('notes') });
-                    }}>
-                        <input name="date" type="date" required defaultValue={new Date().toISOString().split('T')[0]} className="w-full border p-2 rounded mb-2 text-sm" />
-                        <input name="tech" placeholder="Intervenant" required className="w-full border p-2 rounded mb-2 text-sm" />
-                        <textarea name="notes" placeholder="Notes" className="w-full border p-2 rounded mb-4 text-sm"></textarea>
-                        <div className="flex justify-end gap-2">
-                            <button type="button" onClick={() => setShowMaintPopup(null)} className="px-4 py-2 text-slate-500">Annuler</button>
-                            <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded font-bold">Confirmer</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        )}
+  return (
+    <div className="bg-slate-50 min-h-screen pb-10">
+        <header className="bg-gradient-to-r from-sky-700 to-blue-800 text-white shadow-lg p-4 flex items-center justify-between">
+            <div className="flex items-center">
+              <button onClick={onBack} className="mr-4 hover:bg-white/10 p-2 rounded-full"><ArrowLeft /></button>
+              <div>
+                  <h1 className="font-bold text-xl flex items-center"><Wind className="mr-2" size={24}/> Gestion Air Comprimé</h1>
+                  <div className="flex items-center text-xs opacity-80 mt-1">
+                      <MapPin size={12} className="mr-1"/> Site Mégrine
+                      <span className="mx-2">•</span>
+                      <Calendar size={12} className="mr-1"/> Semaine {week.split('-W')[1]} {week.split('-W')[0]}
+                  </div>
+              </div>
+            </div>
+            <div className="flex gap-4">
+                <button onClick={() => setShowGuide(true)} className="flex items-center bg-white/10 px-3 py-2 rounded text-xs font-bold border border-white/20 hover:bg-white/20"><BookOpen size={14} className="mr-2" /> Guide & Procédures</button>
+            </div>
+        </header>
 
-        <main className="p-8 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-7 space-y-6">
-                <div className="flex gap-2">
-                    {COMPRESSORS.map(c => (
-                        <button key={c.id} onClick={() => setActiveCompressor(c.id)} className={`flex-1 p-4 rounded-xl border text-left ${activeCompressor === c.id ? 'bg-white border-sky-500 shadow-md ring-2 ring-sky-100' : 'bg-white border-slate-200 hover:border-sky-300'}`}>
-                            <div className="font-bold text-slate-700">{c.name}</div>
-                            <div className="text-xs text-slate-400">{c.model} - {c.serial}</div>
-                        </button>
-                    ))}
-                </div>
+        {showGuide && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowGuide(false)}>
+                <div className="bg-white rounded-xl max-w-2xl w-full p-6 shadow-2xl relative" onClick={e=>e.stopPropagation()}>
+                    <button onClick={() => setShowGuide(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">✕</button>
+                    <h3 className="font-bold text-slate-800 mb-6 flex items-center text-lg"><BookOpen className="mr-2 text-sky-600" /> Guide Opérationnel</h3>
+                    
+                    <div className="space-y-6 overflow-y-auto max-h-[60vh]">
+                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <h4 className="font-bold text-sky-800 mb-3 flex items-center"><Activity size={16} className="mr-2"/> 1. Collecte Physique (Contrôleur ES 3000)</h4>
+                            <ul className="text-sm text-slate-600 space-y-2 list-disc pl-5">
+                                <li><strong>Affichage Pression :</strong> Écran par défaut.</li>
+                                <li><strong>Heures Totales :</strong> Appuyez 2 fois sur la flèche droite (Tab). Symbole : 🕒 Horloge.</li>
+                                <li><strong>Heures en Charge :</strong> Appuyez 3 fois sur la flèche droite. Symbole : ⚡ Piston/Charge.</li>
+                            </ul>
+                        </div>
 
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                      <div className="flex justify-between items-center mb-6">
-                        <h2 className="font-bold flex items-center text-slate-800"><Timer className="mr-2 text-sky-600"/> Saisie Relevé</h2>
-                        <input type="week" value={week} onChange={(e) => setWeek(e.target.value)} className="text-slate-800 text-sm px-2 py-1 rounded outline-none border font-bold" />
-                      </div>
-                      <div className="grid grid-cols-2 gap-6 mb-6">
-                        <div className="bg-slate-50 p-3 rounded-lg border">
-                            <div className="flex justify-between mb-1">
-                                <label className="text-xs font-bold text-slate-500">Marche (H)</label>
-                                {userRole === 'ADMIN' && <button onClick={() => setEditingPrev(!editingPrev)} className="text-[10px] text-blue-500">Edit</button>}
-                            </div>
-                            <input type="number" readOnly={!editingPrev} className={`w-full text-xs mb-2 bg-transparent ${editingPrev ? 'border rounded bg-white' : ''}`} value={formData[activeCompressor].lastRun} onChange={e => handleInput('lastRun', e.target.value)} />
-                            <input type="number" className="w-full border-2 border-sky-100 p-2 rounded text-lg font-mono focus:border-sky-500 outline-none" placeholder="Nouveau" value={formData[activeCompressor].newRun} onChange={e => handleInput('newRun', e.target.value)} />
-                        </div>
-                        <div className="bg-slate-50 p-3 rounded-lg border">
-                            <label className="text-xs font-bold text-slate-500 mb-1 block">Charge (H)</label>
-                            <input type="number" readOnly={!editingPrev} className={`w-full text-xs mb-2 bg-transparent ${editingPrev ? 'border rounded bg-white' : ''}`} value={formData[activeCompressor].lastLoad} onChange={e => handleInput('lastLoad', e.target.value)} />
-                            <input type="number" className="w-full border-2 border-sky-100 p-2 rounded text-lg font-mono focus:border-sky-500 outline-none" placeholder="Nouveau" value={formData[activeCompressor].newLoad} onChange={e => handleInput('newLoad', e.target.value)} />
-                        </div>
-                      </div>
-                      <textarea className="w-full border p-2 rounded text-sm mb-4" placeholder="Note / Justification..." value={formData[activeCompressor].description} onChange={e => handleInput('description', e.target.value)}></textarea>
-                      <button onClick={handleSubmit} className="w-full bg-sky-600 text-white py-3 rounded-xl font-bold hover:bg-sky-700 shadow-lg shadow-sky-200 transition-all">Valider Relevé</button>
-                </div>
-            </div>
+                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <h4 className="font-bold text-emerald-800 mb-3 flex items-center"><Zap size={16} className="mr-2"/> 2. Workflow Application</h4>
+                            <ol className="text-sm text-slate-600 space-y-2 list-decimal pl-5">
+                                <li>Sélectionnez le compresseur concerné en haut à gauche.</li>
+                                <li>Saisissez les nouveaux index relevés dans la zone "Saisie Relevé".</li>
+                                <li>Vérifiez les indicateurs dans la zone "Analyse" à droite.</li>
+                                <li>Cliquez sur <strong>"Valider Relevé"</strong> pour enregistrer et calculer les coûts.</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
 
-            <div className="lg:col-span-5 space-y-6">
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 className="font-bold text-slate-700 mb-4 flex items-center"><TrendingUp className="mr-2 text-sky-500"/> Analyse Performance</h3>
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div className="bg-slate-50 p-3 rounded border border-slate-100">
-                            <div className="text-xs text-slate-500 mb-1">Taux de Charge</div>
-                            <div className="font-bold text-slate-800 text-lg">{kpis.loadRate.toFixed(1)}%</div>
-                            <div className="w-full bg-slate-200 h-1.5 rounded-full mt-2"><div className="bg-emerald-500 h-1.5 rounded-full" style={{width: `${kpis.loadRate}%`}}></div></div>
-                        </div>
-                        <div className="bg-slate-50 p-3 rounded border border-slate-100">
-                            <div className="text-xs text-slate-500 mb-1">Coût Élec. Est.</div>
-                            <div className="font-bold text-slate-800 text-xl">{kpis.costHT.toFixed(0)} <span className="text-xs font-normal">DT</span></div>
-                        </div>
-                    </div>
-                </div>
+        <main className="p-8 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* Colonne Gauche : Saisie */}
+            <div className="lg:col-span-7 space-y-6">
+                <div className="flex gap-2">
+                    {COMPRESSORS.map(c => (
+                        <button key={c.id} onClick={() => setActiveCompressor(c.id)} className={`flex-1 p-4 rounded-xl border text-left transition-all ${activeCompressor === c.id ? 'bg-white border-sky-500 shadow-md ring-2 ring-sky-100' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
+                            <div className="font-bold text-slate-700">{c.name}</div>
+                            <div className="text-xs text-slate-400">{c.model} - {c.serial}</div>
+                        </button>
+                    ))}
+                </div>
 
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 className="text-sm font-bold text-slate-700 mb-4 uppercase flex items-center"><Wrench size={16} className="mr-2 text-amber-500" /> Maintenance Prédictive</h3>
-                    <div className="space-y-4">
-                        {Object.keys(MAINT_INTERVALS).map(key => {
-                            const Icon = MAINT_ICONS[key];
-                            return (
-                                <div key={key} className="flex flex-col p-3 border border-slate-200 rounded-lg hover:shadow-md transition-shadow bg-white relative overflow-hidden group">
-                                    <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity"><Icon size={30}/></div>
-                                    <div className="flex justify-between items-center mb-2 relative z-10">
-                                        <div className="text-sm font-bold text-slate-800">{MAINT_LABELS[key]}</div>
-                                        <div className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">{MAINT_INTERVALS[key]}h</div>
-                                    </div>
-                                    <div className="mb-2 relative z-10">
-                                        <div className={`text-xs font-bold mb-1 ${getStatusColor(kpis.maintStatus[key].remaining)}`}>
-                                            {kpis.maintStatus[key].remaining <= 0 ? `${Math.abs(kpis.maintStatus[key].remaining)}h dépassement` : `${kpis.maintStatus[key].remaining}h restants`}
-                                        </div>
-                                        <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                                            <div className={`h-full rounded-full transition-all duration-500 ${kpis.maintStatus[key].remaining < 0 ? 'bg-red-600' : (kpis.maintStatus[key].remaining < 200 ? 'bg-orange-500' : 'bg-emerald-400')}`} style={{ width: `${Math.max(0, Math.min(100, (kpis.maintStatus[key].remaining / MAINT_INTERVALS[key]) * 100))}%` }}></div>
-                                        </div>
-                                    </div>
-                                    <button onClick={() => setShowMaintPopup(key)} className="w-full mt-1 bg-slate-800 hover:bg-slate-700 text-white text-xs py-2 rounded flex items-center justify-center transition-colors relative z-10">Faire maintenance</button>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                     <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+                        <h2 className="font-bold flex items-center text-slate-800"><Timer className="mr-2 text-sky-600"/> Saisie Relevé</h2>
+                        <div className="flex items-center text-sm bg-slate-100 px-3 py-1 rounded-lg">
+                            <span className="font-bold text-slate-500 mr-2">Semaine :</span>
+                            <input type="week" value={week} onChange={(e) => setWeek(e.target.value)} className="bg-transparent font-bold text-slate-800 outline-none cursor-pointer" />
+                        </div>
+                     </div>
+                     <div className="grid grid-cols-2 gap-6 mb-6">
+                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                            <div className="flex justify-between mb-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase">Heures Marche</label>
+                                {userRole === 'ADMIN' && <button onClick={() => setEditingPrev(!editingPrev)} className="text-[10px] text-blue-500 hover:underline">Modifier Précédent</button>}
+                            </div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className="text-xs text-slate-400">Préc:</span>
+                                <input type="number" readOnly={!editingPrev} className={`w-full text-xs bg-transparent font-mono ${editingPrev ? 'border rounded bg-white p-1' : ''}`} value={formData[activeCompressor].lastRun || ''} onChange={e => handleInput('lastRun', e.target.value)} />
+                            </div>
+                            <input type="number" className="w-full border-2 border-sky-100 p-2 rounded-lg text-lg font-mono font-bold focus:border-sky-500 outline-none transition-colors" placeholder="Nouveau..." value={formData[activeCompressor].newRun || ''} onChange={e => handleInput('newRun', e.target.value)} />
+                        </div>
+                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                            <label className="text-xs font-bold text-slate-500 mb-2 block uppercase">Heures Charge</label>
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className="text-xs text-slate-400">Préc:</span>
+                                <input type="number" readOnly={!editingPrev} className={`w-full text-xs bg-transparent font-mono ${editingPrev ? 'border rounded bg-white p-1' : ''}`} value={formData[activeCompressor].lastLoad || ''} onChange={e => handleInput('lastLoad', e.target.value)} />
+                            </div>
+                            <input type="number" className="w-full border-2 border-sky-100 p-2 rounded-lg text-lg font-mono font-bold focus:border-sky-500 outline-none transition-colors" placeholder="Nouveau..." value={formData[activeCompressor].newLoad || ''} onChange={e => handleInput('newLoad', e.target.value)} />
+                        </div>
+                     </div>
+                     <textarea className="w-full border p-3 rounded-lg text-sm mb-2 focus:border-sky-500 outline-none" rows="3" placeholder="Note / Observation sur l'état du compresseur..." value={formData[activeCompressor].description} onChange={e => handleInput('description', e.target.value)}></textarea>
+                </div>
+            </div>
 
-                <div className="bg-white p-4 rounded-xl border border-slate-200 h-[300px] flex flex-col">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">Historique</h3>
-                    <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-                        {logs.filter(l => l.compName === COMPRESSORS.find(c => c.id === activeCompressor).name).sort((a,b)=>b.id-a.id).map(log => (
-                            <div key={log.docId} className={`p-2 border rounded text-xs ${log.type === 'MAINTENANCE' ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}>
-                                {log.type === 'MAINTENANCE' ? (
-                                    <div className="flex justify-between font-bold text-emerald-800">
-                                        <span><Wrench size={10} className="inline mr-1"/> {log.maintType}</span>
-                                        <span>{log.date}</span>
-                                    </div>
-                                ) : (
-                                    <div className="flex justify-between">
-                                        <span>{log.week}</span>
-                                        <span className="font-bold text-sky-700">{log.costHT?.toFixed(0)} DT</span>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        </main>
-        {notif && <div className="fixed bottom-6 right-6 px-6 py-4 bg-sky-600 text-white rounded-xl shadow-xl">{notif}</div>}
-    </div>
-  );
+            {/* Colonne Droite : Analyse */}
+            <div className="lg:col-span-5 space-y-6">
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><TrendingUp size={100}/></div>
+                    <h3 className="font-bold text-slate-700 mb-6 flex items-center border-b pb-2"><Activity className="mr-2 text-emerald-500"/> Analyse Performance</h3>
+                    
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                        <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                            <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1">Taux Charge</div>
+                            <div className="font-black text-2xl text-emerald-800">{kpis.loadRate.toFixed(1)}%</div>
+                            <div className="w-full bg-emerald-200 h-1.5 rounded-full mt-2 overflow-hidden"><div className="bg-emerald-600 h-full rounded-full transition-all duration-500" style={{width: `${kpis.loadRate}%`}}></div></div>
+                        </div>
+                        <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                            <div className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">Taux Utilisation</div>
+                            <div className="font-black text-2xl text-blue-800">{kpis.utilRate.toFixed(1)}%</div>
+                            <div className="text-[10px] text-blue-400 mt-1">Base hebdo 47.5h</div>
+                        </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-200 mb-6">
+                        <span className="text-xs font-bold text-slate-500 uppercase">Coût Élec. Estimé</span>
+                        <span className="font-mono font-black text-slate-800 text-lg">{kpis.costHT.toFixed(0)} <span className="text-xs">DT</span></span>
+                    </div>
+
+                    <button onClick={handleSubmit} className="w-full bg-sky-600 text-white py-3 rounded-xl font-bold hover:bg-sky-700 shadow-lg shadow-sky-200 transition-all flex items-center justify-center">
+                        <CheckCircle2 size={18} className="mr-2"/> Valider Relevé
+                    </button>
+                </div>
+            </div>
+
+            {/* Maintenance Section (Moved Up) */}
+            <div className="lg:col-span-12">
+                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 className="font-bold text-slate-700 mb-6 flex items-center"><Wrench className="mr-2 text-amber-500"/> Tableau de Maintenance</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+                        {Object.keys(MAINT_INTERVALS).map(key => {
+                            const Icon = MAINT_ICONS[key];
+                            const rem = kpis.maintStatus[key].remaining;
+                            const total = MAINT_INTERVALS[key];
+                            const isWarning = rem < (total * 0.2);
+                            
+                            return (
+                                <div key={key} className={`flex flex-col p-4 border rounded-xl hover:shadow-lg transition-all relative overflow-hidden group ${isWarning ? 'bg-amber-50 border-amber-200 ring-1 ring-amber-100' : 'bg-slate-50'}`}>
+                                    <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity"><Icon size={40}/></div>
+                                    <div className="text-xs text-slate-500 uppercase font-bold mb-1">{MAINT_LABELS[key]}</div>
+                                    <div className={`text-xl font-black mb-2 ${getStatusColor(rem, total)}`}>{rem} h</div>
+                                    <div className="w-full bg-slate-200 rounded-full h-1.5 mb-2 overflow-hidden">
+                                        <div className={`h-full ${getProgressColor(rem, total)}`} style={{width: `${Math.min(100, (rem/total)*100)}%`}}></div>
+                                    </div>
+                                    {isWarning && <div className="text-[10px] text-amber-600 font-bold mb-2 flex items-center"><AlertTriangle size={10} className="mr-1"/> Planifier</div>}
+                                    <button onClick={() => setShowMaintPopup(key)} className="mt-auto w-full py-2 bg-white border border-slate-200 rounded text-xs font-bold hover:bg-slate-800 hover:text-white transition-colors">Faire Maint.</button>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+
+            {/* Historique Air */}
+            <div className="lg:col-span-12">
+                <div className="bg-white p-6 rounded-xl border border-slate-200">
+                    <h3 className="text-sm font-bold text-slate-500 uppercase mb-4 flex items-center tracking-wider"><History size={16} className="mr-2"/> Historique Détaillé</h3>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-xs">
+                                <tr>
+                                    <th className="p-3 rounded-l-lg">Date / Semaine</th>
+                                    <th className="p-3">Type</th>
+                                    <th className="p-3">Détails / Index</th>
+                                    <th className="p-3">Technicien / Réf.</th>
+                                    <th className="p-3 text-right rounded-r-lg">Coût / Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {logs.filter(l => l.compName === COMPRESSORS.find(c => c.id === activeCompressor).name).sort((a,b)=>b.id-a.id).map(log => (
+                                    <tr key={log.docId} className="hover:bg-slate-50 transition-colors">
+                                        <td className="p-3 font-medium text-slate-700">
+                                            {log.type === 'MAINTENANCE' ? log.date : `Semaine ${log.week?.split('-W')[1] || '?'}`}
+                                        </td>
+                                        <td className="p-3">
+                                            {log.type === 'MAINTENANCE' ? 
+                                                <span className="inline-flex items-center px-2 py-1 rounded bg-amber-100 text-amber-700 text-xs font-bold"><Wrench size={10} className="mr-1"/> {log.maintType}</span> : 
+                                                <span className="inline-flex items-center px-2 py-1 rounded bg-sky-100 text-sky-700 text-xs font-bold"><Activity size={10} className="mr-1"/> Relevé</span>
+                                            }
+                                        </td>
+                                        <td className="p-3 text-slate-600 text-xs">
+                                            {log.type === 'MAINTENANCE' ? 
+                                                `Effectué à ${log.indexDone} h` : 
+                                                `Marche: ${log.newRun}h | Charge: ${log.newLoad}h`
+                                            }
+                                        </td>
+                                        <td className="p-3 text-slate-500 text-xs font-mono">
+                                            {log.type === 'MAINTENANCE' ? 
+                                                <span className="flex flex-col"><span>{log.details?.tech}</span><span className="text-[10px] text-slate-400">Réf: {log.details?.ref}</span></span> : 
+                                                '-'
+                                            }
+                                        </td>
+                                        <td className="p-3 text-right font-bold">
+                                            {log.type === 'MAINTENANCE' ? 
+                                                <span className="text-emerald-600 flex items-center justify-end"><CheckCircle2 size={14} className="mr-1"/> OK</span> : 
+                                                <span className="text-slate-700">{log.costHT?.toFixed(0)} DT</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        {logs.length === 0 && <div className="text-center p-8 text-slate-400 italic">Aucun historique disponible</div>}
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        {/* Popup Maintenance */}
+        {showMaintPopup && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                <div className="bg-white p-6 rounded-2xl w-full max-w-sm shadow-2xl transform transition-all scale-100">
+                    <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
+                        <h3 className="font-bold text-slate-800 flex items-center"><Wrench className="mr-2 text-amber-500" size={20}/> Validation Maint.</h3>
+                        <button onClick={() => setShowMaintPopup(null)} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
+                    </div>
+                    
+                    <div className="mb-4 text-sm text-slate-600 bg-amber-50 p-3 rounded-lg border border-amber-100">
+                        Vous validez la maintenance : <strong>{MAINT_LABELS[showMaintPopup]}</strong>
+                    </div>
+
+                    <form onSubmit={(e) => {
+                        e.preventDefault();
+                        const fd = new FormData(e.target);
+                        handleMaintenanceDone(showMaintPopup, { date: fd.get('date'), tech: fd.get('tech'), ref: fd.get('ref'), notes: fd.get('notes') });
+                    }}>
+                        <div className="space-y-3">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">Date Intervention *</label>
+                                <input name="date" type="date" required defaultValue={new Date().toISOString().split('T')[0]} className="w-full border border-slate-200 p-2 rounded-lg text-sm focus:border-amber-500 outline-none" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">Intervenant / Technicien *</label>
+                                <input name="tech" placeholder="Nom du technicien" required className="w-full border border-slate-200 p-2 rounded-lg text-sm focus:border-amber-500 outline-none" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">Réf. Fiche Intervention *</label>
+                                <input name="ref" placeholder="ex: FI-2024-001" required className="w-full border border-slate-200 p-2 rounded-lg text-sm focus:border-amber-500 outline-none font-mono" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">Notes / Observations</label>
+                                <textarea name="notes" placeholder="Détails supplémentaires..." className="w-full border border-slate-200 p-2 rounded-lg text-sm focus:border-amber-500 outline-none" rows="2"></textarea>
+                            </div>
+                        </div>
+                        
+                        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
+                            <button type="button" onClick={() => setShowMaintPopup(null)} className="px-4 py-2 text-slate-500 font-bold hover:bg-slate-50 rounded-lg transition-colors">Annuler</button>
+                            <button type="submit" className="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold shadow-lg shadow-amber-200 transition-all flex items-center">
+                                <Check size={18} className="mr-2"/> Valider
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        )}
+        {notif && <div className="fixed bottom-6 right-6 px-6 py-4 bg-sky-600 text-white rounded-xl shadow-xl z-50 animate-in slide-in-from-bottom-4 fade-in duration-300 font-bold flex items-center"><CheckCircle2 className="mr-2"/> {notif}</div>}
+    </div>
+  );
 };
 
 // ==================================================================================
@@ -1047,422 +1235,703 @@ const AirModule = ({ onBack, userRole }) => {
 // ==================================================================================
 
 const SitesDashboard = ({ onBack, userRole }) => {
-  const [activeSiteTab, setActiveSiteTab] = useState('MEGRINE');
-  const [historyData, setHistoryData] = useState({});
-  const [showHistoryInput, setShowHistoryInput] = useState(false);
-  const [refYear, setRefYear] = useState('2023'); 
-  const [notif, setNotif] = useState(null);
-  const [avgTempHistory] = useState([
-      { year: 2018, temp: 19.2 }, { year: 2019, temp: 19.5 }, { year: 2020, temp: 19.8 },
-      { year: 2021, temp: 20.1 }, { year: 2022, temp: 20.4 }, { year: 2023, temp: 20.8 }, { year: 2024, temp: 21.0 }
-  ]);
-  
-  useEffect(() => {
-    getDocs(getCollection('site_history')).then(snap => {
-        const data = {};
-        snap.forEach(doc => {
-            const [site, year] = doc.id.split('_');
-            if(!data[site]) data[site] = {};
-            data[site][year] = doc.data().months;
-        });
-        setHistoryData(prev => ({...prev, ...data}));
-    });
-  }, []);
+  const [activeSiteTab, setActiveSiteTab] = useState('MEGRINE');
+  const [historyData, setHistoryData] = useState({});
+  const [showHistoryInput, setShowHistoryInput] = useState(false);
+  const [refYear, setRefYear] = useState('2023'); // Default reference year for visualization
+  const [notif, setNotif] = useState(null);
+  
+  // Données de température plus réalistes pour Tunis
+  const [avgTempHistory] = useState([
+      { year: 2018, temp: 19.4 }, { year: 2019, temp: 19.6 }, { year: 2020, temp: 19.9 },
+      { year: 2021, temp: 20.3 }, { year: 2022, temp: 20.8 }, { year: 2023, temp: 21.2 }, 
+      { year: 2024, temp: 21.5 }, { year: 2025, temp: 21.8 }
+  ]);
+  
+  const yearsRange = ['REF', 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030];
 
-  const initHistory = (site) => {
-      if (!historyData[site]) {
-          const years = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 'REF'];
-          const emptyYear = Array(12).fill('');
-          const newData = {};
-          years.forEach(y => newData[y] = emptyYear);
-          setHistoryData(prev => ({...prev, [site]: newData}));
-      }
-  };
+  useEffect(() => {
+    getDocs(getCollection('site_history')).then(snap => {
+        const data = {};
+        snap.forEach(doc => {
+            const [site, year] = doc.id.split('_');
+            if(!data[site]) data[site] = {};
+            data[site][year] = doc.data().months;
+        });
+        setHistoryData(prev => ({...prev, ...data}));
+    });
+  }, []);
 
-  const SITES_DATA = {
-    MEGRINE: { name: "Mégrine", area: 32500, covered: 30000, open: 2500, details: "Showroom 1000m² • Atelier FIAT 10000m² • Atelier IVECO 9000m² • ITALCAR Gros 10000m²", energyMix: [{ name: "Électricité", value: 97, color: "#3b82f6" }, { name: "Gaz", value: 3, color: "#f97316" }], elecUsage: [{ name: "Clim/Chauffage", value: 40, kpi: "kWh/m²", significant: true }, { name: "Éclairage", value: 27, kpi: "kWh/m²", significant: true }, { name: "Air Comprimé", value: 17, kpi: "kWh/Nm³", significant: true }, { name: "Informatique", value: 8, kpi: "-", significant: false }, { name: "Services", value: 5, kpi: "-", significant: false }, { name: "Gaz (Four)", value: 3, kpi: "kWh/Véhicule", significant: false, note: "Non-Significatif" }] },
-    ELKHADHRA: { name: "El Khadhra", area: 9500, covered: 7000, open: 2500, details: "Réception 1000m² • Atelier FIAT 3000m² • ITALCAR Gros 3000m²", energyMix: [{ name: "Électricité", value: 100, color: "#3b82f6" }], elecUsage: [{ name: "Clim/Chauffage", value: 61, kpi: "kWh/m²", significant: true }, { name: "Éclairage", value: 23, kpi: "kWh/m²", significant: true }, { name: "Air Comprimé", value: 6, kpi: "kWh/Nm³", significant: false }, { name: "Informatique", value: 5, kpi: "-", significant: false }, { name: "Services", value: 5, kpi: "-", significant: false }] },
-    NAASSEN: { name: "Naassen", area: 32500, covered: 1820, open: 30680, details: "Admin 920m² • Atelier 900m² • Parc Neuf 30680m²", energyMix: [{ name: "Électricité", value: 100, color: "#3b82f6" }], elecUsage: [{ name: "Éclairage (80% Ext)", value: 78, kpi: "kWh/m²", significant: true }, { name: "Clim/Chauffage", value: 14, kpi: "kWh/m²", significant: false }, { name: "Air Comprimé", value: 5, kpi: "kWh/Nm³", significant: false }, { name: "Services", value: 2, kpi: "-", significant: false }, { name: "Informatique", value: 1, kpi: "-", significant: false }] },
-    LAC: { name: "Lac", area: 2050, covered: 850, open: 1200, details: "Showroom 850m² • Espace Ouvert 1200m²", energyMix: [{ name: "Électricité", value: 100, color: "#3b82f6" }], elecUsage: [{ name: "Éclairage (60% Int)", value: 58, kpi: "kWh/m²", significant: true }, { name: "Clim/Chauffage", value: 36, kpi: "kWh/m²", significant: true }, { name: "Informatique", value: 3, kpi: "-", significant: false }, { name: "Services", value: 3, kpi: "-", significant: false }] }
-  };
-  
-  const currentData = SITES_DATA[activeSiteTab];
+  const initHistory = (site) => {
+      if (!historyData[site]) {
+          const emptyYear = Array(12).fill('');
+          const newData = {};
+          yearsRange.forEach(y => newData[y] = emptyYear);
+          setHistoryData(prev => ({...prev, [site]: newData}));
+      }
+  };
 
-  const handleHistoryChange = (year, monthIdx, val) => {
-      setHistoryData(prev => ({
-          ...prev,
-          [activeSiteTab]: {
-              ...prev[activeSiteTab],
-              [year]: prev[activeSiteTab][year].map((v, i) => i === monthIdx ? val : v)
-          }
-      }));
-  };
+  const SITES_DATA = {
+    MEGRINE: { 
+        name: "Mégrine", 
+        area: 32500, covered: 30000, open: 2500, glazed: 364.92,
+        details: "Showroom 1000m² • Atelier FIAT 10000m² • Atelier IVECO 9000m² • ITALCAR Gros 10000m²", 
+        energyMix: [{ name: "Électricité", value: 97, color: "#3b82f6" }, { name: "Gaz", value: 3, color: "#f97316" }], 
+        elecUsage: [
+            { name: "Clim/Chauffage", value: 40, kpi: "kWh/m²", significant: true }, 
+            { name: "Éclairage", value: 27, kpi: "kWh/m²", significant: true }, 
+            { name: "Air Comprimé", value: 17, kpi: "kWh/Nm³", significant: true, subDetails: [
+                {name: "Équipement Atelier", val: "40%"},
+                {name: "Gonfleur Pneus", val: "30%"},
+                {name: "Récup. Huile", val: "30%"}
+            ]}, 
+            { name: "Informatique", value: 8, kpi: "-", significant: false }, 
+            { name: "Services", value: 5, kpi: "-", significant: false }, 
+            { name: "Gaz", value: 3, kpi: "kWh/Véhicule", significant: false, subDetails: [
+                {name: "Four Peinture", val: "90%"},
+                {name: "Divers", val: "10%"}
+            ]} 
+        ] 
+    },
+    ELKHADHRA: { 
+        name: "El Khadhra", 
+        area: 9500, covered: 7000, open: 2500, glazed: 39.5,
+        details: "Réception 1000m² • Atelier FIAT 3000m² • ITALCAR Gros 3000m²", 
+        energyMix: [{ name: "Électricité", value: 100, color: "#3b82f6" }], 
+        elecUsage: [
+            { name: "Clim/Chauffage", value: 61, kpi: "kWh/m²", significant: true }, 
+            { name: "Éclairage", value: 23, kpi: "kWh/m²", significant: true }, 
+            { name: "Air Comprimé", value: 6, kpi: "kWh/Nm³", significant: false }, 
+            { name: "Informatique", value: 5, kpi: "-", significant: false }, 
+            { name: "Services", value: 5, kpi: "-", significant: false }
+        ] 
+    },
+    NAASSEN: { 
+        name: "Naassen", 
+        area: 32500, covered: 1820, open: 30680, glazed: 0,
+        details: "Admin 920m² • Atelier 900m² • Parc Neuf 30680m²", 
+        energyMix: [{ name: "Électricité", value: 100, color: "#3b82f6" }], 
+        elecUsage: [
+            { name: "Éclairage (80% Ext)", value: 78, kpi: "kWh/m²", significant: true }, 
+            { name: "Clim/Chauffage", value: 14, kpi: "kWh/m²", significant: false }, 
+            { name: "Air Comprimé", value: 5, kpi: "kWh/Nm³", significant: false }, 
+            { name: "Services", value: 2, kpi: "-", significant: false }, 
+            { name: "Informatique", value: 1, kpi: "-", significant: false }
+        ] 
+    },
+    LAC: { 
+        name: "Lac", 
+        area: 2050, covered: 850, open: 1200, glazed: 115.7,
+        details: "Showroom 850m² • Espace Ouvert 1200m²", 
+        energyMix: [{ name: "Électricité", value: 100, color: "#3b82f6" }], 
+        elecUsage: [
+            { name: "Éclairage (60% Int)", value: 58, kpi: "kWh/m²", significant: true }, 
+            { name: "Clim/Chauffage", value: 36, kpi: "kWh/m²", significant: true }, 
+            { name: "Informatique", value: 3, kpi: "-", significant: false }, 
+            { name: "Services", value: 3, kpi: "-", significant: false }
+        ] 
+    }
+  };
+  
+  const currentData = SITES_DATA[activeSiteTab];
 
-  const saveHistory = async () => {
-      const site = activeSiteTab;
-      if (!historyData[site]) return;
-      try {
-        for (const year of Object.keys(historyData[site])) {
-            await setDoc(doc(db, 'site_history', `${site}_${year}`), { months: historyData[site][year] });
-        }
-        setNotif("Historique sauvegardé");
-        setShowHistoryInput(false);
-      } catch(e) { setNotif("Erreur"); }
-      setTimeout(() => setNotif(null), 3000);
-  };
+  const handleHistoryChange = (year, monthIdx, val) => {
+      setHistoryData(prev => ({
+          ...prev,
+          [activeSiteTab]: {
+              ...prev[activeSiteTab],
+              [year]: prev[activeSiteTab][year].map((v, i) => i === monthIdx ? val : v)
+          }
+      }));
+  };
 
-  const HistoricalAnalysis = () => {
-      const data2024 = historyData[activeSiteTab]?.[2024] || Array(12).fill(0);
-      const dataRef = historyData[activeSiteTab]?.[refYear] || Array(12).fill(0);
-      
-      const total2024 = data2024.reduce((a,b) => a + (parseFloat(b)||0), 0);
-      const totalRef = dataRef.reduce((a,b) => a + (parseFloat(b)||0), 0);
-      const diff = totalRef > 0 ? ((total2024 - totalRef) / totalRef) * 100 : 0;
+  const saveHistory = async () => {
+      const site = activeSiteTab;
+      if (!historyData[site]) return;
+      try {
+        for (const year of Object.keys(historyData[site])) {
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'site_history', `${site}_${year}`), { months: historyData[site][year] });
+        }
+        setNotif("Historique sauvegardé");
+        setShowHistoryInput(false);
+      } catch(e) { setNotif("Erreur"); }
+      setTimeout(() => setNotif(null), 3000);
+  };
 
-      return (
-        <div className="bg-white p-6 rounded-xl border border-slate-200 mt-6 shadow-lg animate-in fade-in slide-in-from-bottom-4">
-             <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-slate-700 flex items-center"><BarChart3 className="mr-2 text-blue-600"/> Analyse Comparative</h3>
-                <div className="flex items-center gap-4">
-                    <div className="text-sm">
-                        <span className="font-bold text-slate-500">2024 vs </span>
-                        <select className="border-none bg-slate-100 rounded px-2 font-bold text-blue-600 cursor-pointer" value={refYear} onChange={e => setRefYear(e.target.value)}>
-                            <option value="REF">REF</option>
-                            {[2018,2019,2020,2021,2022,2023].map(y => <option key={y} value={y}>{y}</option>)}
-                        </select>
-                    </div>
-                    <div className={`px-3 py-1 rounded-full text-xs font-bold ${diff > 0 ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                        {diff > 0 ? '+' : ''}{diff.toFixed(1)}%
-                    </div>
-                </div>
-             </div>
-             
-             <div className="h-48 flex items-end gap-2">
-                 {['J','F','M','A','M','J','J','A','S','O','N','D'].map((m, i) => {
-                     const val2024 = parseFloat(data2024[i]) || 0;
-                     const valRef = parseFloat(dataRef[i]) || 0;
-                     const max = Math.max(...data2024.map(v=>parseFloat(v)||0), ...dataRef.map(v=>parseFloat(v)||0), 100);
-                     
-                     return (
-                         <div key={i} className="flex-1 flex flex-col justify-end gap-1 group relative">
-                             <div className="w-full bg-slate-200 rounded-t relative hover:bg-slate-300 transition-all" style={{height: `${(valRef/max)*100}%`}}>
-                                <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] p-1 rounded mb-1">{valRef}</div>
-                             </div>
-                             <div className="w-full bg-blue-500 rounded-t relative hover:bg-blue-600 transition-all opacity-80" style={{height: `${(val2024/max)*100}%`}}>
-                                <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 bg-blue-900 text-white text-[10px] p-1 rounded mb-1">{val2024}</div>
-                             </div>
-                             <div className="text-[10px] text-center text-slate-400 font-bold border-t border-slate-200 pt-1">{m}</div>
-                         </div>
-                     );
-                 })}
-             </div>
-             <div className="flex justify-center gap-6 mt-4 text-xs font-bold">
-                 <div className="flex items-center"><div className="w-3 h-3 bg-blue-500 rounded mr-2"></div> 2024 (Conso)</div>
-                 <div className="flex items-center"><div className="w-3 h-3 bg-slate-200 rounded mr-2"></div> {refYear} (Référence)</div>
-             </div>
-        </div>
-      );
-  };
+  // KPI DYNAMIC RATIO
+  const getDynamicRatio = () => {
+      const prevYear = new Date().getFullYear() - 1;
+      const prevYearData = historyData[activeSiteTab]?.[prevYear];
+      const totalPrev = prevYearData ? prevYearData.reduce((a,b)=>a+(parseFloat(b)||0),0) : 0;
+      return totalPrev > 0 ? (totalPrev / currentData.covered).toFixed(1) : '--';
+  };
 
-  return (
-    <div className="bg-slate-50 min-h-screen pb-10">
-        <header className="bg-gradient-to-r from-emerald-700 to-teal-800 text-white shadow-lg p-4 flex items-center justify-between">
-            <div className="flex items-center">
-                <button onClick={onBack} className="mr-4"><ArrowLeft /></button>
-                <div>
-                    <h1 className="font-bold text-xl">Tableau de Bord Sites (Cloud)</h1>
-                    <div className="flex items-center text-xs opacity-80 mt-1 space-x-4">
-                        <DateTimeDisplay />
-                        <span className="flex items-center"><Thermometer size={12} className="mr-1"/> 24°C</span>
-                    </div>
-                </div>
-            </div>
-            {userRole === 'ADMIN' && (
-                <button onClick={() => { initHistory(activeSiteTab); setShowHistoryInput(true); }} className="flex items-center bg-white/10 px-3 py-2 rounded text-xs font-bold border border-white/20 hover:bg-white/20">
-                    <Database size={14} className="mr-2" /> Saisir Historique
-                </button>
-            )}
-        </header>
+  // --- COMPONENT: COMPARISON WIDGET (Top) ---
+  const ComparisonWidget = () => {
+      const currentYear = new Date().getFullYear();
+      const currentMonth = new Date().getMonth(); 
+      const lastCompletedMonthIdx = currentMonth === 0 ? 11 : currentMonth - 1;
+      const analysisYear = currentMonth === 0 ? currentYear - 1 : currentYear;
 
-        {showHistoryInput && (
-            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                <div className="bg-white p-6 rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-                    <div className="flex justify-between mb-4">
-                        <h3 className="font-bold">Historique - {currentData.name}</h3>
-                        <button onClick={() => setShowHistoryInput(false)}><X /></button>
-                    </div>
-                    <div className="overflow-y-auto flex-1 pr-2 space-y-6">
-                        {['REF', 2018, 2019, 2020, 2021, 2022, 2023, 2024].map(year => (
-                            <div key={year} className={`border rounded ${year === 'REF' ? 'border-orange-300 ring-2 ring-orange-50 bg-orange-50/20' : ''}`}>
-                                <div className={`p-2 font-bold text-sm flex justify-between ${year === 'REF' ? 'bg-orange-100 text-orange-800' : 'bg-slate-100'}`}>
-                                    <span>{year === 'REF' ? 'ANNÉE DE RÉFÉRENCE' : year}</span>
-                                    <span>Total: {historyData[activeSiteTab]?.[year]?.reduce((a,b)=>a+(parseFloat(b)||0),0).toLocaleString()} kWh</span>
-                                </div>
-                                <div className="grid grid-cols-6 gap-px bg-slate-200">
-                                    {['J','F','M','A','M','J','J','A','S','O','N','D'].map((m, i) => (
-                                        <div key={i} className="bg-white p-2">
-                                            <label className="text-[10px] text-slate-400">{m}</label>
-                                            <input type="number" className="w-full text-xs outline-none" placeholder="0" 
-                                                value={historyData[activeSiteTab]?.[year]?.[i] || ''} 
-                                                onChange={e => handleHistoryChange(year, i, e.target.value)} />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="mt-4 flex justify-end">
-                        <button onClick={saveHistory} className="bg-emerald-600 text-white px-6 py-2 rounded font-bold">Enregistrer</button>
-                    </div>
-                </div>
-            </div>
-        )}
+      const dataCurrent = historyData[activeSiteTab]?.[analysisYear] || Array(12).fill(0);
+      const dataRef = historyData[activeSiteTab]?.[refYear] || Array(12).fill(0);
+      
+      const lastMonthValue = parseFloat(dataCurrent[lastCompletedMonthIdx]) || 0;
+      const lastMonthRefValue = parseFloat(dataRef[lastCompletedMonthIdx]) || 0;
+      const diffLastMonth = lastMonthRefValue > 0 ? ((lastMonthValue - lastMonthRefValue) / lastMonthRefValue) * 100 : 0;
+      const months = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 
-        <main className="p-8 max-w-7xl mx-auto">
-            {/* KEY METRICS */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center"><div className="p-3 rounded-full bg-blue-50 text-blue-600 mr-4"><Maximize2 size={20} /></div><div><div className="text-xs text-slate-500 uppercase font-bold">Surface Totale</div><div className="text-xl font-black text-slate-800">{currentData.area.toLocaleString()} m²</div></div></div>
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center"><div className="p-3 rounded-full bg-emerald-50 text-emerald-600 mr-4"><Zap size={20} /></div><div><div className="text-xs text-slate-500 uppercase font-bold">Source Principale</div><div className="text-xl font-black text-slate-800">{currentData.energyMix[0].name}</div></div></div>
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center"><div className="p-3 rounded-full bg-amber-50 text-amber-600 mr-4"><TrendingUp size={20} /></div><div><div className="text-xs text-slate-500 uppercase font-bold">Poste #1</div><div className="text-xl font-black text-slate-800">{currentData.elecUsage[0].name}</div></div></div>
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center"><div className="p-3 rounded-full bg-purple-50 text-purple-600 mr-4"><Leaf size={20} /></div><div><div className="text-xs text-slate-500 uppercase font-bold">Ratio Global</div><div className="text-xl font-black text-slate-800">-- <span className="text-xs font-normal text-slate-400">kWh/m²</span></div></div></div>
-            </div>
+      return (
+          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 mb-8 flex flex-col md:flex-row items-center justify-between animate-in slide-in-from-top-4">
+              <div>
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center">
+                      <Activity className="mr-2 text-blue-500" size={16}/> Performance Dernière Clôture Mensuelle
+                  </h3>
+                  <div className="text-2xl font-black text-slate-800">
+                      {months[lastCompletedMonthIdx]} {analysisYear} <span className="text-slate-300 mx-2">vs</span> {refYear}
+                  </div>
+              </div>
+              
+              <div className="flex gap-8 items-center mt-4 md:mt-0">
+                  <div className="text-right">
+                      <div className="text-xs font-bold text-slate-400 uppercase">Référence</div>
+                      <div className="font-mono font-bold text-slate-600 text-lg">{lastMonthRefValue.toLocaleString()} kWh</div>
+                  </div>
+                  <div className="text-right">
+                      <div className="text-xs font-bold text-slate-400 uppercase">Réalisé</div>
+                      <div className="font-mono font-black text-slate-800 text-2xl">{lastMonthValue.toLocaleString()} kWh</div>
+                  </div>
+                  <div className={`px-4 py-2 rounded-xl flex items-center gap-2 font-black text-xl ${diffLastMonth <= 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                      {diffLastMonth <= 0 ? <TrendingDown size={24}/> : <TrendingUp size={24}/>}
+                      {diffLastMonth > 0 ? '+' : ''}{diffLastMonth.toFixed(1)}%
+                  </div>
+              </div>
+          </div>
+      );
+  };
 
-            <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
-                {Object.keys(SITES_DATA).map(key => (
-                    <button key={key} onClick={() => setActiveSiteTab(key)} className={`px-4 py-2 rounded font-bold whitespace-nowrap ${activeSiteTab === key ? 'bg-emerald-600 text-white' : 'bg-white'}`}>{SITES_DATA[key].name}</button>
-                ))}
-            </div>
+  const TrajectoryAnalysis = () => {
+      const currentYear = new Date().getFullYear();
+      // Generate bars from 2018 to 2030
+      const years = Array.from({length: 13}, (_, i) => 2018 + i);
+      
+      return (
+        <div className="bg-white p-6 rounded-xl border border-slate-200 mt-6 shadow-lg">
+             <div className="flex justify-between items-center mb-6">
+                <h3 className="font-bold text-slate-700 flex items-center text-lg"><BarChart3 className="mr-2 text-blue-600"/> Trajectoire & Vision 2030</h3>
+                <div className="flex items-center gap-4 text-sm">
+                    <div className="flex items-center"><div className="w-3 h-3 bg-slate-800 rounded mr-2"></div> Historique</div>
+                    <div className="flex items-center"><div className="w-3 h-3 bg-blue-500 rounded mr-2"></div> Vision</div>
+                    <div className="flex items-center"><div className="w-3 h-3 bg-emerald-400 rounded mr-2"></div> Part Verte</div>
+                </div>
+             </div>
+             
+             <div className="h-64 flex items-end gap-2 px-2 relative">
+                 {years.map((year) => {
+                     const yearData = historyData[activeSiteTab]?.[year] || Array(12).fill(0);
+                     const total = yearData.reduce((a,b)=>a+(parseFloat(b)||0),0);
+                     const max = 600000; // Arbitrary max for scaling visualization
+                     const isFuture = year > currentYear;
+                     
+                     return (
+                         <div key={year} className="flex-1 flex flex-col justify-end gap-1 group relative h-full">
+                             <div className={`w-full rounded-t relative transition-all group-hover:scale-105 origin-bottom 
+                                ${isFuture ? 'bg-blue-100 border-2 border-blue-400 border-dashed opacity-70' : 'bg-slate-800 shadow-lg'}`} 
+                                style={{height: `${Math.min(100, (total/max)*100)}%`}}>
+                                {isFuture && <div className="absolute bottom-0 left-0 w-full bg-emerald-400/50" style={{height: '20%'}}></div>} {/* Mock Green Part */}
+                                <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 bg-black text-white text-[10px] p-1 rounded mb-1 font-bold z-10 whitespace-nowrap">
+                                    {total > 0 ? total.toLocaleString() : 'N/A'}
+                                </div>
+                             </div>
+                             <div className={`text-[10px] text-center font-bold border-t pt-2 ${year === currentYear ? 'text-blue-600' : 'text-slate-400'}`}>{year}</div>
+                         </div>
+                     );
+                 })}
+             </div>
+        </div>
+      );
+  };
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="space-y-6">
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                        <h3 className="text-sm font-bold text-slate-400 uppercase mb-4 flex items-center"><Building2 size={16} className="mr-2" /> Structure</h3>
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-slate-50 p-3 rounded-lg border border-slate-100"><div className="text-xs text-slate-500 mb-1 font-bold">COUVERT</div><div className="font-bold text-slate-700 text-lg">{currentData.covered.toLocaleString()} m²</div></div>
-                                <div className="bg-slate-50 p-3 rounded-lg border border-slate-100"><div className="text-xs text-slate-500 mb-1 font-bold">OUVERT</div><div className="font-bold text-slate-700 text-lg">{currentData.open.toLocaleString()} m²</div></div>
-                            </div>
-                            <div className="text-xs text-slate-600 bg-blue-50 p-3 rounded-lg border border-blue-100"><span className="font-bold text-blue-800 block mb-1">Affectation :</span>{currentData.details}</div>
-                        </div>
-                    </div>
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                        <h3 className="text-sm font-bold text-slate-400 uppercase mb-4">Mix Énergétique</h3>
-                        <div className="flex h-4 rounded-full overflow-hidden mb-4">{currentData.energyMix.map((s, idx) => (<div key={idx} style={{ width: `${s.value}%`, backgroundColor: s.color }}></div>))}</div>
-                        <div className="space-y-2">{currentData.energyMix.map((s, idx) => (<div key={idx} className="flex justify-between text-xs font-bold text-slate-600"><span>{s.name}</span><span>{s.value}%</span></div>))}</div>
-                    </div>
-                </div>
-                <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                        <h3 className="text-sm font-bold text-slate-400 uppercase mb-6 flex items-center"><PieChart size={16} className="mr-2" /> Répartition Consommation</h3>
-                        <div className="space-y-4">
-                            {currentData.elecUsage.map((usage, idx) => (
-                                <div key={idx} className="flex items-center justify-between group">
-                                    <div className="w-1/3 pr-2 flex items-center">
-                                        {usage.significant && <div className="w-2 h-2 rounded-full bg-red-500 mr-2 flex-shrink-0"></div>}
-                                        <span className="text-sm font-bold text-slate-800">{usage.name}</span>
-                                    </div>
-                                    <div className="flex-1 px-4"><div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden"><div className={`h-full rounded-full ${usage.significant ? 'bg-emerald-500' : 'bg-slate-300'}`} style={{ width: `${usage.value}%` }}></div></div></div>
-                                    <div className="w-24 text-right"><span className="font-bold text-slate-700 mr-2">{usage.value}%</span><span className="text-[9px] text-slate-400">{usage.kpi}</span></div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                    <HistoricalAnalysis />
-                </div>
-            </div>
-       </main>
-       {notif && <div className="fixed bottom-6 right-6 px-6 py-4 bg-emerald-600 text-white rounded-xl shadow-xl">{notif}</div>}
-    </div>
-  );
+  return (
+    <div className="bg-slate-50 min-h-screen pb-10 relative">
+        <header className="bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-xl p-0 sticky top-0 z-40">
+            <div className="max-w-7xl mx-auto px-6 py-3 flex flex-col md:flex-row justify-between items-center">
+                <div className="flex items-center w-full md:w-auto mb-4 md:mb-0">
+                    <button onClick={onBack} className="mr-6 p-2 bg-white/10 rounded-full hover:bg-white/20 transition-all"><ArrowLeft size={24} /></button>
+                    <div>
+                        <h1 className="font-black text-2xl tracking-tight uppercase">Tableau de Bord</h1>
+                        <p className="text-xs text-blue-300 font-bold uppercase tracking-widest">Suivi Performance Énergétique</p>
+                    </div>
+                </div>
+                
+                {/* SITE ACTIF CENTRÉ */}
+                <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-md border border-white/10 px-6 py-2 rounded-2xl items-center shadow-2xl">
+                    <LayoutGrid className="text-emerald-400 mr-3" size={20}/>
+                    <span className="font-black text-lg tracking-wider uppercase">{currentData.name}</span>
+                </div>
+
+                <div className="flex items-center gap-6">
+                    <HeaderInfoDisplay />
+                </div>
+            </div>
+        </header>
+
+        {showHistoryInput && (
+            <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                <div className="bg-white p-6 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl">
+                    <div className="flex justify-between items-center mb-6 pb-4 border-b">
+                        <h3 className="font-black text-xl text-slate-800 flex items-center"><Database className="mr-3 text-blue-600"/> Saisie Historique & Vision - {currentData.name}</h3>
+                        <button onClick={() => setShowHistoryInput(false)} className="p-2 hover:bg-slate-100 rounded-full"><X /></button>
+                    </div>
+                    <div className="overflow-y-auto flex-1 pr-2 space-y-6">
+                        {yearsRange.map(year => (
+                            <div key={year} className={`border rounded-xl overflow-hidden ${year === 'REF' ? 'border-orange-300 ring-4 ring-orange-50 bg-orange-50/20' : 'border-slate-200'}`}>
+                                <div className={`p-3 font-bold text-sm flex justify-between items-center ${year === 'REF' ? 'bg-orange-100 text-orange-900' : 'bg-slate-50 text-slate-700'}`}>
+                                    <span className="flex items-center gap-2">
+                                        {year === 'REF' && <CheckCircle2 size={16}/>}
+                                        {year === 'REF' ? 'ANNÉE DE RÉFÉRENCE' : `ANNÉE ${year}`}
+                                        {year > new Date().getFullYear() && <span className="ml-2 bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] uppercase tracking-wider">Vision Future</span>}
+                                    </span>
+                                    <span className="font-mono bg-white px-2 py-1 rounded shadow-sm">Total: {historyData[activeSiteTab]?.[year]?.reduce((a,b)=>a+(parseFloat(b)||0),0).toLocaleString()} kWh</span>
+                                </div>
+                                <div className="grid grid-cols-6 md:grid-cols-12 gap-px bg-slate-200 border-t border-slate-200">
+                                    {['JAN','FÉV','MAR','AVR','MAI','JUN','JUL','AOÛ','SEP','OCT','NOV','DÉC'].map((m, i) => (
+                                        <div key={i} className="bg-white p-2">
+                                            <label className="text-[9px] font-bold text-slate-400 block mb-1">{m}</label>
+                                            <input type="number" className="w-full text-sm font-bold text-slate-700 outline-none border-b border-transparent focus:border-blue-500 transition-colors placeholder-slate-200" placeholder="-" 
+                                                value={historyData[activeSiteTab]?.[year]?.[i] || ''} 
+                                                onChange={e => handleHistoryChange(year, i, e.target.value)} />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="mt-6 flex justify-end pt-4 border-t">
+                        <button onClick={saveHistory} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-blue-200 transition-all flex items-center">
+                            <Save className="mr-2" size={18}/> Enregistrer les Données
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        <main className="p-6 max-w-7xl mx-auto space-y-8">
+            <ComparisonWidget />
+
+            <div className="flex justify-between items-center border-b border-slate-200 pb-4">
+               <div className="flex gap-2 overflow-x-auto">
+                  {Object.keys(SITES_DATA).map(key => (
+                      <button key={key} onClick={() => setActiveSiteTab(key)} className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all shadow-sm ${activeSiteTab === key ? 'bg-slate-800 text-white shadow-lg scale-105' : 'bg-white text-slate-500 hover:bg-slate-50'}`}>{SITES_DATA[key].name}</button>
+                  ))}
+               </div>
+               <div className="flex items-center gap-2">
+                   <span className="text-xs font-bold text-slate-400 uppercase mr-2">Année de Réf. :</span>
+                   <select className="bg-white border border-slate-200 rounded-lg px-3 py-1 text-sm font-bold text-slate-700 outline-none cursor-pointer hover:border-blue-400 transition-colors" value={refYear} onChange={e => setRefYear(e.target.value)}>
+                        <option value="REF">Standard (REF)</option>
+                        {[2018,2019,2020,2021,2022,2023].map(y => <option key={y} value={y}>{y}</option>)}
+                   </select>
+               </div>
+            </div>
+
+            {/* 1. KPIs VISUELS (REDESIGN) */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                {/* Surface */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-lg shadow-slate-200/50 flex flex-col justify-between group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-10 bg-blue-50 rounded-bl-full -mr-10 -mt-10 opacity-50"></div>
+                    <div className="flex justify-between items-start mb-4 relative z-10">
+                        <div className="p-3 rounded-xl bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors"><Maximize2 size={24} /></div>
+                    </div>
+                    <div className="relative z-10">
+                        <div className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Surface Totale</div>
+                        <div className="text-3xl font-black text-slate-800">{currentData.area.toLocaleString()} <span className="text-sm font-medium text-slate-400">m²</span></div>
+                    </div>
+                </div>
+
+                {/* Sources d'énergie (Liste Verticale) */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-lg shadow-slate-200/50 flex flex-col justify-between group hover:-translate-y-1 transition-all duration-300">
+                    <div className="flex items-center gap-3 mb-4 border-b border-slate-50 pb-2">
+                        <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600"><Zap size={18} /></div>
+                        <span className="text-xs font-bold text-slate-400 uppercase">Sources Énergie</span>
+                    </div>
+                    <div className="space-y-2">
+                        {currentData.energyMix.map((mix, i) => (
+                            <div key={i} className="flex justify-between items-center text-sm font-bold text-slate-700">
+                                <span>{mix.name}</span>
+                                <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-xs">{mix.value}%</span>
+                            </div>
+                        ))}
+                        {activeSiteTab === 'LAC' && (
+                            <div className="flex justify-between items-center text-sm font-bold text-slate-700 animate-in fade-in">
+                                <span>Photovoltaïque</span>
+                                <span className="text-orange-500 bg-orange-50 px-2 py-0.5 rounded text-[9px] uppercase">Dès 2022</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Usages Significatifs (Liste Verticale) */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-lg shadow-slate-200/50 flex flex-col justify-between group hover:-translate-y-1 transition-all duration-300">
+                    <div className="flex items-center gap-3 mb-4 border-b border-slate-50 pb-2">
+                        <div className="p-2 rounded-lg bg-amber-50 text-amber-600"><TrendingUp size={18} /></div>
+                        <span className="text-xs font-bold text-slate-400 uppercase">Usages Significatifs</span>
+                    </div>
+                    <div className="space-y-2 overflow-y-auto max-h-[100px] scrollbar-hide">
+                        {currentData.elecUsage.filter(u => u.significant).map((u, i) => (
+                            <div key={i} className="flex items-center text-sm font-bold text-slate-700">
+                                <div className="w-2 h-2 rounded-full bg-amber-400 mr-2"></div>
+                                <span className="truncate">{u.name}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Ratio Global Dynamique */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-lg shadow-slate-200/50 flex flex-col justify-between group hover:-translate-y-1 transition-all duration-300">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="p-3 rounded-xl bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors"><Leaf size={24} /></div>
+                        <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-1 rounded">PERFORMANCE</span>
+                    </div>
+                    <div>
+                        <div className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Ratio Global {new Date().getFullYear() - 1}</div>
+                        <div className="text-3xl font-black text-slate-800">{getDynamicRatio()} <span className="text-sm font-medium text-slate-400">kWh/m²</span></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {/* 2. FICHE TECHNIQUE & TEMPÉRATURE */}
+                <div className="bg-white p-0 rounded-3xl border border-slate-200 overflow-hidden shadow-xl flex flex-col h-full">
+                    <div className="bg-slate-50 p-6 border-b border-slate-100">
+                        <h3 className="font-black text-slate-800 uppercase tracking-tight text-lg flex items-center"><FileText className="mr-2 text-slate-400"/> Fiche Technique</h3>
+                    </div>
+                    <div className="p-6 flex-1 space-y-6">
+                        <div>
+                            <div className="text-xs font-bold text-slate-400 uppercase mb-2">Répartition Surfaces</div>
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-center p-2 bg-slate-50 rounded-lg">
+                                    <span className="text-xs font-bold text-slate-500 uppercase">Totale</span>
+                                    <span className="text-lg font-black text-slate-800">{currentData.area.toLocaleString()} m²</span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <div className="bg-slate-50 p-2 rounded-lg text-center">
+                                        <span className="block text-[9px] font-bold text-slate-400 uppercase">Couverte</span>
+                                        <span className="block text-sm font-black text-slate-700">{currentData.covered.toLocaleString()}</span>
+                                    </div>
+                                    <div className="bg-slate-50 p-2 rounded-lg text-center">
+                                        <span className="block text-[9px] font-bold text-slate-400 uppercase">Ouverte</span>
+                                        <span className="block text-sm font-black text-slate-700">{currentData.open.toLocaleString()}</span>
+                                    </div>
+                                    <div className="bg-blue-50 p-2 rounded-lg text-center border border-blue-100">
+                                        <span className="block text-[9px] font-bold text-blue-400 uppercase">Vitrée</span>
+                                        <span className="block text-sm font-black text-blue-800">{currentData.glazed ? currentData.glazed : 0}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="text-xs text-slate-500 bg-slate-50 p-4 rounded-xl border border-slate-100 italic leading-relaxed">
+                            <Info size={14} className="inline mr-1 -mt-0.5 text-slate-400"/>
+                            {currentData.details}
+                        </div>
+                    </div>
+                    
+                    <div className="bg-slate-900 p-6 text-white">
+                        <div className="flex justify-between items-end mb-4">
+                            <div>
+                                <h4 className="text-xs font-bold text-slate-400 uppercase">Température Moyenne (Tunis)</h4>
+                                <div className="text-[10px] text-orange-400 italic mt-1">Obs: Tendance à la hausse (Réchauffement)</div>
+                            </div>
+                        </div>
+                        <div className="flex items-end gap-2 h-24">
+                            {avgTempHistory.map(d => (
+                                <div key={d.year} className="flex-1 flex flex-col justify-end group relative">
+                                    <div className="w-full bg-gradient-to-t from-orange-900 to-orange-500 rounded-t relative transition-all group-hover:to-orange-400" style={{height: `${((d.temp-18)/5)*100}%`}}></div>
+                                    <div className="text-[9px] text-center text-slate-500 mt-1 font-mono">{d.year}</div>
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-white text-slate-900 text-[10px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">{d.temp}°</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+                
+                {/* 3. RÉPARTITION ÉNERGÉTIQUE (AMÉLIORÉE) */}
+                <div className="bg-white p-0 rounded-3xl border border-slate-200 overflow-hidden shadow-xl md:col-span-2 flex flex-col h-full">
+                    <div className="bg-slate-50 p-6 border-b border-slate-100 flex justify-between items-center">
+                        <h3 className="font-black text-slate-800 uppercase tracking-tight text-lg flex items-center"><PieChart className="mr-2 text-slate-400"/> Répartition & Indicateurs</h3>
+                        <span className="text-xs font-bold bg-white border border-slate-200 px-3 py-1 rounded-full text-slate-500">Année 2024</span>
+                    </div>
+                    <div className="p-8 space-y-6 flex-1">
+                        {currentData.elecUsage.map((u, i) => (
+                            <div key={i} className="group">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-3">
+                                        {u.significant ? 
+                                            <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shadow-sm"><Check size={16}/></div> : 
+                                            <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center"><MinusIcon size={16}/></div>
+                                        }
+                                        <div>
+                                            <div className="text-sm font-bold text-slate-800 flex items-center">
+                                                {u.name}
+                                                {u.significant && <span className="ml-2 px-2 py-0.5 rounded text-[9px] bg-emerald-50 text-emerald-600 uppercase font-black tracking-wider">UES</span>}
+                                            </div>
+                                            {/* Affichage Ratio Amélioré */}
+                                            {u.significant && u.kpi !== '-' && (
+                                                <div className="text-xs font-medium text-slate-500 mt-0.5 flex items-center">
+                                                    Ratio Performance : <span className="font-mono font-bold text-slate-700 ml-1">{u.kpi}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-xl font-black text-slate-800">{u.value}%</div>
+                                    </div>
+                                </div>
+                                <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden mb-3">
+                                    <div className={`h-full rounded-full shadow-sm ${u.name.includes('Gaz') ? 'bg-gradient-to-r from-orange-500 to-orange-400' : 'bg-gradient-to-r from-blue-600 to-blue-400'}`} style={{width: `${u.value}%`}}></div>
+                                </div>
+                                
+                                {/* Sous-détails (Drill-down visuel) */}
+                                {u.subDetails && (
+                                    <div className="ml-11 mt-2 p-3 bg-slate-50 rounded-xl border border-slate-100 grid grid-cols-3 gap-2 animate-in slide-in-from-top-1">
+                                        {u.subDetails.map((sub, idx) => (
+                                            <div key={idx} className="text-center bg-white p-2 rounded border border-slate-100">
+                                                <div className="text-[9px] font-bold text-slate-400 uppercase truncate mb-1" title={sub.name}>{sub.name}</div>
+                                                <div className="text-sm font-black text-slate-700">{sub.val}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+            
+            {/* 4. TRAJECTOIRE */}
+            <TrajectoryAnalysis />
+        </main>
+
+        {/* Floating Action Button (Admin Only) */}
+        {userRole === 'ADMIN' && (
+            <button onClick={() => { initHistory(activeSiteTab); setShowHistoryInput(true); }} className="fixed bottom-8 right-8 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-2xl z-50 transition-transform hover:scale-110 flex items-center justify-center group">
+                <Database size={24} />
+                <span className="absolute right-full mr-4 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Saisie Historique</span>
+            </button>
+        )}
+
+        {notif && <div className="fixed bottom-6 left-6 px-6 py-4 bg-emerald-600 text-white rounded-xl shadow-xl z-50">{notif}</div>}
+    </div>
+  );
 };
 
+// Helper Icon
+function MinusIcon(props) { return <div {...props} className="w-2 h-0.5 bg-current rounded-full"></div> }
+
 // ==================================================================================
-// 6. MODULE ADMINISTRATION (Pour gérer les utilisateurs)
+// 6. MODULE ADMINISTRATION (NEW - To fix missing component)
 // ==================================================================================
 const AdminPanel = ({ onBack }) => {
-    const [users, setUsers] = useState([]);
-    const [newUser, setNewUser] = useState({ username: '', password: '', role: 'EQUIPE_ENERGIE' });
-    const [loading, setLoading] = useState(false);
-    const [confirmDelete, setConfirmDelete] = useState(null);
+    const [users, setUsers] = useState([]);
+    const [newUser, setNewUser] = useState({ username: '', password: '', role: 'EQUIPE_ENERGIE' });
+    const [loading, setLoading] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(null); // ID de l'utilisateur à confirmer
 
-    useEffect(() => {
-        const q = query(getCollection('users'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            setUsers(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
-        });
-        return () => unsubscribe();
-    }, []);
+    useEffect(() => {
+        const q = query(getCollection('users'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            setUsers(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+        });
+        return () => unsubscribe();
+    }, []);
 
-    const handleAddUser = async (e) => {
-        e.preventDefault();
-        if (!newUser.username || !newUser.password) return;
-        setLoading(true);
-        await addDoc(getCollection('users'), newUser);
-        setNewUser({ username: '', password: '', role: 'EQUIPE_ENERGIE' });
-        setLoading(false);
-    };
+    const handleAddUser = async (e) => {
+        e.preventDefault();
+        if (!newUser.username || !newUser.password) return;
+        setLoading(true);
+        await addDoc(getCollection('users'), newUser);
+        setNewUser({ username: '', password: '', role: 'EQUIPE_ENERGIE' });
+        setLoading(false);
+    };
 
-    const handleDeleteUser = async (id) => {
-        if (confirmDelete === id) {
-            try {
-                await deleteDoc(doc(getCollection('users'), id));
-                setConfirmDelete(null);
-            } catch (error) {
-                console.error("Erreur suppression:", error);
-                alert("Erreur lors de la suppression. Vérifiez vos droits.");
-            }
-        } else {
-            setConfirmDelete(id);
-            setTimeout(() => setConfirmDelete(null), 3000);
-        }
-    };
+    const handleDeleteUser = async (id) => {
+        if (confirmDelete === id) {
+            try {
+                await deleteDoc(doc(getCollection('users'), id));
+                setConfirmDelete(null);
+            } catch (error) {
+                console.error("Erreur suppression:", error);
+                alert("Erreur lors de la suppression. Vérifiez vos droits.");
+            }
+        } else {
+            setConfirmDelete(id);
+            setTimeout(() => setConfirmDelete(null), 3000); // Annule après 3s
+        }
+    };
 
-    return (
-        <div className="min-h-screen bg-slate-100 p-8">
-            <header className="max-w-4xl mx-auto mb-8 flex items-center justify-between">
-                 <div className="flex items-center">
-                    <button onClick={onBack} className="mr-4 p-2 bg-white rounded-full shadow hover:bg-slate-50"><ArrowLeft size={20} /></button>
-                    <h1 className="text-2xl font-black text-slate-800">Administration Utilisateurs</h1>
-                 </div>
-            </header>
-            <main className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
-                    <h2 className="font-bold text-lg mb-4 flex items-center"><PlusCircle className="mr-2 text-blue-600"/> Ajouter Utilisateur</h2>
-                    <form onSubmit={handleAddUser} className="space-y-4">
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 mb-1">Nom d'utilisateur</label>
-                            <input type="text" value={newUser.username} onChange={e => setNewUser({...newUser, username: e.target.value})} className="w-full border p-2 rounded" placeholder="ex: Maintenance" />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 mb-1">Mot de passe</label>
-                            <input type="text" value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} className="w-full border p-2 rounded" placeholder="******" />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 mb-1">Rôle</label>
-                            <select value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value})} className="w-full border p-2 rounded bg-white font-bold text-slate-700">
-                                <option value="ADMIN">Administrateur (Accès Total)</option>
-                                <option value="EQUIPE_ENERGIE">Équipe Énergie (Saisie)</option>
-                                <option value="DIRECTION">Direction (Visuel Uniquement)</option>
-                            </select>
-                        </div>
-                        <button disabled={loading} className="w-full bg-blue-600 text-white py-2 rounded font-bold hover:bg-blue-700">{loading ? '...' : 'Ajouter'}</button>
-                    </form>
-                </div>
-                
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <h2 className="font-bold text-lg mb-4 flex items-center"><Users className="mr-2 text-slate-600"/> Liste Utilisateurs ({users.length})</h2>
-                    <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                        {users.map(u => (
-                            <div key={u.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-slate-50 group">
-                                <div>
-                                    <div className="font-bold">{u.username}</div>
-                                    <div className={`text-[10px] px-2 py-0.5 rounded w-fit uppercase font-bold 
-                                        ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 
-                                          u.role === 'DIRECTION' ? 'bg-amber-100 text-amber-700' : 
-                                          'bg-blue-100 text-blue-700'}`}>
-                                        {u.role === 'ADMIN' ? 'Admin' : u.role === 'DIRECTION' ? 'Direction' : 'Équipe'}
-                                    </div>
-                                </div>
-                                <button 
-                                    onClick={() => handleDeleteUser(u.id)} 
-                                    className={`p-2 rounded transition-all flex items-center ${confirmDelete === u.id ? 'bg-red-600 text-white w-24 justify-center text-xs font-bold' : 'text-slate-300 hover:text-red-600'}`}
-                                >
-                                    {confirmDelete === u.id ? "Confirmer ?" : <Trash2 size={16}/>}
-                                </button>
-                            </div>
-                        ))}
-                        {users.length === 0 && <div className="text-center text-slate-400 text-sm italic py-4">Aucun utilisateur configuré</div>}
-                    </div>
-                </div>
-            </main>
-        </div>
-    );
+    return (
+        <div className="min-h-screen bg-slate-100 p-8">
+            <header className="max-w-4xl mx-auto mb-8 flex items-center justify-between">
+                 <div className="flex items-center">
+                    <button onClick={onBack} className="mr-4 p-2 bg-white rounded-full shadow hover:bg-slate-50"><ArrowLeft size={20} /></button>
+                    <h1 className="text-2xl font-black text-slate-800">Administration Utilisateurs</h1>
+                 </div>
+            </header>
+            <main className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
+                    <h2 className="font-bold text-lg mb-4 flex items-center"><PlusCircle className="mr-2 text-blue-600"/> Ajouter Utilisateur</h2>
+                    <form onSubmit={handleAddUser} className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 mb-1">Nom d'utilisateur</label>
+                            <input type="text" value={newUser.username} onChange={e => setNewUser({...newUser, username: e.target.value})} className="w-full border p-2 rounded" placeholder="ex: Maintenance" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 mb-1">Mot de passe</label>
+                            <input type="text" value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} className="w-full border p-2 rounded" placeholder="******" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 mb-1">Rôle</label>
+                            <select value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value})} className="w-full border p-2 rounded bg-white font-bold text-slate-700">
+                                <option value="ADMIN">Administrateur (Accès Total)</option>
+                                <option value="EQUIPE_ENERGIE">Équipe Énergie (Saisie)</option>
+                                <option value="DIRECTION">Direction (Visuel Uniquement)</option>
+                            </select>
+                        </div>
+                        <button disabled={loading} className="w-full bg-blue-600 text-white py-2 rounded font-bold hover:bg-blue-700">{loading ? '...' : 'Ajouter'}</button>
+                    </form>
+                </div>
+                
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h2 className="font-bold text-lg mb-4 flex items-center"><Users className="mr-2 text-slate-600"/> Liste Utilisateurs ({users.length})</h2>
+                    <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                        {users.map(u => (
+                            <div key={u.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-slate-50 group">
+                                <div>
+                                    <div className="font-bold">{u.username}</div>
+                                    <div className={`text-[10px] px-2 py-0.5 rounded w-fit uppercase font-bold 
+                                        ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 
+                                          u.role === 'DIRECTION' ? 'bg-amber-100 text-amber-700' : 
+                                          'bg-blue-100 text-blue-700'}`}>
+                                        {u.role === 'ADMIN' ? 'Admin' : u.role === 'DIRECTION' ? 'Direction' : 'Équipe'}
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => handleDeleteUser(u.id)} 
+                                    className={`p-2 rounded transition-all flex items-center ${confirmDelete === u.id ? 'bg-red-600 text-white w-24 justify-center text-xs font-bold' : 'text-slate-300 hover:text-red-600'}`}
+                                >
+                                    {confirmDelete === u.id ? "Confirmer ?" : <Trash2 size={16}/>}
+                                </button>
+                            </div>
+                        ))}
+                        {users.length === 0 && <div className="text-center text-slate-400 text-sm italic py-4">Aucun utilisateur configuré</div>}
+                    </div>
+                </div>
+            </main>
+        </div>
+    );
 };
 
 // ==================================================================================
-// APPLICATION RACINE
+// APPLICATION RACINE & NAVIGATION
 // ==================================================================================
 
 const MainDashboard = ({ user, onNavigate, onLogout }) => {
-  const canAccess = (module) => {
-      if (user.role === 'ADMIN') return true;
-      if (user.role === 'DIRECTION') return module === 'sites';
-      if (user.role === 'RESP_ENERGIE') return module === 'steg' || module === 'sites';
-      if (user.role === 'RESP_MAINTENANCE') return module === 'air';
-      // Fallback pour anciens rôles ou EQUIPE_ENERGIE
-      if (user.role === 'EQUIPE_ENERGIE') return ['steg', 'air', 'sites'].includes(module);
-      return false;
-  };
+  const canAccess = (module) => {
+      if (user.role === 'ADMIN') return true;
+      if (user.role === 'EQUIPE_ENERGIE') return ['steg', 'air', 'sites'].includes(module);
+      if (user.role === 'DIRECTION') return module === 'sites';
+      return false;
+  };
 
-  return (
-    <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
-        <div className="z-10 w-full max-w-6xl flex justify-between items-center mb-12">
-            <div>
-                <h1 className="text-4xl md:text-5xl font-black mb-2 tracking-tight">Système de Gestion Industriel</h1>
-                <p className="text-slate-400 text-lg">Bienvenue, <span className="text-white font-bold">{user.username}</span></p>
-            </div>
-            <div className="flex gap-4">
-                {user.role === 'ADMIN' && <button onClick={() => onNavigate('admin')} className="bg-slate-700 px-4 py-2 rounded font-bold flex items-center gap-2"><Shield size={16}/> Admin</button>}
-                <button onClick={onLogout} className="bg-red-600 px-4 py-2 rounded font-bold flex items-center gap-2"><LogOut size={16}/> Déconnexion</button>
-            </div>
-        </div>
-        <div className="z-10 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl w-full">
-            <button disabled={!canAccess('steg')} onClick={() => onNavigate('steg')} className={`group relative border-2 rounded-3xl p-6 transition-all text-left ${canAccess('steg') ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 hover:border-blue-500' : 'bg-slate-900 border-slate-800 opacity-50 cursor-not-allowed'}`}>
-                <div className={`absolute top-4 right-4 p-2 rounded-xl ${canAccess('steg') ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-800 text-slate-600'}`}><Zap size={24} /></div>
-                <h2 className="text-xl font-bold mb-2">Énergie & Facturation</h2>
-                <p className="text-slate-400 text-xs mb-4 pr-8">Relevés STEG (MT/BT), Calcul Cos φ.</p>
-            </button>
+  return (
+    <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+            <div className="absolute top-10 left-10 w-64 h-64 bg-blue-500 rounded-full blur-[100px]"></div>
+            <div className="absolute bottom-10 right-10 w-96 h-96 bg-emerald-500 rounded-full blur-[120px]"></div>
+        </div>
 
-            <button disabled={!canAccess('air')} onClick={() => onNavigate('air')} className={`group relative border-2 rounded-3xl p-6 transition-all text-left ${canAccess('air') ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 hover:border-sky-500' : 'bg-slate-900 border-slate-800 opacity-50 cursor-not-allowed'}`}>
-                <div className={`absolute top-4 right-4 p-2 rounded-xl ${canAccess('air') ? 'bg-sky-500/20 text-sky-400' : 'bg-slate-800 text-slate-600'}`}><Wind size={24} /></div>
-                <h2 className="text-xl font-bold mb-2">Air Comprimé</h2>
-                <p className="text-slate-400 text-xs mb-4 pr-8">Suivi Compresseurs, Maintenance.</p>
-            </button>
+        <div className="z-10 w-full max-w-6xl flex justify-between items-center mb-12">
+            <div>
+                <h1 className="text-4xl md:text-5xl font-black mb-2 tracking-tight">Système de Gestion Industriel</h1>
+                <p className="text-slate-400 text-lg">Bienvenue, <span className="text-white font-bold">{user.username}</span> 
+                <span className="ml-2 text-xs bg-white/10 px-2 py-1 rounded text-slate-300 border border-white/20">
+                    {user.role === 'ADMIN' ? 'ADMINISTRATEUR' : user.role === 'DIRECTION' ? 'DIRECTION' : 'ÉQUIPE ÉNERGIE'}
+                </span>
+                </p>
+            </div>
+            <div className="flex gap-4">
+                {user.role === 'ADMIN' && <button onClick={() => onNavigate('admin')} className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg font-bold flex items-center"><Shield className="mr-2"/> Admin</button>}
+                <button onClick={onLogout} className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-bold flex items-center"><LogOut className="mr-2"/> Déconnexion</button>
+            </div>
+        </div>
 
-            <button disabled={!canAccess('sites')} onClick={() => onNavigate('sites')} className={`group relative border-2 rounded-3xl p-6 transition-all text-left ${canAccess('sites') ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 hover:border-emerald-500' : 'bg-slate-900 border-slate-800 opacity-50 cursor-not-allowed'}`}>
-                <div className={`absolute top-4 right-4 p-2 rounded-xl ${canAccess('sites') ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-600'}`}><LayoutGrid size={24} /></div>
-                <h2 className="text-xl font-bold mb-2">Tableau de Bord Sites</h2>
-                <p className="text-slate-400 text-xs mb-4 pr-8">Superficies, Usages, KPIs.</p>
-            </button>
-        </div>
-    </div>
-  );
+        <div className="z-10 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl w-full">
+            <button disabled={!canAccess('steg')} onClick={() => onNavigate('steg')} className={`group relative border-2 rounded-3xl p-6 transition-all text-left ${canAccess('steg') ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 hover:border-blue-500' : 'bg-slate-900 border-slate-800 opacity-50 cursor-not-allowed'}`}>
+                <div className={`absolute top-4 right-4 p-2 rounded-xl ${canAccess('steg') ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-800 text-slate-600'}`}><Zap size={24} /></div>
+                <h2 className="text-xl font-bold mb-2">Énergie & Facturation</h2>
+                <p className="text-slate-400 text-xs mb-4 pr-8">Relevés STEG (MT/BT), Calcul Cos φ.</p>
+            </button>
+
+            <button disabled={!canAccess('air')} onClick={() => onNavigate('air')} className={`group relative border-2 rounded-3xl p-6 transition-all text-left ${canAccess('air') ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 hover:border-sky-500' : 'bg-slate-900 border-slate-800 opacity-50 cursor-not-allowed'}`}>
+                <div className={`absolute top-4 right-4 p-2 rounded-xl ${canAccess('air') ? 'bg-sky-500/20 text-sky-400' : 'bg-slate-800 text-slate-600'}`}><Wind size={24} /></div>
+                <h2 className="text-xl font-bold mb-2">Air Comprimé</h2>
+                <p className="text-slate-400 text-xs mb-4 pr-8">Suivi Compresseurs, Maintenance.</p>
+            </button>
+
+            <button disabled={!canAccess('sites')} onClick={() => onNavigate('sites')} className={`group relative border-2 rounded-3xl p-6 transition-all text-left ${canAccess('sites') ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 hover:border-emerald-500' : 'bg-slate-900 border-slate-800 opacity-50 cursor-not-allowed'}`}>
+                <div className={`absolute top-4 right-4 p-2 rounded-xl ${canAccess('sites') ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-600'}`}><LayoutGrid size={24} /></div>
+                <h2 className="text-xl font-bold mb-2">Tableau de Bord Sites</h2>
+                <p className="text-slate-400 text-xs mb-4 pr-8">Superficies, Usages, KPIs.</p>
+            </button>
+        </div>
+    </div>
+  );
 };
 
 const App = () => {
-  const [user, setUser] = useState(null); 
-  const [currentModule, setCurrentModule] = useState('dashboard');
-  
-  useEffect(() => {
-      const storedUser = localStorage.getItem('smen_user');
-      if (storedUser) {
-          setUser(JSON.parse(storedUser));
-      }
-  }, []);
+  const [user, setUser] = useState(null); 
+  const [currentModule, setCurrentModule] = useState('dashboard');
+  const [authReady, setAuthReady] = useState(false);
+   
+  useEffect(() => {
+    const initAuth = async () => {
+        try {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+        } catch (e) {
+            console.error("Auth failed", e);
+        } finally {
+            setAuthReady(true);
+        }
+    };
+    initAuth();
+  }, []);
 
-  const handleLogin = (userData) => {
-      setUser(userData);
-      localStorage.setItem('smen_user', JSON.stringify(userData));
-      setCurrentModule('dashboard');
-  };
+  const handleLogin = (userData) => {
+      setUser(userData);
+      setCurrentModule('dashboard');
+  };
 
-  const handleLogout = () => {
-      setUser(null);
-      localStorage.removeItem('smen_user');
-      setCurrentModule('dashboard');
-  };
+  const handleLogout = () => {
+      setUser(null);
+      setCurrentModule('dashboard');
+  };
 
-  if (!user) return <LoginScreen onLogin={handleLogin} />;
+  if (!authReady) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Connexion au Cloud...</div>;
 
-  return (
-    <>
-      {currentModule === 'dashboard' && <MainDashboard user={user} onNavigate={setCurrentModule} onLogout={handleLogout} />}
-      {currentModule === 'admin' && <AdminPanel onBack={() => setCurrentModule('dashboard')} />}
-      {currentModule === 'steg' && <StegModule onBack={() => setCurrentModule('dashboard')} userRole={user.role} />}
-      {currentModule === 'air' && <AirModule onBack={() => setCurrentModule('dashboard')} userRole={user.role} />}
-      {currentModule === 'sites' && <SitesDashboard onBack={() => setCurrentModule('dashboard')} userRole={user.role} />}
-    </>
-  );
+  if (!user) return <LoginScreen onLogin={handleLogin} />;
+
+  return (
+    <>
+      {currentModule === 'dashboard' && <MainDashboard user={user} onNavigate={setCurrentModule} onLogout={handleLogout} />}
+      {currentModule === 'admin' && <AdminPanel onBack={() => setCurrentModule('dashboard')} />}
+      {currentModule === 'steg' && <StegModule onBack={() => setCurrentModule('dashboard')} userRole={user.role} />}
+      {currentModule === 'air' && <AirModule onBack={() => setCurrentModule('dashboard')} userRole={user.role} />}
+      {currentModule === 'sites' && <SitesDashboard onBack={() => setCurrentModule('dashboard')} userRole={user.role} />}
+    </>
+  );
 };
 
 export default App;
