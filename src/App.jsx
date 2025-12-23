@@ -13,20 +13,49 @@ import {
   Store, Droplets, Filter, Check, Image as ImageIcon, FileCheck
 } from 'lucide-react';
 
+
+// --- CONFIGURATION CHARTE GRAPHIQUE ---
+const LOGO_URL = "https://italcar.tn/wp-content/uploads/2020/12/logo-italcar.png"; 
+const BRAND = {
+    primary: "bg-blue-900", // Bleu Italcar (foncé)
+    primaryText: "text-blue-900",
+    accent: "bg-red-600", // Rouge Italcar (vif)
+    accentText: "text-red-600",
+    lightBg: "bg-slate-50"
+};
+
 // --- MODIFICATION ICI : SIMPLIFICATION DES COLLECTIONS ---
 // Dans Gemini Canvas, on utilisait une structure complexe ('artifacts/appId...').
 // Sur ton propre Firebase, utilise des collections simples à la racine.
 const getCollection = (name) => collection(db, name);
 
+
+// --- COMPOSANT MARQUE (LOGO) ---
+const BrandLogo = ({ size = "h-10" }) => (
+    <img 
+        src={LOGO_URL} 
+        alt="ITALCAR Logo" 
+        className={`${size} object-contain`} 
+        onError={(e) => {
+            e.target.onerror = null; 
+            e.target.style.display = 'none'; 
+            e.target.nextSibling.style.display = 'flex';
+        }} 
+    />
+);
+const FallbackLogo = () => (
+    <div className="hidden items-center justify-center bg-blue-900 text-white font-black p-2 rounded text-xs">
+        ITALCAR
+    </div>
+);
+
 // --- COMPOSANT HORLOGE & MÉTÉO (API LIVE) ---
-const HeaderInfoDisplay = () => {
+const HeaderInfoDisplay = ({ darkText = false }) => {
     const [date, setDate] = useState(new Date());
     const [weather, setWeather] = useState({ temp: '--', code: 0 });
 
     useEffect(() => {
         const timer = setInterval(() => setDate(new Date()), 1000);
-        
-        // Fetch Tunis Weather (Open-Meteo Free API)
         const fetchWeather = async () => {
             try {
                 const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=36.8065&longitude=10.1815&current_weather=true');
@@ -37,23 +66,25 @@ const HeaderInfoDisplay = () => {
             } catch (e) { console.log("Weather fetch failed"); }
         };
         fetchWeather();
-        const weatherTimer = setInterval(fetchWeather, 600000); // Update every 10 min
-
+        const weatherTimer = setInterval(fetchWeather, 600000);
         return () => { clearInterval(timer); clearInterval(weatherTimer); };
     }, []);
 
+    const textColor = darkText ? "text-slate-700" : "text-white";
+    const subTextColor = darkText ? "text-slate-400" : "text-white/70";
+
     return (
-        <div className="flex items-center gap-6 text-white">
-             <div className="text-right">
-                <div className="text-2xl font-black leading-none flex items-center justify-end gap-2">
-                    {weather.temp}°C <Thermometer size={20} className="text-orange-400"/>
+        <div className={`flex items-center gap-6 ${textColor}`}>
+             <div className="text-right hidden sm:block">
+                <div className="text-xl font-black leading-none flex items-center justify-end gap-2">
+                    {weather.temp}°C <Thermometer size={18} className="text-red-500"/>
                 </div>
-                <div className="text-[10px] opacity-70 uppercase font-bold tracking-widest">Tunis (Live)</div>
+                <div className={`text-[10px] uppercase font-bold tracking-widest ${subTextColor}`}>Tunis (Live)</div>
             </div>
-            <div className="h-8 w-px bg-white/20"></div>
+            <div className={`h-8 w-px hidden sm:block ${darkText ? 'bg-slate-200' : 'bg-white/20'}`}></div>
             <div className="text-right">
-                <div className="text-2xl font-black leading-none">{date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}</div>
-                <div className="text-[10px] opacity-70 uppercase font-bold tracking-widest">{date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' })}</div>
+                <div className="text-xl font-black leading-none">{date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}</div>
+                <div className={`text-[10px] uppercase font-bold tracking-widest ${subTextColor}`}>{date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' })}</div>
             </div>
         </div>
     );
@@ -117,39 +148,39 @@ const LoginScreen = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-            <div className="absolute top-10 left-10 w-64 h-64 bg-blue-500 rounded-full blur-[100px]"></div>
-            <div className="absolute bottom-10 right-10 w-96 h-96 bg-emerald-500 rounded-full blur-[120px]"></div>
+    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 relative overflow-hidden">
+        <div className="absolute inset-0 z-0">
+            <div className="absolute top-0 right-0 w-1/2 h-full bg-slate-200 skew-x-12 opacity-50"></div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md z-10">
-            <div className="text-center mb-8">
-                <div className="bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-600/30">
-                    <Factory size={32} className="text-white" />
+        <div className="bg-white rounded-xl shadow-2xl p-10 w-full max-w-md z-10 border-t-4 border-blue-900">
+            <div className="text-center mb-10">
+                <div className="flex justify-center mb-4">
+                    <BrandLogo size="h-16" />
+                    <FallbackLogo />
                 </div>
-                <h1 className="text-2xl font-black text-slate-800">SMEn ITALCAR</h1>
-                <p className="text-slate-400 text-sm">Système de Management de l'Énergie</p>
+                <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Portail Énergie</h1>
+                <p className="text-slate-400 text-sm mt-1 font-medium">Système de Management de l'Énergie</p>
             </div>
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleLogin} className="space-y-5">
                 <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Identifiant</label>
                     <div className="relative">
-                        <User className="absolute left-3 top-3 text-slate-400" size={18} />
-                        <input type="text" className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:border-blue-500 font-bold text-slate-700" placeholder="Nom d'utilisateur" value={username} onChange={(e) => setUsername(e.target.value)} />
+                        <User className="absolute left-3 top-3.5 text-slate-400" size={18} />
+                        <input type="text" className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:border-blue-900 focus:ring-1 focus:ring-blue-900 font-bold text-slate-700 outline-none transition-all" placeholder="Nom d'utilisateur" value={username} onChange={(e) => setUsername(e.target.value)} />
                     </div>
                 </div>
                 <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Mot de passe</label>
                     <div className="relative">
-                        <Key className="absolute left-3 top-3 text-slate-400" size={18} />
-                        <input type="password" className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:border-blue-500 font-bold text-slate-700" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
+                        <Key className="absolute left-3 top-3.5 text-slate-400" size={18} />
+                        <input type="password" className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:border-blue-900 focus:ring-1 focus:ring-blue-900 font-bold text-slate-700 outline-none transition-all" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
                     </div>
                 </div>
-                {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center font-bold flex items-center justify-center"><AlertCircle size={16} className="mr-2"/>{error}</div>}
-                <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-600/20 transition-all">{loading ? "Connexion..." : "Se Connecter"}</button>
+                {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center font-bold flex items-center justify-center border border-red-100"><AlertCircle size={16} className="mr-2"/>{error}</div>}
+                <button type="submit" disabled={loading} className="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold py-3.5 rounded-lg shadow-lg shadow-blue-900/20 transition-all uppercase tracking-wide text-sm">{loading ? "Connexion..." : "Se Connecter"}</button>
             </form>
-            <div className="mt-6 text-center text-xs text-slate-300">v7.3.3 Final • Production</div>
+            <div className="mt-8 text-center text-[10px] text-slate-400 font-mono">v8.2.0 • ITALCAR SA</div>
         </div>
     </div>
   );
@@ -380,22 +411,24 @@ const StegModule = ({ onBack, userRole }) => {
   const siteLogs = logs.filter(l => l.siteId === currentSite);
   const currentSiteObj = SITES.find(s => s.id === currentSite);
   const isBT = currentSiteObj.type.startsWith('BT');
+  const isMT = currentSiteObj.type === 'MT';
   const displayMetrics = liveMetrics;
   const CurrentIcon = currentSiteObj.icon;
    
   return (
     <div className="bg-slate-50 min-h-screen pb-10">
-        <header className={`text-white shadow-lg sticky top-0 z-30 transition-colors duration-500 ${isBT ? 'bg-gradient-to-r from-red-800 to-orange-900' : 'bg-gradient-to-r from-blue-900 to-slate-900'}`}>
+        {/* NEW HEADER STYLE */}
+        <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
             <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center">
                 <div className="flex items-center space-x-4 mb-2 md:mb-0">
-                    <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full mr-2 transition-colors"><ArrowLeft size={20} /></button>
-                    <div className={`p-2 rounded-xl text-slate-900 shadow-lg ${isBT ? 'bg-white' : 'bg-yellow-500'}`}>
-                        <CurrentIcon size={28} className={isBT ? 'text-red-600' : 'text-blue-900'} />
+                    <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full mr-2 transition-colors text-slate-500"><ArrowLeft size={20} /></button>
+                    <div className={`p-2 rounded-lg ${isBT ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-900'}`}>
+                        <CurrentIcon size={24} />
                     </div>
                     <div>
-                        <h1 className="text-xl font-bold tracking-tight leading-tight">Facturation {currentSiteObj.name}</h1>
-                        <div className="flex items-center space-x-2 text-xs opacity-90 mt-1">
-                            <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[10px] ${isBT ? 'bg-red-700 border border-red-600' : 'bg-blue-800 border border-blue-700'}`}>
+                        <h1 className="text-lg font-black text-slate-800 tracking-tight leading-none uppercase">Facturation {currentSiteObj.name}</h1>
+                        <div className="flex items-center space-x-2 text-xs text-slate-500 mt-1">
+                            <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[9px] ${isBT ? 'bg-red-600 text-white' : 'bg-blue-900 text-white'}`}>
                                 {isBT ? 'BASSE TENSION' : 'MOYENNE TENSION'}
                             </span>
                             <span className="flex items-center"><MapPin size={10} className="mr-1"/> {currentSiteObj.code}</span>
@@ -403,88 +436,67 @@ const StegModule = ({ onBack, userRole }) => {
                     </div>
                 </div>
                 <div className="flex items-center gap-6">
-                   <div className="flex gap-2">
-                       <button onClick={() => setShowUserGuide(true)} className="flex items-center bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg text-xs font-bold border border-white/20"><BookOpen size={16} className="mr-2" /> Guide</button>
-                       {!isBT && <button onClick={() => setShowHelp(true)} className="flex items-center bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg text-xs font-bold border border-white/20"><HelpCircle size={16} className="mr-2" /> Cos φ</button>}
-                   </div>
+                    <HeaderInfoDisplay darkText={true} />
+                    <div className="flex gap-2">
+                        <button onClick={() => setShowUserGuide(true)} className="flex items-center bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg text-xs font-bold text-slate-600 transition-colors"><BookOpen size={16} className="mr-2" /> Guide</button>
+                        {isMT && <button onClick={() => setShowHelp(true)} className="flex items-center bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-lg text-xs font-bold text-blue-600 transition-colors border border-blue-100"><HelpCircle size={16} className="mr-2" /> Cos φ</button>}
+                    </div>
                 </div>
             </div>
         </header>
 
+        {/* GUIDE MODAL REFACTORED */}
         {showUserGuide && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={() => setShowUserGuide(false)}>
-                <div className="bg-white p-8 rounded-2xl max-w-4xl w-full shadow-2xl relative overflow-hidden" onClick={e => e.stopPropagation()}>
+                <div className="bg-white p-8 rounded-2xl max-w-4xl w-full shadow-2xl relative overflow-hidden h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
                     <div className="flex justify-between items-start mb-6 border-b border-slate-100 pb-4">
                         <div>
                             <h3 className="text-2xl font-black text-slate-800 flex items-center">
-                                <BookOpen className="mr-3 text-blue-600" size={28}/> 
-                                Guide d'Utilisation
+                                <BookOpen className="mr-3 text-blue-900" size={28}/> Guide de Collecte
                             </h3>
-                            <p className="text-slate-500 text-sm mt-1">Comment utiliser le module Facturation & Énergie</p>
+                            <p className="text-slate-500 text-sm mt-1">Procédures physiques pour les relevés d'index</p>
                         </div>
-                        <button onClick={() => setShowUserGuide(false)} className="bg-slate-100 hover:bg-slate-200 p-2 rounded-full transition-colors"><X size={20} className="text-slate-600"/></button>
+                        <button onClick={() => setShowUserGuide(false)} className="bg-slate-100 hover:bg-slate-200 p-2 rounded-full"><X size={20} className="text-slate-600"/></button>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-6">
-                            <h4 className="text-lg font-bold text-blue-800 mb-4 flex items-center"><Activity className="mr-2"/> Workflow Application</h4>
-                            
-                            <div className="relative border-l-4 border-blue-200 pl-6 space-y-6">
-                                <div className="relative">
-                                    <span className="absolute -left-[34px] bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ring-4 ring-white">1</span>
-                                    <h5 className="font-bold text-slate-800">Sélection du Site</h5>
-                                    <p className="text-sm text-slate-600">Choisissez le compteur (MT ou BT) dans la grille supérieure. L'interface s'adapte automatiquement au type de comptage.</p>
+                    <div className="overflow-y-auto flex-1 space-y-8 pr-2">
+                        {/* Section MT */}
+                        <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
+                            <h4 className="text-lg font-bold text-blue-900 mb-4 flex items-center"><Factory className="mr-2"/> Compteurs Moyenne Tension (MT)</h4>
+                            <p className="text-sm text-slate-600 mb-4">Concerne : Mégrine, El Khadhra, Naassen.</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="bg-white p-4 rounded-lg shadow-sm">
+                                    <h5 className="font-bold text-slate-800 mb-2">Navigation</h5>
+                                    <p className="text-xs text-slate-500 leading-relaxed">Appuyez sur le bouton de défilement (souvent bleu ou jaune) pour allumer l'écran. Continuez d'appuyer pour faire défiler les codes OBIS en haut à gauche.</p>
                                 </div>
-                                <div className="relative">
-                                    <span className="absolute -left-[34px] bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ring-4 ring-white">2</span>
-                                    <h5 className="font-bold text-slate-800">Saisie des Données</h5>
-                                    <p className="text-sm text-slate-600">Entrez le <strong>Nouvel Index</strong> (kWh). Pour les sites MT, ajoutez la <strong>Puissance Max</strong> et le <strong>Cos φ</strong>.</p>
-                                </div>
-                                <div className="relative">
-                                    <span className="absolute -left-[34px] bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ring-4 ring-white">3</span>
-                                    <h5 className="font-bold text-slate-800">Analyse Instantanée</h5>
-                                    <p className="text-sm text-slate-600">Le système calcule immédiatement la consommation, les pénalités éventuelles et le montant estimé de la facture.</p>
+                                <div className="bg-white p-4 rounded-lg shadow-sm">
+                                    <h5 className="font-bold text-slate-800 mb-2">Codes OBIS à Relever</h5>
+                                    <ul className="text-xs text-slate-500 space-y-1 font-mono">
+                                        <li><strong>1.8.0</strong> : Cumul Énergie Active (kWh) [Total]</li>
+                                        <li><strong>1.8.1</strong> : Index Jour (kWh)</li>
+                                        <li><strong>1.8.2</strong> : Index Pointe (kWh)</li>
+                                        <li><strong>1.8.3</strong> : Index Nuit/Soir (kWh)</li>
+                                        <li><strong>1.6.0</strong> : Puissance Max (kW) du mois en cours</li>
+                                    </ul>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 overflow-y-auto max-h-[400px]">
-                            <h4 className="text-lg font-bold text-slate-800 mb-4 flex items-center"><Eye className="mr-2 text-slate-500"/> Relevé Physique Détaillé</h4>
+                        {/* Section BT / PV */}
+                        <div className="bg-orange-50 p-6 rounded-xl border border-orange-200">
+                            <h4 className="text-lg font-bold text-orange-800 mb-4 flex items-center"><Sun className="mr-2"/> Photovoltaïque & BT</h4>
+                            <p className="text-sm text-slate-600 mb-4">Concerne : Showroom Lac (BT+PV).</p>
                             <div className="space-y-4">
-                                <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
-                                    <div className="flex items-center mb-2">
-                                        <MousePointerClick className="text-blue-500 mr-2" size={18}/>
-                                        <span className="font-bold text-slate-700 text-sm">1. Navigation Compteur</span>
-                                    </div>
-                                    <p className="text-xs text-slate-500 leading-relaxed pl-6">
-                                        Appuyez sur le bouton de défilement (souvent bleu ou jaune) pour réveiller l'écran.
-                                        Continuez d'appuyer pour faire défiler les codes OBIS (les chiffres en haut à gauche type <code>1.8.0</code>).
-                                    </p>
+                                <div className="bg-white p-4 rounded-lg border border-orange-100">
+                                    <h5 className="font-bold text-slate-800 mb-1">1. Onduleur PV (Marque: Fronius/SMA)</h5>
+                                    <p className="text-xs text-slate-500">Relever la valeur <strong>"Total Energy Produced"</strong> ou <strong>"E-Total"</strong> en kWh. C'est l'index de production cumulée.</p>
                                 </div>
-
-                                <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
-                                    <div className="flex items-center mb-2">
-                                        <FileText className="text-emerald-500 mr-2" size={18}/>
-                                        <span className="font-bold text-slate-700 text-sm">2. Codes à Relever (MT)</span>
-                                    </div>
-                                    <ul className="text-xs text-slate-500 space-y-1 pl-6 list-disc">
-                                        <li><strong>1.8.0</strong> : Cumul Énergie Active (kWh) - <em>Vital pour la facturation</em>.</li>
-                                        <li><strong>1.8.1</strong> : Index Jour (kWh).</li>
-                                        <li><strong>1.8.2</strong> : Index Pointe (kWh).</li>
-                                        <li><strong>1.8.3</strong> : Index Nuit/Soir (kWh).</li>
-                                        <li><strong>P.Max (1.6.0)</strong> : Puissance Maximale (kVA) du mois en cours.</li>
-                                    </ul>
-                                </div>
-
-                                <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
-                                    <div className="flex items-center mb-2">
-                                        <AlertTriangle className="text-orange-500 mr-2" size={18}/>
-                                        <span className="font-bold text-slate-700 text-sm">3. Points de Vigilance</span>
-                                    </div>
-                                    <ul className="text-xs text-slate-500 space-y-1 pl-6">
-                                        <li>• Vérifiez l'unité : <strong>kWh</strong> (Énergie) vs <strong>kVA</strong> (Puissance).</li>
-                                        <li>• Notez les chiffres <strong>avant la virgule</strong> pour éviter les erreurs d'échelle.</li>
-                                        <li>• Si le compteur affiche <code>Erreur</code> ou un triangle clignotant, signalez-le à la maintenance.</li>
+                                <div className="bg-white p-4 rounded-lg border border-orange-100">
+                                    <h5 className="font-bold text-slate-800 mb-1">2. Compteur STEG Bidirectionnel</h5>
+                                    <p className="text-xs text-slate-500 mb-2">Ce compteur affiche deux sens de flux :</p>
+                                    <ul className="text-xs text-slate-500 list-disc pl-5">
+                                        <li><strong>Code 1.8.0</strong> : Consommation prise du réseau (Import).</li>
+                                        <li><strong>Code 2.8.0</strong> : Surplus injecté dans le réseau (Export).</li>
                                     </ul>
                                 </div>
                             </div>
@@ -494,25 +506,25 @@ const StegModule = ({ onBack, userRole }) => {
             </div>
         )}
 
+        {/* HELP MODAL (Cos Phi) - Restored for MT */}
         {showHelp && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={() => setShowHelp(false)}>
                 <div className="bg-white p-8 rounded-2xl max-w-3xl w-full shadow-2xl relative overflow-hidden" onClick={e => e.stopPropagation()}>
                     <div className="flex justify-between items-start mb-8">
                         <div>
                             <h3 className="text-2xl font-black text-slate-800 flex items-center">
-                                <HelpCircle className="mr-3 text-emerald-600" size={28}/> 
-                                Comprendre le Cos φ
+                                <HelpCircle className="mr-3 text-blue-600" size={28}/> Comprendre le Cos φ
                             </h3>
                             <p className="text-slate-500 text-sm mt-1">Impact sur la facturation et l'efficacité énergétique</p>
                         </div>
-                        <button onClick={() => setShowHelp(false)} className="bg-slate-100 hover:bg-slate-200 p-2 rounded-full transition-colors"><X size={20} className="text-slate-600"/></button>
+                        <button onClick={() => setShowHelp(false)} className="bg-slate-100 hover:bg-slate-200 p-2 rounded-full"><X size={20} className="text-slate-600"/></button>
                     </div>
 
                     <div className="mb-8">
                         <div className="flex justify-between text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">
-                            <span>Zone de Pénalité</span>
-                            <span>Zone Neutre</span>
-                            <span>Zone de Bonus</span>
+                            <span>Pénalité</span>
+                            <span>Neutre</span>
+                            <span>Bonus</span>
                         </div>
                         <div className="h-12 w-full rounded-xl flex overflow-hidden shadow-inner border border-slate-200">
                             <div className="w-[80%] bg-gradient-to-r from-red-500 to-red-400 flex items-center justify-center text-white font-bold text-xs relative group cursor-help">
@@ -525,64 +537,27 @@ const StegModule = ({ onBack, userRole }) => {
                             </div>
                             <div className="w-[10%] bg-emerald-500 flex items-center justify-center text-white font-bold text-xs relative group cursor-help">
                                 &gt; 0.90
-                                <span className="absolute bottom-full mb-2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Excellent = Bonus sur facture</span>
+                                <span className="absolute bottom-full mb-2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Excellent = Bonus</span>
                             </div>
                         </div>
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-4">
-                            <h4 className="font-bold text-slate-800 text-lg">Qu'est-ce que c'est ?</h4>
-                            <p className="text-sm text-slate-600 leading-relaxed text-justify">
-                                Le Cosinus Phi (Facteur de Puissance) mesure l'efficacité avec laquelle votre installation utilise l'électricité. 
-                                C'est le rapport entre la <strong>puissance active</strong> (celle qui crée du travail : moteurs, lumière) et la <strong>puissance apparente</strong> (celle fournie par le réseau).
-                            </p>
-                            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                                <div className="flex items-center text-blue-800 font-bold text-sm mb-2">
-                                    <Info size={16} className="mr-2"/> Analogie simple
-                                </div>
-                                <p className="text-xs text-blue-700 italic">
-                                    Imaginez un verre de bière. Le liquide est la puissance active (utile). La mousse est la puissance réactive (inutile mais occupe de la place). Le Cos φ est le ratio de liquide par rapport au verre total. Plus il y a de mousse (réactif), moins c'est efficace.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            <h4 className="font-bold text-slate-800 text-lg">Impact Financier</h4>
-                            
-                            <div className="space-y-3">
-                                <div className="flex items-start p-3 bg-red-50 rounded-xl border border-red-100">
-                                    <div className="bg-red-200 p-2 rounded-lg text-red-700 mr-3"><TrendingDown size={18}/></div>
-                                    <div>
-                                        <span className="block font-bold text-red-800 text-sm">Pénalités (Cos φ &lt; 0.8)</span>
-                                        <span className="text-xs text-red-600 leading-tight">La STEG facture l'énergie réactive consommée au-delà du seuil toléré. Cela peut représenter un surcoût important.</span>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-start p-3 bg-emerald-50 rounded-xl border border-emerald-100">
-                                    <div className="bg-emerald-200 p-2 rounded-lg text-emerald-700 mr-3"><TrendingUp size={18}/></div>
-                                    <div>
-                                        <span className="block font-bold text-emerald-800 text-sm">Bonus (Cos φ &gt; 0.9)</span>
-                                        <span className="text-xs text-emerald-600 leading-tight">Si votre installation est très efficace, la STEG applique une réduction sur le montant de l'énergie active.</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <div className="text-sm text-slate-600 bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <p><strong>Note :</strong> Le Cosinus Phi mesure l'efficacité de votre installation. Un mauvais Cos φ (inférieur à 0.8) entraîne une facturation de l'énergie réactive par la STEG. Assurez-vous que vos batteries de condensateurs fonctionnent correctement.</p>
                     </div>
                 </div>
             </div>
         )}
 
-        <main className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+         <main className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className="lg:col-span-7 space-y-6">
                 <div className="grid grid-cols-3 gap-2">
                     {SITES.map((site) => (
                         <button key={site.id} onClick={() => setCurrentSite(site.id)} 
                             className={`p-3 rounded-xl border text-xs font-bold transition-all flex flex-col items-center justify-center text-center h-20 group relative overflow-hidden
                             ${currentSite === site.id 
-                                ? (site.type.startsWith('BT') ? 'bg-white border-red-500 shadow-md ring-2 ring-red-100 text-red-700' : 'bg-white border-blue-500 shadow-md ring-2 ring-blue-100 text-blue-700') 
-                                : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`}>
-                            <site.icon size={20} className="mb-1 opacity-80 group-hover:scale-110 transition-transform"/>
+                                ? (site.type.startsWith('BT') ? 'bg-red-600 text-white shadow-lg border-red-600' : 'bg-blue-900 text-white shadow-lg border-blue-900') 
+                                : 'bg-white text-slate-500 border-slate-200 hover:border-blue-200 hover:bg-slate-50'}`}>
+                            <site.icon size={20} className={`mb-1 transition-transform ${currentSite === site.id ? 'opacity-100' : 'opacity-60 group-hover:scale-110'}`}/>
                             <span>{site.name}</span>
                         </button>
                     ))}
@@ -593,7 +568,7 @@ const StegModule = ({ onBack, userRole }) => {
                         <h2 className="text-lg font-bold text-slate-800 flex items-center">
                             <Calendar className="mr-2 text-slate-400" size={20} /> Période de Facturation
                         </h2>
-                        <input type="month" value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="bg-slate-100 border border-slate-200 rounded px-3 py-1.5 font-bold text-slate-700 cursor-pointer focus:ring-2 focus:ring-blue-500 outline-none" />
+                        <input type="month" value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="bg-slate-50 border border-slate-200 rounded px-3 py-1.5 font-bold text-slate-700 cursor-pointer focus:ring-2 focus:ring-blue-900 outline-none" />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -603,7 +578,7 @@ const StegModule = ({ onBack, userRole }) => {
                                 <div>
                                     <label className="flex justify-between text-xs font-bold text-slate-500 mb-1">
                                         Ancien Index
-                                        {userRole === 'ADMIN' && <Edit2 size={12} className="cursor-pointer text-slate-400 hover:text-blue-600" onClick={() => setEditingPrev(!editingPrev)} />}
+                                        {userRole === 'ADMIN' && <Edit2 size={12} className="cursor-pointer text-slate-400 hover:text-blue-900" onClick={() => setEditingPrev(!editingPrev)} />}
                                     </label>
                                     <div className="relative">
                                         <input type="text" value={formatInputDisplay(formData.lastIndex)} 
@@ -612,13 +587,12 @@ const StegModule = ({ onBack, userRole }) => {
                                             className={`w-full border rounded p-2 text-sm font-mono ${userRole !== 'ADMIN' && !editingPrev ? 'bg-slate-200 text-slate-500' : 'bg-white border-orange-300'}`} />
                                     {userRole !== 'ADMIN' && !editingPrev && <Lock size={12} className="absolute right-3 top-3 text-slate-400"/>}
                                     </div>
-                                    {editingPrev && <p className="text-[10px] text-orange-600 mt-1 flex items-center"><AlertTriangle size={10} className="mr-1"/> Modification manuelle activée</p>}
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-blue-700 mb-1 block">Nouvel Index *</label>
-                                    <input type="text" required value={formatInputDisplay(formData.newIndex)} onChange={(e) => handleInputChange('newIndex', e.target.value)} className="w-full text-lg border-2 border-blue-200 rounded p-2 font-mono focus:border-blue-600 outline-none" />
+                                    <label className="text-xs font-bold text-blue-900 mb-1 block">Nouvel Index *</label>
+                                    <input type="text" required value={formatInputDisplay(formData.newIndex)} onChange={(e) => handleInputChange('newIndex', e.target.value)} className="w-full text-lg border-2 border-blue-200 rounded p-2 font-mono focus:border-blue-900 outline-none" />
                                 </div>
-                                <div className="text-right text-xs font-bold text-blue-600">Conso: {formatNumber(liveMetrics.consumptionGrid || liveMetrics.energyRecorded)} kWh</div>
+                                <div className="text-right text-xs font-bold text-blue-900">Conso: {formatNumber(liveMetrics.consumptionGrid || liveMetrics.energyRecorded)} kWh</div>
                             </div>
                         </div>
 
@@ -661,12 +635,12 @@ const StegModule = ({ onBack, userRole }) => {
                         </div>
                     </div>
 
-                    <button type="submit" className={`w-full text-white font-bold py-3 rounded-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center ${isBT ? 'bg-gradient-to-r from-red-600 to-red-700' : 'bg-gradient-to-r from-blue-600 to-blue-700'}`}>
+                    <button type="submit" className={`w-full text-white font-bold py-3 rounded-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center ${isBT ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-900 hover:bg-blue-800'}`}>
                         <Save size={18} className="mr-2" /> Valider & Sauvegarder
                     </button>
                 </form>
 
-                {/* Configuration Admin - Séparée MT/BT */}
+                {/* Configuration Admin */}
                 <div className="bg-slate-100 rounded-xl border border-slate-200 overflow-hidden">
                     <button onClick={() => setIsConfigUnlocked(!isConfigUnlocked)} className="w-full px-6 py-3 flex justify-between items-center text-xs font-bold text-slate-500 uppercase hover:bg-slate-200">
                         <span><Settings size={14} className="inline mr-2" /> Configuration Avancée ({isBT ? 'BT' : 'MT'})</span>
@@ -674,30 +648,23 @@ const StegModule = ({ onBack, userRole }) => {
                     </button>
                     {isConfigUnlocked && (
                         <div className="p-4 bg-white border-t border-slate-200 animate-in slide-in-from-top-2">
-                             {/* AFFICHAGE CONDITIONNEL SELON TYPE DE SITE */}
                              {!isBT ? (
-                                // --- CONFIGURATION MT ---
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-                                    <div className="col-span-full mb-1 text-[10px] font-black text-blue-800 uppercase tracking-widest border-b pb-1">Paramètres Moyenne Tension</div>
-                                    
+                                    <div className="col-span-full mb-1 text-[10px] font-black text-blue-900 uppercase tracking-widest border-b pb-1">Paramètres Moyenne Tension</div>
                                     <div><label className="block text-slate-400 mb-1">P. Souscrite (kVA)</label><input type="number" value={siteConfigs[currentSite].subscribedPower} onChange={e => handleSiteConfigChange('subscribedPower', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
                                     <div><label className="block text-slate-400 mb-1">Prix Énergie (DT/kWh)</label><input type="number" value={globalConfig.unitPriceKwh} onChange={e => handleGlobalConfigChange('unitPriceKwh', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
                                     <div><label className="block text-slate-400 mb-1">Prix Puissance (DT/kVA)</label><input type="number" value={globalConfig.powerUnitPrice} onChange={e => handleGlobalConfigChange('powerUnitPrice', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
                                     <div><label className="block text-slate-400 mb-1">TVA (%)</label><input type="number" value={globalConfig.vatRate} onChange={e => handleGlobalConfigChange('vatRate', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
-                                    
                                     <div><label className="block text-slate-400 mb-1">Pénalité Dépassement</label><input type="number" value={globalConfig.powerOverrunPenalty} onChange={e => handleGlobalConfigChange('powerOverrunPenalty', e.target.value)} className="border p-1 w-full rounded font-mono bg-red-50" /></div>
                                     <div><label className="block text-slate-400 mb-1">Pertes à Vide (kWh)</label><input type="number" value={siteConfigs[currentSite].emptyLosses} onChange={e => handleSiteConfigChange('emptyLosses', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
                                     <div><label className="block text-slate-400 mb-1">RTT (DT)</label><input type="number" value={globalConfig.rtt} onChange={e => handleGlobalConfigChange('rtt', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
                                 </div>
                              ) : (
-                                // --- CONFIGURATION BT ---
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs">
                                     <div className="col-span-full mb-1 text-[10px] font-black text-red-800 uppercase tracking-widest border-b pb-1">Paramètres Basse Tension</div>
-
                                     <div><label className="block text-slate-400 mb-1">Prix kWh BT</label><input type="number" value={globalConfig.unitPriceKwhBT} onChange={e => handleGlobalConfigChange('unitPriceKwhBT', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
                                     <div><label className="block text-slate-400 mb-1">Redevance Fixe</label><input type="number" value={globalConfig.fixedFeesBT} onChange={e => handleGlobalConfigChange('fixedFeesBT', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
                                     <div><label className="block text-slate-400 mb-1">Services</label><input type="number" value={globalConfig.servicesBT} onChange={e => handleGlobalConfigChange('servicesBT', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
-                                    
                                     <div><label className="block text-slate-400 mb-1">Taxe CL (Taux)</label><input type="number" value={globalConfig.taxCLRate} onChange={e => handleGlobalConfigChange('taxCLRate', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
                                     <div><label className="block text-slate-400 mb-1">FTE Elec (Taux)</label><input type="number" value={globalConfig.taxFTERate} onChange={e => handleGlobalConfigChange('taxFTERate', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
                                     <div><label className="block text-slate-400 mb-1">FTE Gaz (Montant)</label><input type="number" value={globalConfig.fteGazBT} onChange={e => handleGlobalConfigChange('fteGazBT', e.target.value)} className="border p-1 w-full rounded font-mono" /></div>
@@ -713,7 +680,7 @@ const StegModule = ({ onBack, userRole }) => {
                     <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">{isBT ? <Sun size={100}/> : <Zap size={100}/>}</div>
                     <div className="flex justify-between items-end border-b-2 border-slate-100 pb-4 mb-4">
                          <div>
-                            <h3 className={`text-sm font-bold uppercase ${isBT ? 'text-red-700' : 'text-blue-600'}`}>{isBT ? "FACTURE BT" : "FACTURE MT"}</h3>
+                            <h3 className={`text-sm font-bold uppercase ${isBT ? 'text-red-600' : 'text-blue-900'}`}>{isBT ? "FACTURE BT" : "FACTURE MT"}</h3>
                             <p className="text-xs text-slate-400">{currentSiteObj.name}</p>
                          </div>
                          <div className="text-right"><p className="text-xs text-slate-400 font-mono">{formData.date}</p></div>
@@ -728,8 +695,8 @@ const StegModule = ({ onBack, userRole }) => {
                                   <div className="flex justify-between text-slate-500 text-xs bg-slate-50 p-1 rounded"><span>Solde N-1</span><span className="font-mono">{formatNumber(displayMetrics.prevBalance)} kWh</span></div>
                                   <div className={`flex justify-between font-bold p-2 rounded ${displayMetrics.totalBalance > 0 ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}><span>Solde Final</span><span>{formatNumber(displayMetrics.totalBalance)} kWh</span></div>
                                   {displayMetrics.totalBalance <= 0 ? <div className="text-xs text-center text-emerald-600 italic">Crédit reporté au mois prochain</div> : <div className="flex justify-between text-slate-800 font-bold border-t pt-2"><span>Facturé ({formatNumber(displayMetrics.billedKwh)} kWh)</span><span>{formatMoney(displayMetrics.consoAmountHT)}</span></div>}
-                                </div>
-                                <div className="space-y-1 text-xs text-slate-500 pt-2">
+                               </div>
+                               <div className="space-y-1 text-xs text-slate-500 pt-2">
                                   <div className="flex justify-between"><span>Redevances Fixes</span><span>{formatMoney(displayMetrics.fixedAmountHT)}</span></div>
                                   <div className="flex justify-between"><span>Taxes (TVA, CL, FTE)</span><span>{formatMoney(displayMetrics.totalFinalTTC - (displayMetrics.consoAmountHT + displayMetrics.fixedAmountHT))}</span></div>
                                </div>
@@ -777,7 +744,7 @@ const StegModule = ({ onBack, userRole }) => {
                     <div className="mt-6 border-t-2 border-slate-800 pt-4">
                        <div className="flex justify-between items-end">
                          <span className="text-lg font-black text-slate-900 uppercase">Net à Payer</span>
-                         <span className={`text-3xl font-black font-mono tracking-tight ${isBT ? 'text-red-700' : 'text-blue-700'}`}>{formatMoney(displayMetrics.netToPay)}</span>
+                         <span className={`text-3xl font-black font-mono tracking-tight ${isBT ? 'text-red-700' : 'text-blue-900'}`}>{formatMoney(displayMetrics.netToPay)}</span>
                        </div>
                     </div>
                 </div>
@@ -794,8 +761,6 @@ const StegModule = ({ onBack, userRole }) => {
                                 <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-500 mt-2 border-t pt-2 border-slate-200">
                                     <div>Conso: <span className="font-mono text-slate-700">{formatNumber(log.type === 'MT' ? log.energyRecorded : log.consumptionGrid)}</span> kWh</div>
                                     <div>{log.type === 'MT' ? `P.Max: ${log.maxPower} kVA` : (log.type === 'BT_PV' ? `PV: ${formatNumber(log.productionPv)}` : 'Standard')}</div>
-                                    {log.type === 'MT' && <div>Cos φ: <span className={log.cosPhi < 0.8 ? 'text-red-500 font-bold' : 'text-emerald-600'}>{log.cosPhi}</span></div>}
-                                    {log.type === 'MT' && log.reactiveCons > 0 && <div>Réactif: {log.reactiveCons}</div>}
                                 </div>
                             </div>
                         ))}
@@ -809,9 +774,8 @@ const StegModule = ({ onBack, userRole }) => {
 };
 
 // ==================================================================================
-// 4. MODULE GESTION AIR COMPRIMÉ (Complet)
+// 6. MODULE GESTION AIR COMPRIMÉ (Complet & Revisé)
 // ==================================================================================
-
 const AirModule = ({ onBack, userRole }) => {
   const [activeCompressor, setActiveCompressor] = useState(1);
   const [logs, setLogs] = useState([]);
@@ -821,7 +785,7 @@ const AirModule = ({ onBack, userRole }) => {
   const [week, setWeek] = useState(getWeekNumber(new Date()));
   const [editingPrev, setEditingPrev] = useState(false);
   const [config, setConfig] = useState({ elecPrice: 0.291, offLoadFactor: 0.3 });
-  
+   
   function getWeekNumber(d) {
     d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
     d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
@@ -843,40 +807,29 @@ const AirModule = ({ onBack, userRole }) => {
     { id: 2, name: "Compresseur 2", serial: "CAI 808264", model: "Ceccato CSB 30", power: 22 }
   ];
 
-  // Updated Intervals
   const MAINT_INTERVALS = { oilFilter: 2000, airFilter: 2000, separator: 2000, oil: 2000, general: 500 };
   const MAINT_LABELS = { oilFilter: "Filtre à Huile", airFilter: "Filtre à Air", separator: "Séparateur", oil: "Huile", general: "Inspection" };
-  const MAINT_ICONS = { oilFilter: Filter, airFilter: Wind, separator: Droplets, oil: Droplets, general: SearchIcon };
-  function SearchIcon(props) { return <Eye {...props}/> } 
+  const MAINT_ICONS = { oilFilter: Filter, airFilter: Wind, separator: Droplets, oil: Droplets, general: Eye };
 
-  // Initialize form data with "fresh" state logic: 
-  // Initially we assume components are brand new relative to the compressor's life if no logs exist.
-  // Ideally, we'd fetch the latest maintenance date. For the demo/default state, we can simulate 
-  // a state where `lastMaint` matches `lastRun` so remaining = interval.
   const [formData, setFormData] = useState({
     1: { lastRun: 19960, newRun: '', lastLoad: 10500, newLoad: '', description: '', lastMaint: { oilFilter: 19960, airFilter: 19960, separator: 19960, oil: 19960, general: 19960 } },
     2: { lastRun: 18500, newRun: '', lastLoad: 9200, newLoad: '', description: '', lastMaint: { oilFilter: 18500, airFilter: 18500, separator: 18500, oil: 18500, general: 18500 } }
   });
-  
+   
   useEffect(() => {
-      // Fetch latest logs to update current running hours and last maintenance performed
       const compLogs = logs.filter(l => l.compName === COMPRESSORS.find(c => c.id === activeCompressor).name);
       
       if(compLogs.length > 0) {
-          // Find most recent run hours
           const latestRunLog = compLogs.find(l => l.type === 'WEEKLY_REPORT');
           const currentRun = latestRunLog ? latestRunLog.newRun : formData[activeCompressor].lastRun;
           const currentLoad = latestRunLog ? latestRunLog.newLoad : formData[activeCompressor].lastLoad;
 
-          // Find most recent maintenance for each type
           const maintenanceStatus = { ...formData[activeCompressor].lastMaint };
           Object.keys(MAINT_INTERVALS).forEach(type => {
               const lastMaintLog = compLogs.find(l => l.type === 'MAINTENANCE' && l.maintType === MAINT_LABELS[type]);
               if (lastMaintLog) {
                   maintenanceStatus[type] = lastMaintLog.indexDone;
               }
-              // If no log exists, we keep the default which assumes full health relative to current run 
-              // (or we could default to 0 if we wanted to show them as expired, but user asked for "reset" state)
           });
 
           setFormData(prev => ({
@@ -892,7 +845,7 @@ const AirModule = ({ onBack, userRole }) => {
   }, [activeCompressor, logs]);
 
   const handleInput = (field, value) => setFormData(prev => ({...prev, [activeCompressor]: {...prev[activeCompressor], [field]: value}}));
-  
+   
   const calculateKPIs = () => {
       const data = formData[activeCompressor];
       const comp = COMPRESSORS.find(c => c.id === activeCompressor);
@@ -906,7 +859,6 @@ const AirModule = ({ onBack, userRole }) => {
       const maintStatus = {};
       Object.keys(MAINT_INTERVALS).forEach(key => {
         const lastDone = data.lastMaint[key] || 0;
-        // Logic: (Last Maintenance Hour + Interval) - Current Hour = Remaining Hours
         const remaining = (lastDone + MAINT_INTERVALS[key]) - currentTotal;
         maintStatus[key] = { remaining };
       });
@@ -959,10 +911,9 @@ const AirModule = ({ onBack, userRole }) => {
   };
 
   const kpis = calculateKPIs();
-  // 20% warning logic
   const getStatusColor = (rem, total) => {
       if (rem <= 0) return 'text-red-600 font-bold';
-      if (rem < (total * 0.2)) return 'text-amber-500 font-bold'; // < 20%
+      if (rem < (total * 0.2)) return 'text-amber-500 font-bold'; 
       return 'text-emerald-600';
   };
   const getProgressColor = (rem, total) => {
@@ -973,20 +924,24 @@ const AirModule = ({ onBack, userRole }) => {
 
   return (
     <div className="bg-slate-50 min-h-screen pb-10">
-        <header className="bg-gradient-to-r from-sky-700 to-blue-800 text-white shadow-lg p-4 flex items-center justify-between">
-            <div className="flex items-center">
-              <button onClick={onBack} className="mr-4 hover:bg-white/10 p-2 rounded-full"><ArrowLeft /></button>
-              <div>
-                  <h1 className="font-bold text-xl flex items-center"><Wind className="mr-2" size={24}/> Gestion Air Comprimé</h1>
-                  <div className="flex items-center text-xs opacity-80 mt-1">
-                      <MapPin size={12} className="mr-1"/> Site Mégrine
-                      <span className="mx-2">•</span>
-                      <Calendar size={12} className="mr-1"/> Semaine {week.split('-W')[1]} {week.split('-W')[0]}
-                  </div>
-              </div>
-            </div>
-            <div className="flex gap-4">
-                <button onClick={() => setShowGuide(true)} className="flex items-center bg-white/10 px-3 py-2 rounded text-xs font-bold border border-white/20 hover:bg-white/20"><BookOpen size={14} className="mr-2" /> Guide & Procédures</button>
+        <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+            <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center">
+                <div className="flex items-center gap-4 mb-2 md:mb-0">
+                    <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full mr-2 transition-colors text-slate-500"><ArrowLeft size={20} /></button>
+                    <BrandLogo size="h-8"/>
+                    <div className="w-px h-8 bg-slate-200"></div>
+                    <div>
+                        <h1 className="text-lg font-black text-blue-900 flex items-center"><Wind className="mr-2" size={20}/> Air Comprimé</h1>
+                        <div className="flex items-center text-xs text-slate-500 mt-1">
+                            <MapPin size={10} className="mr-1"/> Site Mégrine
+                            <span className="mx-2">•</span>
+                            <Calendar size={10} className="mr-1"/> Semaine {week.split('-W')[1]} {week.split('-W')[0]}
+                        </div>
+                    </div>
+                </div>
+                <div className="flex gap-4">
+                    <button onClick={() => setShowGuide(true)} className="flex items-center bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg text-xs font-bold text-slate-600 transition-colors"><BookOpen size={16} className="mr-2" /> Guide & Consignes</button>
+                </div>
             </div>
         </header>
 
@@ -994,26 +949,32 @@ const AirModule = ({ onBack, userRole }) => {
             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowGuide(false)}>
                 <div className="bg-white rounded-xl max-w-2xl w-full p-6 shadow-2xl relative" onClick={e=>e.stopPropagation()}>
                     <button onClick={() => setShowGuide(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">✕</button>
-                    <h3 className="font-bold text-slate-800 mb-6 flex items-center text-lg"><BookOpen className="mr-2 text-sky-600" /> Guide Opérationnel</h3>
+                    <h3 className="font-bold text-slate-800 mb-6 flex items-center text-lg"><BookOpen className="mr-2 text-blue-900" /> Instructions ES3000</h3>
                     
                     <div className="space-y-6 overflow-y-auto max-h-[60vh]">
                         <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                            <h4 className="font-bold text-sky-800 mb-3 flex items-center"><Activity size={16} className="mr-2"/> 1. Collecte Physique (Contrôleur ES 3000)</h4>
-                            <ul className="text-sm text-slate-600 space-y-2 list-disc pl-5">
-                                <li><strong>Affichage Pression :</strong> Écran par défaut.</li>
-                                <li><strong>Heures Totales :</strong> Appuyez 2 fois sur la flèche droite (Tab). Symbole : 🕒 Horloge.</li>
-                                <li><strong>Heures en Charge :</strong> Appuyez 3 fois sur la flèche droite. Symbole : ⚡ Piston/Charge.</li>
-                            </ul>
-                        </div>
-
-                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                            <h4 className="font-bold text-emerald-800 mb-3 flex items-center"><Zap size={16} className="mr-2"/> 2. Workflow Application</h4>
-                            <ol className="text-sm text-slate-600 space-y-2 list-decimal pl-5">
-                                <li>Sélectionnez le compresseur concerné en haut à gauche.</li>
-                                <li>Saisissez les nouveaux index relevés dans la zone "Saisie Relevé".</li>
-                                <li>Vérifiez les indicateurs dans la zone "Analyse" à droite.</li>
-                                <li>Cliquez sur <strong>"Valider Relevé"</strong> pour enregistrer et calculer les coûts.</li>
+                            <h4 className="font-bold text-blue-900 mb-3 flex items-center"><Activity size={16} className="mr-2"/> Navigation Contrôleur</h4>
+                            <ol className="text-sm text-slate-600 space-y-3 list-decimal pl-5">
+                                <li>L'écran affiche par défaut la <strong>Pression de sortie</strong>.</li>
+                                <li>Appuyez sur la flèche <strong>DROITE</strong> (Tab) pour faire défiler le menu principal.</li>
+                                <li>
+                                    <strong>Heures Totales :</strong> Cherchez le symbole 🕒 (Horloge pleine). Notez la valeur.
+                                </li>
+                                <li>
+                                    <strong>Heures en Charge :</strong> Continuez de défiler jusqu'au symbole ⚡ (Piston/Éclair). C'est le temps de travail effectif.
+                                </li>
+                                <li>Pour revenir, appuyez sur <strong>C (Cancel)</strong> ou attendez 30s.</li>
                             </ol>
+                        </div>
+                        
+                        <div className="bg-orange-50 p-4 rounded-xl border border-orange-200">
+                            <h4 className="font-bold text-orange-900 mb-3 flex items-center"><AlertTriangle size={16} className="mr-2"/> Bonnes Pratiques & Sécurité</h4>
+                            <ul className="text-sm text-slate-700 space-y-2 list-disc pl-5">
+                                <li>Vérifier le niveau d'huile visuel avant chaque démarrage ou relevé (hublot latéral).</li>
+                                <li>Écouter s'il y a des bruits anormaux ou des fuites d'air audibles lors de la mise en charge.</li>
+                                <li>Purger le réservoir d'air quotidiennement si la purge auto est défaillante.</li>
+                                <li>Ne jamais ouvrir le capot machine en marche.</li>
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -1025,7 +986,7 @@ const AirModule = ({ onBack, userRole }) => {
             <div className="lg:col-span-7 space-y-6">
                 <div className="flex gap-2">
                     {COMPRESSORS.map(c => (
-                        <button key={c.id} onClick={() => setActiveCompressor(c.id)} className={`flex-1 p-4 rounded-xl border text-left transition-all ${activeCompressor === c.id ? 'bg-white border-sky-500 shadow-md ring-2 ring-sky-100' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
+                        <button key={c.id} onClick={() => setActiveCompressor(c.id)} className={`flex-1 p-4 rounded-xl border text-left transition-all ${activeCompressor === c.id ? 'bg-white border-blue-900 shadow-md ring-1 ring-blue-900' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
                             <div className="font-bold text-slate-700">{c.name}</div>
                             <div className="text-xs text-slate-400">{c.model} - {c.serial}</div>
                         </button>
@@ -1033,24 +994,24 @@ const AirModule = ({ onBack, userRole }) => {
                 </div>
 
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                     <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
-                        <h2 className="font-bold flex items-center text-slate-800"><Timer className="mr-2 text-sky-600"/> Saisie Relevé</h2>
+                      <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+                        <h2 className="font-bold flex items-center text-slate-800"><Timer className="mr-2 text-blue-900"/> Saisie Relevé</h2>
                         <div className="flex items-center text-sm bg-slate-100 px-3 py-1 rounded-lg">
                             <span className="font-bold text-slate-500 mr-2">Semaine :</span>
                             <input type="week" value={week} onChange={(e) => setWeek(e.target.value)} className="bg-transparent font-bold text-slate-800 outline-none cursor-pointer" />
                         </div>
-                     </div>
-                     <div className="grid grid-cols-2 gap-6 mb-6">
+                      </div>
+                      <div className="grid grid-cols-2 gap-6 mb-6">
                         <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
                             <div className="flex justify-between mb-2">
                                 <label className="text-xs font-bold text-slate-500 uppercase">Heures Marche</label>
-                                {userRole === 'ADMIN' && <button onClick={() => setEditingPrev(!editingPrev)} className="text-[10px] text-blue-500 hover:underline">Modifier Précédent</button>}
+                                {userRole === 'ADMIN' && <button onClick={() => setEditingPrev(!editingPrev)} className="text-[10px] text-blue-900 hover:underline">Modifier Précédent</button>}
                             </div>
                             <div className="flex items-center gap-2 mb-2">
                                 <span className="text-xs text-slate-400">Préc:</span>
                                 <input type="number" readOnly={!editingPrev} className={`w-full text-xs bg-transparent font-mono ${editingPrev ? 'border rounded bg-white p-1' : ''}`} value={formData[activeCompressor].lastRun || ''} onChange={e => handleInput('lastRun', e.target.value)} />
                             </div>
-                            <input type="number" className="w-full border-2 border-sky-100 p-2 rounded-lg text-lg font-mono font-bold focus:border-sky-500 outline-none transition-colors" placeholder="Nouveau..." value={formData[activeCompressor].newRun || ''} onChange={e => handleInput('newRun', e.target.value)} />
+                            <input type="number" className="w-full border-2 border-slate-200 p-2 rounded-lg text-lg font-mono font-bold focus:border-blue-900 outline-none transition-colors" placeholder="Nouveau..." value={formData[activeCompressor].newRun || ''} onChange={e => handleInput('newRun', e.target.value)} />
                         </div>
                         <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
                             <label className="text-xs font-bold text-slate-500 mb-2 block uppercase">Heures Charge</label>
@@ -1058,18 +1019,16 @@ const AirModule = ({ onBack, userRole }) => {
                                 <span className="text-xs text-slate-400">Préc:</span>
                                 <input type="number" readOnly={!editingPrev} className={`w-full text-xs bg-transparent font-mono ${editingPrev ? 'border rounded bg-white p-1' : ''}`} value={formData[activeCompressor].lastLoad || ''} onChange={e => handleInput('lastLoad', e.target.value)} />
                             </div>
-                            <input type="number" className="w-full border-2 border-sky-100 p-2 rounded-lg text-lg font-mono font-bold focus:border-sky-500 outline-none transition-colors" placeholder="Nouveau..." value={formData[activeCompressor].newLoad || ''} onChange={e => handleInput('newLoad', e.target.value)} />
+                            <input type="number" className="w-full border-2 border-slate-200 p-2 rounded-lg text-lg font-mono font-bold focus:border-blue-900 outline-none transition-colors" placeholder="Nouveau..." value={formData[activeCompressor].newLoad || ''} onChange={e => handleInput('newLoad', e.target.value)} />
                         </div>
-                     </div>
-                     <textarea className="w-full border p-3 rounded-lg text-sm mb-2 focus:border-sky-500 outline-none" rows="3" placeholder="Note / Observation sur l'état du compresseur..." value={formData[activeCompressor].description} onChange={e => handleInput('description', e.target.value)}></textarea>
+                      </div>
+                      <textarea className="w-full border p-3 rounded-lg text-sm mb-2 focus:border-blue-900 outline-none" rows="3" placeholder="Note / Observation sur l'état du compresseur..." value={formData[activeCompressor].description} onChange={e => handleInput('description', e.target.value)}></textarea>
                 </div>
             </div>
 
-            {/* Colonne Droite : Analyse */}
             <div className="lg:col-span-5 space-y-6">
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><TrendingUp size={100}/></div>
-                    <h3 className="font-bold text-slate-700 mb-6 flex items-center border-b pb-2"><Activity className="mr-2 text-emerald-500"/> Analyse Performance</h3>
+                    <h3 className="font-bold text-slate-700 mb-6 flex items-center border-b pb-2"><Activity className="mr-2 text-blue-900"/> Analyse Performance</h3>
                     
                     <div className="grid grid-cols-2 gap-4 mb-6">
                         <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
@@ -1089,16 +1048,15 @@ const AirModule = ({ onBack, userRole }) => {
                         <span className="font-mono font-black text-slate-800 text-lg">{kpis.costHT.toFixed(0)} <span className="text-xs">DT</span></span>
                     </div>
 
-                    <button onClick={handleSubmit} className="w-full bg-sky-600 text-white py-3 rounded-xl font-bold hover:bg-sky-700 shadow-lg shadow-sky-200 transition-all flex items-center justify-center">
+                    <button onClick={handleSubmit} className="w-full bg-blue-900 text-white py-3 rounded-xl font-bold hover:bg-blue-800 shadow-lg transition-all flex items-center justify-center">
                         <CheckCircle2 size={18} className="mr-2"/> Valider Relevé
                     </button>
                 </div>
             </div>
 
-            {/* Maintenance Section (Moved Up) */}
             <div className="lg:col-span-12">
                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 className="font-bold text-slate-700 mb-6 flex items-center"><Wrench className="mr-2 text-amber-500"/> Tableau de Maintenance</h3>
+                    <h3 className="font-bold text-slate-700 mb-6 flex items-center"><Wrench className="mr-2 text-red-600"/> Tableau de Maintenance</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
                         {Object.keys(MAINT_INTERVALS).map(key => {
                             const Icon = MAINT_ICONS[key];
@@ -1107,14 +1065,14 @@ const AirModule = ({ onBack, userRole }) => {
                             const isWarning = rem < (total * 0.2);
                             
                             return (
-                                <div key={key} className={`flex flex-col p-4 border rounded-xl hover:shadow-lg transition-all relative overflow-hidden group ${isWarning ? 'bg-amber-50 border-amber-200 ring-1 ring-amber-100' : 'bg-slate-50'}`}>
+                                <div key={key} className={`flex flex-col p-4 border rounded-xl hover:shadow-lg transition-all relative overflow-hidden group ${isWarning ? 'bg-red-50 border-red-200' : 'bg-slate-50'}`}>
                                     <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity"><Icon size={40}/></div>
                                     <div className="text-xs text-slate-500 uppercase font-bold mb-1">{MAINT_LABELS[key]}</div>
                                     <div className={`text-xl font-black mb-2 ${getStatusColor(rem, total)}`}>{rem} h</div>
                                     <div className="w-full bg-slate-200 rounded-full h-1.5 mb-2 overflow-hidden">
                                         <div className={`h-full ${getProgressColor(rem, total)}`} style={{width: `${Math.min(100, (rem/total)*100)}%`}}></div>
                                     </div>
-                                    {isWarning && <div className="text-[10px] text-amber-600 font-bold mb-2 flex items-center"><AlertTriangle size={10} className="mr-1"/> Planifier</div>}
+                                    {isWarning && <div className="text-[10px] text-red-600 font-bold mb-2 flex items-center"><AlertTriangle size={10} className="mr-1"/> Planifier</div>}
                                     <button onClick={() => setShowMaintPopup(key)} className="mt-auto w-full py-2 bg-white border border-slate-200 rounded text-xs font-bold hover:bg-slate-800 hover:text-white transition-colors">Faire Maint.</button>
                                 </div>
                             );
@@ -1123,7 +1081,6 @@ const AirModule = ({ onBack, userRole }) => {
                 </div>
             </div>
 
-            {/* Historique Air */}
             <div className="lg:col-span-12">
                 <div className="bg-white p-6 rounded-xl border border-slate-200">
                     <h3 className="text-sm font-bold text-slate-500 uppercase mb-4 flex items-center tracking-wider"><History size={16} className="mr-2"/> Historique Détaillé</h3>
@@ -1134,7 +1091,7 @@ const AirModule = ({ onBack, userRole }) => {
                                     <th className="p-3 rounded-l-lg">Date / Semaine</th>
                                     <th className="p-3">Type</th>
                                     <th className="p-3">Détails / Index</th>
-                                    <th className="p-3">Technicien / Réf.</th>
+                                    <th className="p-3">Technicien</th>
                                     <th className="p-3 text-right rounded-r-lg">Coût / Statut</th>
                                 </tr>
                             </thead>
@@ -1147,26 +1104,17 @@ const AirModule = ({ onBack, userRole }) => {
                                         <td className="p-3">
                                             {log.type === 'MAINTENANCE' ? 
                                                 <span className="inline-flex items-center px-2 py-1 rounded bg-amber-100 text-amber-700 text-xs font-bold"><Wrench size={10} className="mr-1"/> {log.maintType}</span> : 
-                                                <span className="inline-flex items-center px-2 py-1 rounded bg-sky-100 text-sky-700 text-xs font-bold"><Activity size={10} className="mr-1"/> Relevé</span>
+                                                <span className="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-700 text-xs font-bold"><Activity size={10} className="mr-1"/> Relevé</span>
                                             }
                                         </td>
                                         <td className="p-3 text-slate-600 text-xs">
-                                            {log.type === 'MAINTENANCE' ? 
-                                                `Effectué à ${log.indexDone} h` : 
-                                                `Marche: ${log.newRun}h | Charge: ${log.newLoad}h`
-                                            }
+                                            {log.type === 'MAINTENANCE' ? `Effectué à ${log.indexDone} h` : `Marche: ${log.newRun}h | Charge: ${log.newLoad}h`}
                                         </td>
                                         <td className="p-3 text-slate-500 text-xs font-mono">
-                                            {log.type === 'MAINTENANCE' ? 
-                                                <span className="flex flex-col"><span>{log.details?.tech}</span><span className="text-[10px] text-slate-400">Réf: {log.details?.ref}</span></span> : 
-                                                '-'
-                                            }
+                                            {log.type === 'MAINTENANCE' ? log.details?.tech : '-'}
                                         </td>
                                         <td className="p-3 text-right font-bold">
-                                            {log.type === 'MAINTENANCE' ? 
-                                                <span className="text-emerald-600 flex items-center justify-end"><CheckCircle2 size={14} className="mr-1"/> OK</span> : 
-                                                <span className="text-slate-700">{log.costHT?.toFixed(0)} DT</span>
-                                            }
+                                            {log.type === 'MAINTENANCE' ? <span className="text-emerald-600">OK</span> : <span className="text-slate-700">{log.costHT?.toFixed(0)} DT</span>}
                                         </td>
                                     </tr>
                                 ))}
@@ -1178,19 +1126,14 @@ const AirModule = ({ onBack, userRole }) => {
             </div>
         </main>
         
-        {/* Popup Maintenance */}
         {showMaintPopup && (
             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
                 <div className="bg-white p-6 rounded-2xl w-full max-w-sm shadow-2xl transform transition-all scale-100">
                     <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
-                        <h3 className="font-bold text-slate-800 flex items-center"><Wrench className="mr-2 text-amber-500" size={20}/> Validation Maint.</h3>
+                        <h3 className="font-bold text-slate-800 flex items-center"><Wrench className="mr-2 text-red-600" size={20}/> Validation Maint.</h3>
                         <button onClick={() => setShowMaintPopup(null)} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
                     </div>
                     
-                    <div className="mb-4 text-sm text-slate-600 bg-amber-50 p-3 rounded-lg border border-amber-100">
-                        Vous validez la maintenance : <strong>{MAINT_LABELS[showMaintPopup]}</strong>
-                    </div>
-
                     <form onSubmit={(e) => {
                         e.preventDefault();
                         const fd = new FormData(e.target);
@@ -1199,25 +1142,25 @@ const AirModule = ({ onBack, userRole }) => {
                         <div className="space-y-3">
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 mb-1">Date Intervention *</label>
-                                <input name="date" type="date" required defaultValue={new Date().toISOString().split('T')[0]} className="w-full border border-slate-200 p-2 rounded-lg text-sm focus:border-amber-500 outline-none" />
+                                <input name="date" type="date" required defaultValue={new Date().toISOString().split('T')[0]} className="w-full border border-slate-200 p-2 rounded-lg text-sm focus:border-red-600 outline-none" />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 mb-1">Intervenant / Technicien *</label>
-                                <input name="tech" placeholder="Nom du technicien" required className="w-full border border-slate-200 p-2 rounded-lg text-sm focus:border-amber-500 outline-none" />
+                                <input name="tech" placeholder="Nom du technicien" required className="w-full border border-slate-200 p-2 rounded-lg text-sm focus:border-red-600 outline-none" />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 mb-1">Réf. Fiche Intervention *</label>
-                                <input name="ref" placeholder="ex: FI-2024-001" required className="w-full border border-slate-200 p-2 rounded-lg text-sm focus:border-amber-500 outline-none font-mono" />
+                                <input name="ref" placeholder="ex: FI-2024-001" required className="w-full border border-slate-200 p-2 rounded-lg text-sm focus:border-red-600 outline-none font-mono" />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 mb-1">Notes / Observations</label>
-                                <textarea name="notes" placeholder="Détails supplémentaires..." className="w-full border border-slate-200 p-2 rounded-lg text-sm focus:border-amber-500 outline-none" rows="2"></textarea>
+                                <textarea name="notes" placeholder="Détails supplémentaires..." className="w-full border border-slate-200 p-2 rounded-lg text-sm focus:border-red-600 outline-none" rows="2"></textarea>
                             </div>
                         </div>
                         
                         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
                             <button type="button" onClick={() => setShowMaintPopup(null)} className="px-4 py-2 text-slate-500 font-bold hover:bg-slate-50 rounded-lg transition-colors">Annuler</button>
-                            <button type="submit" className="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold shadow-lg shadow-amber-200 transition-all flex items-center">
+                            <button type="submit" className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shadow-lg transition-all flex items-center">
                                 <Check size={18} className="mr-2"/> Valider
                             </button>
                         </div>
@@ -1225,516 +1168,19 @@ const AirModule = ({ onBack, userRole }) => {
                 </div>
             </div>
         )}
-        {notif && <div className="fixed bottom-6 right-6 px-6 py-4 bg-sky-600 text-white rounded-xl shadow-xl z-50 animate-in slide-in-from-bottom-4 fade-in duration-300 font-bold flex items-center"><CheckCircle2 className="mr-2"/> {notif}</div>}
+        {notif && <div className="fixed bottom-6 right-6 px-6 py-4 bg-emerald-600 text-white rounded-xl shadow-xl z-50 font-bold flex items-center"><CheckCircle2 className="mr-2"/> {notif}</div>}
     </div>
   );
 };
 
 // ==================================================================================
-// 5. MODULE TABLEAU DE BORD SITES (Complet)
-// ==================================================================================
-
-const SitesDashboard = ({ onBack, userRole }) => {
-  const [activeSiteTab, setActiveSiteTab] = useState('MEGRINE');
-  const [historyData, setHistoryData] = useState({});
-  const [showHistoryInput, setShowHistoryInput] = useState(false);
-  const [refYear, setRefYear] = useState('2023'); // Default reference year for visualization
-  const [notif, setNotif] = useState(null);
-  
-  // Données de température plus réalistes pour Tunis
-  const [avgTempHistory] = useState([
-      { year: 2018, temp: 19.4 }, { year: 2019, temp: 19.6 }, { year: 2020, temp: 19.9 },
-      { year: 2021, temp: 20.3 }, { year: 2022, temp: 20.8 }, { year: 2023, temp: 21.2 }, 
-      { year: 2024, temp: 21.5 }, { year: 2025, temp: 21.8 }
-  ]);
-  
-  const yearsRange = ['REF', 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030];
-
-  useEffect(() => {
-    getDocs(getCollection('site_history')).then(snap => {
-        const data = {};
-        snap.forEach(doc => {
-            const [site, year] = doc.id.split('_');
-            if(!data[site]) data[site] = {};
-            data[site][year] = doc.data().months;
-        });
-        setHistoryData(prev => ({...prev, ...data}));
-    });
-  }, []);
-
-  const initHistory = (site) => {
-      if (!historyData[site]) {
-          const emptyYear = Array(12).fill('');
-          const newData = {};
-          yearsRange.forEach(y => newData[y] = emptyYear);
-          setHistoryData(prev => ({...prev, [site]: newData}));
-      }
-  };
-
-  const SITES_DATA = {
-    MEGRINE: { 
-        name: "Mégrine", 
-        area: 32500, covered: 30000, open: 2500, glazed: 364.92,
-        details: "Showroom 1000m² • Atelier FIAT 10000m² • Atelier IVECO 9000m² • ITALCAR Gros 10000m²", 
-        energyMix: [{ name: "Électricité", value: 97, color: "#3b82f6" }, { name: "Gaz", value: 3, color: "#f97316" }], 
-        elecUsage: [
-            { name: "Clim/Chauffage", value: 40, kpi: "kWh/m²", significant: true }, 
-            { name: "Éclairage", value: 27, kpi: "kWh/m²", significant: true }, 
-            { name: "Air Comprimé", value: 17, kpi: "kWh/Nm³", significant: true, subDetails: [
-                {name: "Équipement Atelier", val: "40%"},
-                {name: "Gonfleur Pneus", val: "30%"},
-                {name: "Récup. Huile", val: "30%"}
-            ]}, 
-            { name: "Informatique", value: 8, kpi: "-", significant: false }, 
-            { name: "Services", value: 5, kpi: "-", significant: false }, 
-            { name: "Gaz", value: 3, kpi: "kWh/Véhicule", significant: false, subDetails: [
-                {name: "Four Peinture", val: "90%"},
-                {name: "Divers", val: "10%"}
-            ]} 
-        ] 
-    },
-    ELKHADHRA: { 
-        name: "El Khadhra", 
-        area: 9500, covered: 7000, open: 2500, glazed: 39.5,
-        details: "Réception 1000m² • Atelier FIAT 3000m² • ITALCAR Gros 3000m²", 
-        energyMix: [{ name: "Électricité", value: 100, color: "#3b82f6" }], 
-        elecUsage: [
-            { name: "Clim/Chauffage", value: 61, kpi: "kWh/m²", significant: true }, 
-            { name: "Éclairage", value: 23, kpi: "kWh/m²", significant: true }, 
-            { name: "Air Comprimé", value: 6, kpi: "kWh/Nm³", significant: false }, 
-            { name: "Informatique", value: 5, kpi: "-", significant: false }, 
-            { name: "Services", value: 5, kpi: "-", significant: false }
-        ] 
-    },
-    NAASSEN: { 
-        name: "Naassen", 
-        area: 32500, covered: 1820, open: 30680, glazed: 0,
-        details: "Admin 920m² • Atelier 900m² • Parc Neuf 30680m²", 
-        energyMix: [{ name: "Électricité", value: 100, color: "#3b82f6" }], 
-        elecUsage: [
-            { name: "Éclairage (80% Ext)", value: 78, kpi: "kWh/m²", significant: true }, 
-            { name: "Clim/Chauffage", value: 14, kpi: "kWh/m²", significant: false }, 
-            { name: "Air Comprimé", value: 5, kpi: "kWh/Nm³", significant: false }, 
-            { name: "Services", value: 2, kpi: "-", significant: false }, 
-            { name: "Informatique", value: 1, kpi: "-", significant: false }
-        ] 
-    },
-    LAC: { 
-        name: "Lac", 
-        area: 2050, covered: 850, open: 1200, glazed: 115.7,
-        details: "Showroom 850m² • Espace Ouvert 1200m²", 
-        energyMix: [{ name: "Électricité", value: 100, color: "#3b82f6" }], 
-        elecUsage: [
-            { name: "Éclairage (60% Int)", value: 58, kpi: "kWh/m²", significant: true }, 
-            { name: "Clim/Chauffage", value: 36, kpi: "kWh/m²", significant: true }, 
-            { name: "Informatique", value: 3, kpi: "-", significant: false }, 
-            { name: "Services", value: 3, kpi: "-", significant: false }
-        ] 
-    }
-  };
-  
-  const currentData = SITES_DATA[activeSiteTab];
-
-  const handleHistoryChange = (year, monthIdx, val) => {
-      setHistoryData(prev => ({
-          ...prev,
-          [activeSiteTab]: {
-              ...prev[activeSiteTab],
-              [year]: prev[activeSiteTab][year].map((v, i) => i === monthIdx ? val : v)
-          }
-      }));
-  };
-
-  const saveHistory = async () => {
-      const site = activeSiteTab;
-      if (!historyData[site]) return;
-      try {
-        for (const year of Object.keys(historyData[site])) {
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'site_history', `${site}_${year}`), { months: historyData[site][year] });
-        }
-        setNotif("Historique sauvegardé");
-        setShowHistoryInput(false);
-      } catch(e) { setNotif("Erreur"); }
-      setTimeout(() => setNotif(null), 3000);
-  };
-
-  // KPI DYNAMIC RATIO
-  const getDynamicRatio = () => {
-      const prevYear = new Date().getFullYear() - 1;
-      const prevYearData = historyData[activeSiteTab]?.[prevYear];
-      const totalPrev = prevYearData ? prevYearData.reduce((a,b)=>a+(parseFloat(b)||0),0) : 0;
-      return totalPrev > 0 ? (totalPrev / currentData.covered).toFixed(1) : '--';
-  };
-
-  // --- COMPONENT: COMPARISON WIDGET (Top) ---
-  const ComparisonWidget = () => {
-      const currentYear = new Date().getFullYear();
-      const currentMonth = new Date().getMonth(); 
-      const lastCompletedMonthIdx = currentMonth === 0 ? 11 : currentMonth - 1;
-      const analysisYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-
-      const dataCurrent = historyData[activeSiteTab]?.[analysisYear] || Array(12).fill(0);
-      const dataRef = historyData[activeSiteTab]?.[refYear] || Array(12).fill(0);
-      
-      const lastMonthValue = parseFloat(dataCurrent[lastCompletedMonthIdx]) || 0;
-      const lastMonthRefValue = parseFloat(dataRef[lastCompletedMonthIdx]) || 0;
-      const diffLastMonth = lastMonthRefValue > 0 ? ((lastMonthValue - lastMonthRefValue) / lastMonthRefValue) * 100 : 0;
-      const months = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-
-      return (
-          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 mb-8 flex flex-col md:flex-row items-center justify-between animate-in slide-in-from-top-4">
-              <div>
-                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center">
-                      <Activity className="mr-2 text-blue-500" size={16}/> Performance Dernière Clôture Mensuelle
-                  </h3>
-                  <div className="text-2xl font-black text-slate-800">
-                      {months[lastCompletedMonthIdx]} {analysisYear} <span className="text-slate-300 mx-2">vs</span> {refYear}
-                  </div>
-              </div>
-              
-              <div className="flex gap-8 items-center mt-4 md:mt-0">
-                  <div className="text-right">
-                      <div className="text-xs font-bold text-slate-400 uppercase">Référence</div>
-                      <div className="font-mono font-bold text-slate-600 text-lg">{lastMonthRefValue.toLocaleString()} kWh</div>
-                  </div>
-                  <div className="text-right">
-                      <div className="text-xs font-bold text-slate-400 uppercase">Réalisé</div>
-                      <div className="font-mono font-black text-slate-800 text-2xl">{lastMonthValue.toLocaleString()} kWh</div>
-                  </div>
-                  <div className={`px-4 py-2 rounded-xl flex items-center gap-2 font-black text-xl ${diffLastMonth <= 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
-                      {diffLastMonth <= 0 ? <TrendingDown size={24}/> : <TrendingUp size={24}/>}
-                      {diffLastMonth > 0 ? '+' : ''}{diffLastMonth.toFixed(1)}%
-                  </div>
-              </div>
-          </div>
-      );
-  };
-
-  const TrajectoryAnalysis = () => {
-      const currentYear = new Date().getFullYear();
-      // Generate bars from 2018 to 2030
-      const years = Array.from({length: 13}, (_, i) => 2018 + i);
-      
-      return (
-        <div className="bg-white p-6 rounded-xl border border-slate-200 mt-6 shadow-lg">
-             <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-slate-700 flex items-center text-lg"><BarChart3 className="mr-2 text-blue-600"/> Trajectoire & Vision 2030</h3>
-                <div className="flex items-center gap-4 text-sm">
-                    <div className="flex items-center"><div className="w-3 h-3 bg-slate-800 rounded mr-2"></div> Historique</div>
-                    <div className="flex items-center"><div className="w-3 h-3 bg-blue-500 rounded mr-2"></div> Vision</div>
-                    <div className="flex items-center"><div className="w-3 h-3 bg-emerald-400 rounded mr-2"></div> Part Verte</div>
-                </div>
-             </div>
-             
-             <div className="h-64 flex items-end gap-2 px-2 relative">
-                 {years.map((year) => {
-                     const yearData = historyData[activeSiteTab]?.[year] || Array(12).fill(0);
-                     const total = yearData.reduce((a,b)=>a+(parseFloat(b)||0),0);
-                     const max = 600000; // Arbitrary max for scaling visualization
-                     const isFuture = year > currentYear;
-                     
-                     return (
-                         <div key={year} className="flex-1 flex flex-col justify-end gap-1 group relative h-full">
-                             <div className={`w-full rounded-t relative transition-all group-hover:scale-105 origin-bottom 
-                                ${isFuture ? 'bg-blue-100 border-2 border-blue-400 border-dashed opacity-70' : 'bg-slate-800 shadow-lg'}`} 
-                                style={{height: `${Math.min(100, (total/max)*100)}%`}}>
-                                {isFuture && <div className="absolute bottom-0 left-0 w-full bg-emerald-400/50" style={{height: '20%'}}></div>} {/* Mock Green Part */}
-                                <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 bg-black text-white text-[10px] p-1 rounded mb-1 font-bold z-10 whitespace-nowrap">
-                                    {total > 0 ? total.toLocaleString() : 'N/A'}
-                                </div>
-                             </div>
-                             <div className={`text-[10px] text-center font-bold border-t pt-2 ${year === currentYear ? 'text-blue-600' : 'text-slate-400'}`}>{year}</div>
-                         </div>
-                     );
-                 })}
-             </div>
-        </div>
-      );
-  };
-
-  return (
-    <div className="bg-slate-50 min-h-screen pb-10 relative">
-        <header className="bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-xl p-0 sticky top-0 z-40">
-            <div className="max-w-7xl mx-auto px-6 py-3 flex flex-col md:flex-row justify-between items-center">
-                <div className="flex items-center w-full md:w-auto mb-4 md:mb-0">
-                    <button onClick={onBack} className="mr-6 p-2 bg-white/10 rounded-full hover:bg-white/20 transition-all"><ArrowLeft size={24} /></button>
-                    <div>
-                        <h1 className="font-black text-2xl tracking-tight uppercase">Tableau de Bord</h1>
-                        <p className="text-xs text-blue-300 font-bold uppercase tracking-widest">Suivi Performance Énergétique</p>
-                    </div>
-                </div>
-                
-                {/* SITE ACTIF CENTRÉ */}
-                <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-md border border-white/10 px-6 py-2 rounded-2xl items-center shadow-2xl">
-                    <LayoutGrid className="text-emerald-400 mr-3" size={20}/>
-                    <span className="font-black text-lg tracking-wider uppercase">{currentData.name}</span>
-                </div>
-
-                <div className="flex items-center gap-6">
-                    <HeaderInfoDisplay />
-                </div>
-            </div>
-        </header>
-
-        {showHistoryInput && (
-            <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                <div className="bg-white p-6 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl">
-                    <div className="flex justify-between items-center mb-6 pb-4 border-b">
-                        <h3 className="font-black text-xl text-slate-800 flex items-center"><Database className="mr-3 text-blue-600"/> Saisie Historique & Vision - {currentData.name}</h3>
-                        <button onClick={() => setShowHistoryInput(false)} className="p-2 hover:bg-slate-100 rounded-full"><X /></button>
-                    </div>
-                    <div className="overflow-y-auto flex-1 pr-2 space-y-6">
-                        {yearsRange.map(year => (
-                            <div key={year} className={`border rounded-xl overflow-hidden ${year === 'REF' ? 'border-orange-300 ring-4 ring-orange-50 bg-orange-50/20' : 'border-slate-200'}`}>
-                                <div className={`p-3 font-bold text-sm flex justify-between items-center ${year === 'REF' ? 'bg-orange-100 text-orange-900' : 'bg-slate-50 text-slate-700'}`}>
-                                    <span className="flex items-center gap-2">
-                                        {year === 'REF' && <CheckCircle2 size={16}/>}
-                                        {year === 'REF' ? 'ANNÉE DE RÉFÉRENCE' : `ANNÉE ${year}`}
-                                        {year > new Date().getFullYear() && <span className="ml-2 bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] uppercase tracking-wider">Vision Future</span>}
-                                    </span>
-                                    <span className="font-mono bg-white px-2 py-1 rounded shadow-sm">Total: {historyData[activeSiteTab]?.[year]?.reduce((a,b)=>a+(parseFloat(b)||0),0).toLocaleString()} kWh</span>
-                                </div>
-                                <div className="grid grid-cols-6 md:grid-cols-12 gap-px bg-slate-200 border-t border-slate-200">
-                                    {['JAN','FÉV','MAR','AVR','MAI','JUN','JUL','AOÛ','SEP','OCT','NOV','DÉC'].map((m, i) => (
-                                        <div key={i} className="bg-white p-2">
-                                            <label className="text-[9px] font-bold text-slate-400 block mb-1">{m}</label>
-                                            <input type="number" className="w-full text-sm font-bold text-slate-700 outline-none border-b border-transparent focus:border-blue-500 transition-colors placeholder-slate-200" placeholder="-" 
-                                                value={historyData[activeSiteTab]?.[year]?.[i] || ''} 
-                                                onChange={e => handleHistoryChange(year, i, e.target.value)} />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="mt-6 flex justify-end pt-4 border-t">
-                        <button onClick={saveHistory} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-blue-200 transition-all flex items-center">
-                            <Save className="mr-2" size={18}/> Enregistrer les Données
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )}
-
-        <main className="p-6 max-w-7xl mx-auto space-y-8">
-            <ComparisonWidget />
-
-            <div className="flex justify-between items-center border-b border-slate-200 pb-4">
-               <div className="flex gap-2 overflow-x-auto">
-                  {Object.keys(SITES_DATA).map(key => (
-                      <button key={key} onClick={() => setActiveSiteTab(key)} className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all shadow-sm ${activeSiteTab === key ? 'bg-slate-800 text-white shadow-lg scale-105' : 'bg-white text-slate-500 hover:bg-slate-50'}`}>{SITES_DATA[key].name}</button>
-                  ))}
-               </div>
-               <div className="flex items-center gap-2">
-                   <span className="text-xs font-bold text-slate-400 uppercase mr-2">Année de Réf. :</span>
-                   <select className="bg-white border border-slate-200 rounded-lg px-3 py-1 text-sm font-bold text-slate-700 outline-none cursor-pointer hover:border-blue-400 transition-colors" value={refYear} onChange={e => setRefYear(e.target.value)}>
-                        <option value="REF">Standard (REF)</option>
-                        {[2018,2019,2020,2021,2022,2023].map(y => <option key={y} value={y}>{y}</option>)}
-                   </select>
-               </div>
-            </div>
-
-            {/* 1. KPIs VISUELS (REDESIGN) */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                {/* Surface */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-lg shadow-slate-200/50 flex flex-col justify-between group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-10 bg-blue-50 rounded-bl-full -mr-10 -mt-10 opacity-50"></div>
-                    <div className="flex justify-between items-start mb-4 relative z-10">
-                        <div className="p-3 rounded-xl bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors"><Maximize2 size={24} /></div>
-                    </div>
-                    <div className="relative z-10">
-                        <div className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Surface Totale</div>
-                        <div className="text-3xl font-black text-slate-800">{currentData.area.toLocaleString()} <span className="text-sm font-medium text-slate-400">m²</span></div>
-                    </div>
-                </div>
-
-                {/* Sources d'énergie (Liste Verticale) */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-lg shadow-slate-200/50 flex flex-col justify-between group hover:-translate-y-1 transition-all duration-300">
-                    <div className="flex items-center gap-3 mb-4 border-b border-slate-50 pb-2">
-                        <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600"><Zap size={18} /></div>
-                        <span className="text-xs font-bold text-slate-400 uppercase">Sources Énergie</span>
-                    </div>
-                    <div className="space-y-2">
-                        {currentData.energyMix.map((mix, i) => (
-                            <div key={i} className="flex justify-between items-center text-sm font-bold text-slate-700">
-                                <span>{mix.name}</span>
-                                <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-xs">{mix.value}%</span>
-                            </div>
-                        ))}
-                        {activeSiteTab === 'LAC' && (
-                            <div className="flex justify-between items-center text-sm font-bold text-slate-700 animate-in fade-in">
-                                <span>Photovoltaïque</span>
-                                <span className="text-orange-500 bg-orange-50 px-2 py-0.5 rounded text-[9px] uppercase">Dès 2022</span>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Usages Significatifs (Liste Verticale) */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-lg shadow-slate-200/50 flex flex-col justify-between group hover:-translate-y-1 transition-all duration-300">
-                    <div className="flex items-center gap-3 mb-4 border-b border-slate-50 pb-2">
-                        <div className="p-2 rounded-lg bg-amber-50 text-amber-600"><TrendingUp size={18} /></div>
-                        <span className="text-xs font-bold text-slate-400 uppercase">Usages Significatifs</span>
-                    </div>
-                    <div className="space-y-2 overflow-y-auto max-h-[100px] scrollbar-hide">
-                        {currentData.elecUsage.filter(u => u.significant).map((u, i) => (
-                            <div key={i} className="flex items-center text-sm font-bold text-slate-700">
-                                <div className="w-2 h-2 rounded-full bg-amber-400 mr-2"></div>
-                                <span className="truncate">{u.name}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Ratio Global Dynamique */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-lg shadow-slate-200/50 flex flex-col justify-between group hover:-translate-y-1 transition-all duration-300">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 rounded-xl bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors"><Leaf size={24} /></div>
-                        <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-1 rounded">PERFORMANCE</span>
-                    </div>
-                    <div>
-                        <div className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Ratio Global {new Date().getFullYear() - 1}</div>
-                        <div className="text-3xl font-black text-slate-800">{getDynamicRatio()} <span className="text-sm font-medium text-slate-400">kWh/m²</span></div>
-                    </div>
-                </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {/* 2. FICHE TECHNIQUE & TEMPÉRATURE */}
-                <div className="bg-white p-0 rounded-3xl border border-slate-200 overflow-hidden shadow-xl flex flex-col h-full">
-                    <div className="bg-slate-50 p-6 border-b border-slate-100">
-                        <h3 className="font-black text-slate-800 uppercase tracking-tight text-lg flex items-center"><FileText className="mr-2 text-slate-400"/> Fiche Technique</h3>
-                    </div>
-                    <div className="p-6 flex-1 space-y-6">
-                        <div>
-                            <div className="text-xs font-bold text-slate-400 uppercase mb-2">Répartition Surfaces</div>
-                            <div className="space-y-3">
-                                <div className="flex justify-between items-center p-2 bg-slate-50 rounded-lg">
-                                    <span className="text-xs font-bold text-slate-500 uppercase">Totale</span>
-                                    <span className="text-lg font-black text-slate-800">{currentData.area.toLocaleString()} m²</span>
-                                </div>
-                                <div className="grid grid-cols-3 gap-2">
-                                    <div className="bg-slate-50 p-2 rounded-lg text-center">
-                                        <span className="block text-[9px] font-bold text-slate-400 uppercase">Couverte</span>
-                                        <span className="block text-sm font-black text-slate-700">{currentData.covered.toLocaleString()}</span>
-                                    </div>
-                                    <div className="bg-slate-50 p-2 rounded-lg text-center">
-                                        <span className="block text-[9px] font-bold text-slate-400 uppercase">Ouverte</span>
-                                        <span className="block text-sm font-black text-slate-700">{currentData.open.toLocaleString()}</span>
-                                    </div>
-                                    <div className="bg-blue-50 p-2 rounded-lg text-center border border-blue-100">
-                                        <span className="block text-[9px] font-bold text-blue-400 uppercase">Vitrée</span>
-                                        <span className="block text-sm font-black text-blue-800">{currentData.glazed ? currentData.glazed : 0}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="text-xs text-slate-500 bg-slate-50 p-4 rounded-xl border border-slate-100 italic leading-relaxed">
-                            <Info size={14} className="inline mr-1 -mt-0.5 text-slate-400"/>
-                            {currentData.details}
-                        </div>
-                    </div>
-                    
-                    <div className="bg-slate-900 p-6 text-white">
-                        <div className="flex justify-between items-end mb-4">
-                            <div>
-                                <h4 className="text-xs font-bold text-slate-400 uppercase">Température Moyenne (Tunis)</h4>
-                                <div className="text-[10px] text-orange-400 italic mt-1">Obs: Tendance à la hausse (Réchauffement)</div>
-                            </div>
-                        </div>
-                        <div className="flex items-end gap-2 h-24">
-                            {avgTempHistory.map(d => (
-                                <div key={d.year} className="flex-1 flex flex-col justify-end group relative">
-                                    <div className="w-full bg-gradient-to-t from-orange-900 to-orange-500 rounded-t relative transition-all group-hover:to-orange-400" style={{height: `${((d.temp-18)/5)*100}%`}}></div>
-                                    <div className="text-[9px] text-center text-slate-500 mt-1 font-mono">{d.year}</div>
-                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-white text-slate-900 text-[10px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">{d.temp}°</div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-                
-                {/* 3. RÉPARTITION ÉNERGÉTIQUE (AMÉLIORÉE) */}
-                <div className="bg-white p-0 rounded-3xl border border-slate-200 overflow-hidden shadow-xl md:col-span-2 flex flex-col h-full">
-                    <div className="bg-slate-50 p-6 border-b border-slate-100 flex justify-between items-center">
-                        <h3 className="font-black text-slate-800 uppercase tracking-tight text-lg flex items-center"><PieChart className="mr-2 text-slate-400"/> Répartition & Indicateurs</h3>
-                        <span className="text-xs font-bold bg-white border border-slate-200 px-3 py-1 rounded-full text-slate-500">Année 2024</span>
-                    </div>
-                    <div className="p-8 space-y-6 flex-1">
-                        {currentData.elecUsage.map((u, i) => (
-                            <div key={i} className="group">
-                                <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-3">
-                                        {u.significant ? 
-                                            <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shadow-sm"><Check size={16}/></div> : 
-                                            <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center"><MinusIcon size={16}/></div>
-                                        }
-                                        <div>
-                                            <div className="text-sm font-bold text-slate-800 flex items-center">
-                                                {u.name}
-                                                {u.significant && <span className="ml-2 px-2 py-0.5 rounded text-[9px] bg-emerald-50 text-emerald-600 uppercase font-black tracking-wider">UES</span>}
-                                            </div>
-                                            {/* Affichage Ratio Amélioré */}
-                                            {u.significant && u.kpi !== '-' && (
-                                                <div className="text-xs font-medium text-slate-500 mt-0.5 flex items-center">
-                                                    Ratio Performance : <span className="font-mono font-bold text-slate-700 ml-1">{u.kpi}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="text-xl font-black text-slate-800">{u.value}%</div>
-                                    </div>
-                                </div>
-                                <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden mb-3">
-                                    <div className={`h-full rounded-full shadow-sm ${u.name.includes('Gaz') ? 'bg-gradient-to-r from-orange-500 to-orange-400' : 'bg-gradient-to-r from-blue-600 to-blue-400'}`} style={{width: `${u.value}%`}}></div>
-                                </div>
-                                
-                                {/* Sous-détails (Drill-down visuel) */}
-                                {u.subDetails && (
-                                    <div className="ml-11 mt-2 p-3 bg-slate-50 rounded-xl border border-slate-100 grid grid-cols-3 gap-2 animate-in slide-in-from-top-1">
-                                        {u.subDetails.map((sub, idx) => (
-                                            <div key={idx} className="text-center bg-white p-2 rounded border border-slate-100">
-                                                <div className="text-[9px] font-bold text-slate-400 uppercase truncate mb-1" title={sub.name}>{sub.name}</div>
-                                                <div className="text-sm font-black text-slate-700">{sub.val}</div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-            
-            {/* 4. TRAJECTOIRE */}
-            <TrajectoryAnalysis />
-        </main>
-
-        {/* Floating Action Button (Admin Only) */}
-        {userRole === 'ADMIN' && (
-            <button onClick={() => { initHistory(activeSiteTab); setShowHistoryInput(true); }} className="fixed bottom-8 right-8 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-2xl z-50 transition-transform hover:scale-110 flex items-center justify-center group">
-                <Database size={24} />
-                <span className="absolute right-full mr-4 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Saisie Historique</span>
-            </button>
-        )}
-
-        {notif && <div className="fixed bottom-6 left-6 px-6 py-4 bg-emerald-600 text-white rounded-xl shadow-xl z-50">{notif}</div>}
-    </div>
-  );
-};
-
-// Helper Icon
-function MinusIcon(props) { return <div {...props} className="w-2 h-0.5 bg-current rounded-full"></div> }
-
-// ==================================================================================
-// 6. MODULE ADMINISTRATION (NEW - To fix missing component)
+// 7. MODULE ADMINISTRATION
 // ==================================================================================
 const AdminPanel = ({ onBack }) => {
     const [users, setUsers] = useState([]);
     const [newUser, setNewUser] = useState({ username: '', password: '', role: 'EQUIPE_ENERGIE' });
     const [loading, setLoading] = useState(false);
-    const [confirmDelete, setConfirmDelete] = useState(null); // ID de l'utilisateur à confirmer
+    const [confirmDelete, setConfirmDelete] = useState(null);
 
     useEffect(() => {
         const q = query(getCollection('users'));
@@ -1764,7 +1210,7 @@ const AdminPanel = ({ onBack }) => {
             }
         } else {
             setConfirmDelete(id);
-            setTimeout(() => setConfirmDelete(null), 3000); // Annule après 3s
+            setTimeout(() => setConfirmDelete(null), 3000);
         }
     };
 
@@ -1773,12 +1219,13 @@ const AdminPanel = ({ onBack }) => {
             <header className="max-w-4xl mx-auto mb-8 flex items-center justify-between">
                  <div className="flex items-center">
                     <button onClick={onBack} className="mr-4 p-2 bg-white rounded-full shadow hover:bg-slate-50"><ArrowLeft size={20} /></button>
-                    <h1 className="text-2xl font-black text-slate-800">Administration Utilisateurs</h1>
+                    <BrandLogo size="h-8"/>
+                    <h1 className="text-2xl font-black text-slate-800 ml-4">Administration</h1>
                  </div>
             </header>
             <main className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
-                    <h2 className="font-bold text-lg mb-4 flex items-center"><PlusCircle className="mr-2 text-blue-600"/> Ajouter Utilisateur</h2>
+                    <h2 className="font-bold text-lg mb-4 flex items-center text-blue-900"><PlusCircle className="mr-2"/> Ajouter Utilisateur</h2>
                     <form onSubmit={handleAddUser} className="space-y-4">
                         <div>
                             <label className="block text-xs font-bold text-slate-500 mb-1">Nom d'utilisateur</label>
@@ -1796,19 +1243,19 @@ const AdminPanel = ({ onBack }) => {
                                 <option value="DIRECTION">Direction (Visuel Uniquement)</option>
                             </select>
                         </div>
-                        <button disabled={loading} className="w-full bg-blue-600 text-white py-2 rounded font-bold hover:bg-blue-700">{loading ? '...' : 'Ajouter'}</button>
+                        <button disabled={loading} className="w-full bg-blue-900 text-white py-2 rounded font-bold hover:bg-blue-800">{loading ? '...' : 'Ajouter'}</button>
                     </form>
                 </div>
                 
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <h2 className="font-bold text-lg mb-4 flex items-center"><Users className="mr-2 text-slate-600"/> Liste Utilisateurs ({users.length})</h2>
+                    <h2 className="font-bold text-lg mb-4 flex items-center text-slate-700"><Users className="mr-2"/> Liste Utilisateurs ({users.length})</h2>
                     <div className="space-y-2 max-h-[400px] overflow-y-auto">
                         {users.map(u => (
                             <div key={u.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-slate-50 group">
                                 <div>
                                     <div className="font-bold">{u.username}</div>
                                     <div className={`text-[10px] px-2 py-0.5 rounded w-fit uppercase font-bold 
-                                        ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 
+                                        ${u.role === 'ADMIN' ? 'bg-red-100 text-red-700' : 
                                           u.role === 'DIRECTION' ? 'bg-amber-100 text-amber-700' : 
                                           'bg-blue-100 text-blue-700'}`}>
                                         {u.role === 'ADMIN' ? 'Admin' : u.role === 'DIRECTION' ? 'Direction' : 'Équipe'}
@@ -1822,13 +1269,602 @@ const AdminPanel = ({ onBack }) => {
                                 </button>
                             </div>
                         ))}
-                        {users.length === 0 && <div className="text-center text-slate-400 text-sm italic py-4">Aucun utilisateur configuré</div>}
                     </div>
                 </div>
             </main>
         </div>
     );
 };
+
+// ==================================================================================
+// 5. MODULE TABLEAU DE BORD SITES (CHARTE ITALCAR) - REFACTORED
+// ==================================================================================
+
+const SitesDashboard = ({ onBack, userRole }) => {
+  const [activeSiteTab, setActiveSiteTab] = useState('MEGRINE');
+  const [historyData, setHistoryData] = useState({});
+  const [showHistoryInput, setShowHistoryInput] = useState(false);
+  const [showReport, setShowReport] = useState(false);
+  const [notif, setNotif] = useState(null);
+  
+  // NOUVEAU: State pour la vision (Projection)
+  const [visionSettings, setVisionSettings] = useState({ reductionRate: 5, greenRate: 2 }); // % annuel
+
+  const avgTempHistory = [
+      { year: 2018, temp: 19.4 }, { year: 2019, temp: 19.6 }, { year: 2020, temp: 19.9 },
+      { year: 2021, temp: 20.3 }, { year: 2022, temp: 20.8 }, { year: 2023, temp: 21.2 }, 
+      { year: 2024, temp: 21.5 }, { year: 2025, temp: 21.8 }
+  ];
+  
+  // Années historiques + Futures
+  const yearsRange = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025];
+  const refYear = 2023; // Année de référence fixe pour le widget
+
+  useEffect(() => {
+    getDocs(getCollection('site_history')).then(snap => {
+        const data = {};
+        snap.forEach(doc => {
+            const [site, year] = doc.id.split('_');
+            if(!data[site]) data[site] = {};
+            data[site][year] = doc.data();
+        });
+        setHistoryData(prev => ({...prev, ...data}));
+    });
+  }, []);
+
+  const initHistory = (site) => {
+      if (!historyData[site]) {
+          const newData = {};
+          yearsRange.forEach(y => {
+             if (site === 'LAC') {
+                 newData[y] = { grid: Array(12).fill(''), pv: Array(12).fill(''), export: Array(12).fill('') };
+             } else {
+                 newData[y] = { months: Array(12).fill('') };
+             }
+          });
+          setHistoryData(prev => ({...prev, [site]: newData}));
+      }
+  };
+
+  const SITES_DATA = {
+    MEGRINE: { 
+        name: "Mégrine", 
+        area: 32500, covered: 30000, open: 2500, glazed: 365,
+        details: "Showroom 1000m² • Atelier FIAT 10000m² • Atelier IVECO 9000m² • ITALCAR Gros 10000m²", 
+        energyMix: [{ name: "Électricité", value: 97, color: "bg-blue-900" }, { name: "Gaz", value: 3, color: "bg-orange-500" }], 
+        elecUsage: [
+            { name: "Clim/Chauffage", value: 40, kpi: "kWh/m²", significant: true }, 
+            { name: "Éclairage", value: 27, kpi: "kWh/m²", significant: true }, 
+            { name: "Air Comprimé", value: 17, kpi: "kWh/Nm³", significant: true, subDetails: [{n: "Equipements", v: "40%"}, {n: "Récup. Huile", v: "30%"}, {n: "Gonflage", v: "30%"}] }, 
+            { name: "Informatique", value: 8, kpi: "-", significant: false }, 
+            { name: "Services", value: 5, kpi: "-", significant: false }, 
+            { name: "Gaz (Primaire)", value: 3, kpi: "kWh/Véhicule", significant: false } 
+        ] 
+    },
+    ELKHADHRA: { 
+        name: "El Khadhra", 
+        area: 9500, covered: 7000, open: 2500, glazed: 40,
+        details: "Réception 1000m² • Atelier FIAT 3000m² • ITALCAR Gros 3000m²", 
+        energyMix: [{ name: "Électricité", value: 100, color: "bg-blue-900" }], 
+        elecUsage: [
+            { name: "Clim/Chauffage", value: 61, kpi: "kWh/m²", significant: true }, 
+            { name: "Éclairage", value: 23, kpi: "kWh/m²", significant: true }, 
+            { name: "Air Comprimé", value: 6, kpi: "kWh/Nm³", significant: false }, 
+            { name: "Informatique", value: 5, kpi: "-", significant: false }, 
+            { name: "Services", value: 5, kpi: "-", significant: false }
+        ] 
+    },
+    NAASSEN: { 
+        name: "Naassen", 
+        area: 32500, covered: 1820, open: 30680, glazed: 0,
+        details: "Admin 920m² • Atelier 900m² • Parc Neuf 30680m²", 
+        energyMix: [{ name: "Électricité", value: 100, color: "bg-blue-900" }], 
+        elecUsage: [
+            { name: "Éclairage (80% Ext)", value: 78, kpi: "kWh/m²", significant: true }, 
+            { name: "Clim/Chauffage", value: 14, kpi: "kWh/m²", significant: false }, 
+            { name: "Air Comprimé", value: 5, kpi: "kWh/Nm³", significant: false }, 
+            { name: "Services", value: 2, kpi: "-", significant: false }, 
+            { name: "Informatique", value: 1, kpi: "-", significant: false }
+        ] 
+    },
+    LAC: { 
+        name: "Lac", 
+        area: 2050, covered: 850, open: 1200, glazed: 116,
+        details: "Showroom 850m² • Espace Ouvert 1200m²", 
+        energyMix: [], // Dynamic
+        elecUsage: [
+            { name: "Éclairage (60% Int)", value: 58, kpi: "kWh/m²", significant: true }, 
+            { name: "Clim/Chauffage", value: 36, kpi: "kWh/m²", significant: true }, 
+            { name: "Informatique", value: 3, kpi: "-", significant: false }, 
+            { name: "Services", value: 3, kpi: "-", significant: false }
+        ] 
+    },
+    CARTHAGE: {
+        name: "Rue de Carthage",
+        area: 1200, covered: 1200, open: 0, glazed: 50,
+        details: "Siège Social • Bureaux",
+        energyMix: [{ name: "Électricité", value: 100, color: "bg-blue-900" }],
+        elecUsage: [
+            { name: "Clim/Chauffage", value: 65, kpi: "kWh/m²", significant: true },
+            { name: "Éclairage", value: 25, kpi: "kWh/m²", significant: true },
+            { name: "Informatique", value: 10, kpi: "-", significant: true }
+        ]
+    },
+    AZUR: {
+        name: "Azur City",
+        area: 800, covered: 800, open: 0, glazed: 80,
+        details: "Showroom Commercial",
+        energyMix: [{ name: "Électricité", value: 100, color: "bg-blue-900" }],
+        elecUsage: [
+            { name: "Eclairage", value: 60, kpi: "kWh/m²", significant: true },
+            { name: "Clim", value: 35, kpi: "kWh/m²", significant: true },
+            { name: "Services", value: 5, kpi: "-", significant: false }
+        ]
+    }
+  };
+  
+  const currentData = SITES_DATA[activeSiteTab];
+
+  const getMonthsData = (site, year, type = 'grid') => {
+      const yearData = historyData[site]?.[year];
+      if (!yearData) return Array(12).fill('');
+      if (site === 'LAC') {
+          return yearData[type] || Array(12).fill('');
+      }
+      return yearData.months || Array(12).fill('');
+  };
+
+  const handleHistoryChange = (year, monthIdx, val, type = 'months') => {
+      setHistoryData(prev => {
+          const siteData = prev[activeSiteTab];
+          const yearData = siteData[year] || {};
+          let updatedYearData;
+          if (activeSiteTab === 'LAC') {
+              const currentArray = yearData[type] ? [...yearData[type]] : Array(12).fill('');
+              currentArray[monthIdx] = val;
+              updatedYearData = { ...yearData, [type]: currentArray };
+          } else {
+              const currentArray = yearData.months ? [...yearData.months] : Array(12).fill('');
+              currentArray[monthIdx] = val;
+              updatedYearData = { ...yearData, months: currentArray };
+          }
+          return { ...prev, [activeSiteTab]: { ...siteData, [year]: updatedYearData } }
+      });
+  };
+
+  const saveHistory = async () => {
+      const site = activeSiteTab;
+      if (!historyData[site]) return;
+      try {
+        for (const year of Object.keys(historyData[site])) {
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'site_history', `${site}_${year}`), historyData[site][year]);
+        }
+        setNotif("Historique sauvegardé");
+        setShowHistoryInput(false);
+      } catch(e) { console.error(e); setNotif("Erreur"); }
+      setTimeout(() => setNotif(null), 3000);
+  };
+
+  // --- LOGIC LAC MIX ---
+  const lacEnergyMix = useMemo(() => {
+      if (activeSiteTab !== 'LAC') return currentData.energyMix;
+      const year = new Date().getFullYear() - 1; 
+      const grid = getMonthsData('LAC', year, 'grid').reduce((a,b)=>a+(parseFloat(b)||0),0);
+      const pv = getMonthsData('LAC', year, 'pv').reduce((a,b)=>a+(parseFloat(b)||0),0);
+      const exp = getMonthsData('LAC', year, 'export').reduce((a,b)=>a+(parseFloat(b)||0),0);
+      const selfConsumed = Math.max(0, pv - exp);
+      const totalConsumed = grid + selfConsumed;
+      if (totalConsumed === 0) return [{ name: "Réseau STEG", value: 100, color: "bg-blue-900" }];
+      const pvPercent = Math.round((selfConsumed / totalConsumed) * 100);
+      return [
+          { name: "Réseau STEG", value: 100 - pvPercent, color: "bg-blue-900" },
+          { name: "Solaire PV (Autocons.)", value: pvPercent, color: "bg-orange-500" }
+      ];
+  }, [activeSiteTab, historyData]);
+
+  // --- WIDGET PERFORMANCE ---
+  const PerformanceWidget = () => {
+      // Nous sommes le 23 Décembre 2025 -> Mois précédent clôturé = Novembre (Index 10)
+      const currentMonthIndex = 10; 
+      const currentYear = 2025; // Année simulée
+      
+      const currentMonthData = getMonthsData(activeSiteTab, currentYear, 'grid')[currentMonthIndex];
+      const refMonthData = getMonthsData(activeSiteTab, refYear, 'grid')[currentMonthIndex];
+      
+      const currentVal = parseFloat(currentMonthData) || 0;
+      const refVal = parseFloat(refMonthData) || 0;
+      
+      const diff = refVal > 0 ? ((currentVal - refVal) / refVal) * 100 : 0;
+      const isGood = diff <= 0;
+
+      return (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6 flex flex-col md:flex-row items-center justify-between animate-in slide-in-from-top-4">
+              <div className="flex items-center gap-4">
+                  <div className={`p-3 rounded-full ${isGood ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                      {isGood ? <TrendingDown size={24}/> : <TrendingUp size={24}/>}
+                  </div>
+                  <div>
+                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Performance Dernière Clôture</h3>
+                      <div className="font-black text-slate-800 text-lg">Novembre {currentYear} <span className="text-slate-400 font-normal">vs</span> Nov. {refYear}</div>
+                  </div>
+              </div>
+              
+              <div className="flex gap-8 mt-4 md:mt-0 text-center md:text-right">
+                  <div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase">Référence</div>
+                      <div className="font-mono font-bold text-slate-600">{refVal.toLocaleString()} kWh</div>
+                  </div>
+                  <div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase">Réalisé</div>
+                      <div className="font-mono font-black text-slate-800">{currentVal.toLocaleString()} kWh</div>
+                  </div>
+                  <div className={`flex items-center font-black text-xl ${isGood ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {diff > 0 ? '+' : ''}{diff.toFixed(1)}%
+                  </div>
+              </div>
+          </div>
+      );
+  };
+
+  // --- TRAJECTOIRE CHART ---
+  const TrajectoryChart = () => {
+      // 1. Get History Totals
+      const historyTotals = yearsRange.map(y => {
+          const data = getMonthsData(activeSiteTab, y, activeSiteTab === 'LAC' ? 'grid' : 'months');
+          return data.reduce((a,b)=>a+(parseFloat(b)||0),0);
+      });
+
+      // 2. Project Future (2025 -> 2030)
+      const lastKnown = historyTotals[historyTotals.length - 1] || 50000; // Fallback
+      const futureYears = [2026, 2027, 2028, 2029, 2030];
+      const futureData = futureYears.map((y, i) => {
+          const reductionFactor = Math.pow(1 - (visionSettings.reductionRate / 100), i + 1);
+          return lastKnown * reductionFactor;
+      });
+
+      const maxVal = Math.max(...historyTotals, ...futureData) * 1.1;
+
+      return (
+          <div className="bg-slate-900 rounded-xl shadow-lg p-6 text-white overflow-hidden relative">
+              <div className="flex justify-between items-start mb-6 relative z-10">
+                  <div>
+                      <h3 className="font-bold text-white uppercase tracking-wider text-xs mb-1">Trajectoire & Vision</h3>
+                      <p className="text-slate-400 text-xs">Historique 2018-2025 et Projection 2030</p>
+                  </div>
+                  <div className="flex gap-4 text-right">
+                      <div>
+                          <div className="text-[9px] text-slate-400 uppercase">Obj. Réduction</div>
+                          <div className="font-bold text-emerald-400">-{visionSettings.reductionRate}% / an</div>
+                      </div>
+                      <div>
+                          <div className="text-[9px] text-slate-400 uppercase">Part Verte (Vision)</div>
+                          <div className="font-bold text-emerald-400">+{visionSettings.greenRate}% / an</div>
+                      </div>
+                  </div>
+              </div>
+
+              {/* Chart */}
+              <div className="flex items-end gap-1 h-48 relative z-10">
+                  {/* History Bars */}
+                  {historyTotals.map((val, i) => (
+                      <div key={i} className="flex-1 flex flex-col justify-end group">
+                          <div className="w-full bg-blue-600/80 hover:bg-blue-500 rounded-t relative transition-all" style={{height: `${(val/maxVal)*100}%`}}>
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 text-[9px] opacity-0 group-hover:opacity-100 bg-white text-slate-900 px-1 rounded font-bold">{Math.round(val/1000)}k</div>
+                          </div>
+                          <div className="text-[9px] text-slate-500 text-center mt-1 border-t border-slate-700 pt-1">{yearsRange[i]}</div>
+                      </div>
+                  ))}
+                  {/* Future Bars */}
+                  {futureData.map((val, i) => (
+                      <div key={i} className="flex-1 flex flex-col justify-end group">
+                          <div className="w-full bg-emerald-500/30 hover:bg-emerald-500/60 border-t-2 border-emerald-500 border-dashed rounded-t relative transition-all" style={{height: `${(val/maxVal)*100}%`}}>
+                               {/* Part verte viz */}
+                               <div className="absolute bottom-0 left-0 w-full bg-emerald-500" style={{height: `${Math.min(100, (i+1)*visionSettings.greenRate)}%`}}></div>
+                          </div>
+                          <div className="text-[9px] text-emerald-500/70 text-center mt-1 border-t border-slate-700 pt-1 font-bold">{futureYears[i]}</div>
+                      </div>
+                  ))}
+              </div>
+              
+              {/* Inputs Vision */}
+              {userRole === 'ADMIN' && (
+                  <div className="mt-4 pt-4 border-t border-slate-700 flex gap-4 text-xs">
+                      <label className="flex items-center gap-2">
+                          <span className="text-slate-400">Vision Réduction:</span>
+                          <input type="number" value={visionSettings.reductionRate} onChange={e => setVisionSettings({...visionSettings, reductionRate: e.target.value})} className="bg-slate-800 border border-slate-600 rounded w-12 px-1 text-center text-white font-bold"/>
+                          <span className="text-slate-500">%</span>
+                      </label>
+                      <label className="flex items-center gap-2">
+                          <span className="text-slate-400">Vision Verte:</span>
+                          <input type="number" value={visionSettings.greenRate} onChange={e => setVisionSettings({...visionSettings, greenRate: e.target.value})} className="bg-slate-800 border border-slate-600 rounded w-12 px-1 text-center text-white font-bold"/>
+                          <span className="text-slate-500">%</span>
+                      </label>
+                  </div>
+              )}
+          </div>
+      );
+  };
+
+  // --- SVG TEMPERATURE CHART ---
+  const TempChart = () => {
+      const height = 100;
+      const width = 300;
+      const minTemp = 18;
+      const maxTemp = 23;
+      const points = avgTempHistory.map((d, i) => {
+          const x = (i / (avgTempHistory.length - 1)) * width;
+          const y = height - ((d.temp - minTemp) / (maxTemp - minTemp)) * height;
+          return `${x},${y}`;
+      }).join(' ');
+
+      return (
+        <div className="relative h-32 w-full">
+            <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
+                <defs>
+                    <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#f97316" stopOpacity="0.4"/>
+                        <stop offset="100%" stopColor="#f97316" stopOpacity="0"/>
+                    </linearGradient>
+                </defs>
+                <path d={`M0,${height} ${points} L${width},${height} Z`} fill="url(#tempGradient)" />
+                <polyline fill="none" stroke="#f97316" strokeWidth="3" points={points} strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+        </div>
+      );
+  };
+
+  return (
+    <div className="bg-slate-50 min-h-screen pb-20 relative font-sans text-slate-600">
+        <header className="bg-white/80 backdrop-blur-md sticky top-0 z-40 border-b border-slate-200">
+            <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center">
+                <div className="flex items-center gap-4">
+                    <button onClick={onBack} className="p-2 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors text-slate-600"><ArrowLeft size={20} /></button>
+                    <div>
+                        <h1 className="font-bold text-xl text-slate-800 tracking-tight">DASHBOARD ÉNERGIE</h1>
+                        <p className="text-xs text-slate-400 font-medium">Vision Globale & Performance</p>
+                    </div>
+                </div>
+                
+                {/* SELECTEUR DE SITE */}
+                <div className="flex bg-white rounded-full shadow-sm border border-slate-200 p-1.5 gap-1 mt-4 md:mt-0 overflow-x-auto max-w-full">
+                    {Object.keys(SITES_DATA).map(key => (
+                        <button 
+                            key={key} 
+                            onClick={() => setActiveSiteTab(key)} 
+                            className={`px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center whitespace-nowrap
+                            ${activeSiteTab === key 
+                                ? 'bg-blue-900 text-white shadow-md' 
+                                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
+                        >
+                            {activeSiteTab === key && <CheckCircle2 size={12} className="mr-2"/>}
+                            {SITES_DATA[key].name}
+                        </button>
+                    ))}
+                </div>
+            </div>
+        </header>
+
+        {showHistoryInput && (
+            <div className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+                    <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                        <div>
+                            <h3 className="font-bold text-lg text-slate-800 flex items-center"><Database className="mr-2 text-blue-900"/> Saisie Historique - {currentData.name}</h3>
+                        </div>
+                        <button onClick={() => setShowHistoryInput(false)} className="p-2 hover:bg-slate-200 rounded-full text-slate-500"><X size={20}/></button>
+                    </div>
+                    
+                    <div className="overflow-y-auto flex-1 p-6 space-y-8">
+                        {yearsRange.map(year => (
+                            <div key={year} className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-slate-700 text-sm">{year}</span>
+                                    <div className="h-px bg-slate-100 flex-1"></div>
+                                </div>
+                                {activeSiteTab === 'LAC' ? (
+                                    <div className="space-y-2 pl-4 border-l-2 border-slate-100">
+                                        <HistoryRow label="Conso. Réseau" color="text-slate-600" data={getMonthsData('LAC', year, 'grid')} onChange={(idx, val) => handleHistoryChange(year, idx, val, 'grid')} />
+                                        <HistoryRow label="Prod. PV" color="text-orange-500" data={getMonthsData('LAC', year, 'pv')} onChange={(idx, val) => handleHistoryChange(year, idx, val, 'pv')} />
+                                        <HistoryRow label="Export STEG" color="text-blue-500" data={getMonthsData('LAC', year, 'export')} onChange={(idx, val) => handleHistoryChange(year, idx, val, 'export')} />
+                                    </div>
+                                ) : (
+                                    <div className="pl-4 border-l-2 border-slate-100">
+                                        <HistoryRow label="Consommation" color="text-slate-600" data={getMonthsData(activeSiteTab, year, 'months')} onChange={(idx, val) => handleHistoryChange(year, idx, val, 'months')} />
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                    <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+                        <button onClick={saveHistory} className="bg-blue-900 hover:bg-blue-800 text-white px-6 py-2 rounded-lg font-bold shadow-lg transition-all flex items-center">
+                            <Save className="mr-2" size={18}/> Enregistrer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* MODALE RAPPORT (PRINT MOCKUP) */}
+        {showReport && (
+            <div className="fixed inset-0 bg-white z-[60] overflow-auto p-8">
+                <div className="max-w-[21cm] mx-auto border border-slate-200 shadow-2xl p-12 min-h-[29.7cm] bg-white relative">
+                    <button onClick={() => setShowReport(false)} className="absolute top-4 right-4 no-print bg-slate-100 p-2 rounded-full"><X/></button>
+                    <div className="flex justify-between items-center mb-8 border-b-2 border-blue-900 pb-4">
+                        <BrandLogo size="h-12"/>
+                        <div className="text-right">
+                            <h1 className="text-2xl font-black text-blue-900 uppercase">Rapport Mensuel Énergie</h1>
+                            <p className="text-slate-500 text-sm">Site : {currentData.name} • Décembre 2025</p>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-8 mb-8">
+                        <div className="bg-slate-50 p-4 border border-slate-200">
+                            <h3 className="font-bold text-blue-900 mb-2">Synthèse Consommation</h3>
+                            <div className="text-3xl font-black text-slate-800">45,230 <span className="text-sm font-normal text-slate-500">kWh</span></div>
+                            <div className="text-sm text-emerald-600 font-bold mt-1">-4.2% vs N-1</div>
+                        </div>
+                        <div className="bg-slate-50 p-4 border border-slate-200">
+                            <h3 className="font-bold text-blue-900 mb-2">Indicateurs Clés</h3>
+                            <div className="text-sm space-y-1">
+                                <div className="flex justify-between"><span>Ratio Surf.</span><strong>54 kWh/m²</strong></div>
+                                <div className="flex justify-between"><span>Coût Est.</span><strong>12,400 DT</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="border rounded p-4 mb-8 h-64 flex items-center justify-center bg-slate-50 text-slate-400">
+                        [Graphique Evolution Annuelle - Espace Réservé Impression]
+                    </div>
+                    <div className="text-center text-slate-400 text-xs mt-auto pt-12">
+                        Généré automatiquement par SmartEnergyManager - ITALCAR SA
+                    </div>
+                </div>
+            </div>
+        )}
+
+        <main className="max-w-7xl mx-auto p-6 space-y-8 animate-in fade-in duration-500">
+            <PerformanceWidget />
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                 {/* MIX ÉNERGÉTIQUE */}
+                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center col-span-2">
+                    <div className="flex items-center gap-2 mb-4 text-blue-900 border-b border-slate-50 pb-2">
+                        <Zap size={18}/>
+                        <span className="text-xs font-bold uppercase tracking-wider">Mix Énergétique & PV</span>
+                    </div>
+                    <div className="space-y-4">
+                        {(activeSiteTab === 'LAC' ? lacEnergyMix : currentData.energyMix).map((mix, i) => (
+                            <div key={i}>
+                                <div className="flex justify-between text-sm font-bold text-slate-700 mb-1">
+                                    <span>{mix.name}</span>
+                                    <span>{mix.value}%</span>
+                                </div>
+                                <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
+                                    <div className={`h-full ${mix.color}`} style={{width: `${mix.value}%`}}></div>
+                                </div>
+                            </div>
+                        ))}
+                        {activeSiteTab === 'LAC' && (
+                            <div className="flex justify-between items-center text-xs bg-orange-50 p-2 rounded border border-orange-100 text-orange-800">
+                                <span>Export vers STEG (Excédent)</span>
+                                <span className="font-bold">12% de la Prod.</span>
+                            </div>
+                        )}
+                    </div>
+                 </div>
+
+                 {/* Ratio Global */}
+                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center col-span-2">
+                    <div className="flex items-center gap-2 mb-2 text-red-600">
+                        <Activity size={20}/>
+                        <span className="text-xs font-bold uppercase tracking-wider">Ratio Global 2024</span>
+                    </div>
+                    <div className="text-3xl font-black text-slate-800">
+                        {activeSiteTab === 'MEGRINE' ? '54.2' : activeSiteTab === 'LAC' ? '128.4' : '--'}
+                        <span className="text-sm font-medium text-slate-400 ml-1">kWh/m²</span>
+                    </div>
+                    <div className="text-xs font-bold text-emerald-600 mt-1 flex items-center">
+                        <TrendingDown size={14} className="mr-1"/> Objectif 2025 : -5%
+                    </div>
+                 </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* FICHE TECHNIQUE & TEMP (SPLIT SCREEN) */}
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div className="text-xs font-bold text-slate-400 uppercase mb-2">Surface Totale</div>
+                        <div className="text-2xl font-black text-blue-900">{currentData.area.toLocaleString()} m²</div>
+                        <div className="mt-2 space-y-1">
+                            <div className="flex justify-between text-[10px] text-slate-500"><span>Couverte</span><b>{currentData.covered}</b></div>
+                            <div className="flex justify-between text-[10px] text-slate-500"><span>Vitrée</span><b>{currentData.glazed}</b></div>
+                        </div>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                        <div className="text-xs font-bold text-slate-400 uppercase mb-2">Temp. Moyenne</div>
+                        <TempChart />
+                        <div className="text-[10px] text-center text-slate-400 mt-1">Tunis (Annuel)</div>
+                    </div>
+                </div>
+
+                {/* USAGES SIGNIFICATIFS (UES) */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-bold text-slate-700 uppercase tracking-wider text-xs flex items-center"><PieChart className="mr-2"/> Répartition (UES)</h3>
+                        {currentData.elecUsage.some(u => u.name.includes('Gaz')) && <span className="text-[9px] bg-orange-100 text-orange-700 px-2 py-1 rounded">Gaz inclus (Faible part)</span>}
+                    </div>
+                    <div className="space-y-4">
+                        {currentData.elecUsage.map((u, i) => (
+                            <div key={i} className="group">
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className={`text-sm ${u.significant ? 'font-bold text-slate-800' : 'text-slate-500'}`}>{u.name}</span>
+                                    <span className="font-bold text-slate-800">{u.value}%</span>
+                                </div>
+                                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-1">
+                                    <div className={`h-full ${u.significant ? 'bg-blue-900' : 'bg-slate-300'}`} style={{width: `${u.value}%`}}></div>
+                                </div>
+                                {/* Sous-détails (ex: Air Comprimé) */}
+                                {u.subDetails && (
+                                    <div className="flex gap-2 mt-1 ml-2">
+                                        {u.subDetails.map((sub, idx) => (
+                                            <div key={idx} className="bg-slate-50 px-2 py-0.5 rounded border border-slate-100 text-[9px] text-slate-500">
+                                                {sub.n}: <b>{sub.v}</b>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* TRAJECTOIRE */}
+            <TrajectoryChart />
+        </main>
+
+        {/* FABs */}
+        <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-50">
+            {userRole === 'ADMIN' && (
+                <button onClick={() => { initHistory(activeSiteTab); setShowHistoryInput(true); }} className="bg-slate-800 hover:bg-slate-700 text-white p-4 rounded-full shadow-lg shadow-slate-400 transition-transform hover:scale-110 group relative">
+                    <Database size={20} />
+                    <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none">Historique</span>
+                </button>
+            )}
+            <button onClick={() => setShowReport(true)} className="bg-blue-900 hover:bg-blue-800 text-white p-4 rounded-full shadow-xl shadow-blue-300 transition-transform hover:scale-110 group relative">
+                <Printer size={24} />
+                <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-blue-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none">Rapport Mensuel</span>
+            </button>
+        </div>
+
+        {notif && <div className="fixed bottom-6 left-6 px-6 py-4 bg-emerald-600 text-white rounded-xl shadow-xl z-50 font-bold flex items-center"><CheckCircle2 className="mr-2"/> {notif}</div>}
+    </div>
+  );
+};
+
+// Sub-component for Tech Card
+const TechCard = ({ label, value, icon, color, bg }) => (
+    <div className={`p-4 rounded-xl border border-slate-100 ${bg} bg-opacity-30 flex flex-col items-center text-center transition-transform hover:scale-105`}>
+        <div className={`p-2 rounded-full bg-white shadow-sm mb-2 ${color}`}>{icon}</div>
+        <div className="text-[10px] font-bold text-slate-600 uppercase tracking-wide">{label}</div>
+        <div className="text-xl font-black text-slate-800">{value.toLocaleString()}</div>
+    </div>
+);
+
+// Sub-component for History Row
+const HistoryRow = ({ label, color, data, onChange }) => (
+    <div className="flex items-center gap-2 overflow-x-auto pb-2">
+        <div className={`w-32 flex-shrink-0 text-[10px] font-bold uppercase ${color}`}>{label}</div>
+        {data.map((val, idx) => (
+            <input 
+                key={idx} 
+                type="number" 
+                placeholder={['J','F','M','A','M','J','J','A','S','O','N','D'][idx]}
+                className="w-12 p-1 text-center text-xs border border-slate-200 rounded focus:border-blue-900 outline-none font-mono"
+                value={val}
+                onChange={(e) => onChange(idx, e.target.value)}
+            />
+        ))}
+    </div>
+);
 
 // ==================================================================================
 // APPLICATION RACINE & NAVIGATION
@@ -1842,46 +1878,79 @@ const MainDashboard = ({ user, onNavigate, onLogout }) => {
       return false;
   };
 
-  return (
-    <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-            <div className="absolute top-10 left-10 w-64 h-64 bg-blue-500 rounded-full blur-[100px]"></div>
-            <div className="absolute bottom-10 right-10 w-96 h-96 bg-emerald-500 rounded-full blur-[120px]"></div>
-        </div>
+  const getGreeting = () => {
+      const hour = new Date().getHours();
+      if (hour < 12) return "Bonjour";
+      if (hour < 18) return "Bonne après-midi";
+      return "Bonsoir";
+  };
 
-        <div className="z-10 w-full max-w-6xl flex justify-between items-center mb-12">
-            <div>
-                <h1 className="text-4xl md:text-5xl font-black mb-2 tracking-tight">Système de Gestion Industriel</h1>
-                <p className="text-slate-400 text-lg">Bienvenue, <span className="text-white font-bold">{user.username}</span> 
-                <span className="ml-2 text-xs bg-white/10 px-2 py-1 rounded text-slate-300 border border-white/20">
-                    {user.role === 'ADMIN' ? 'ADMINISTRATEUR' : user.role === 'DIRECTION' ? 'DIRECTION' : 'ÉQUIPE ÉNERGIE'}
-                </span>
-                </p>
+  const getRandomTip = () => {
+      const tips = [
+          "Pensez à vérifier les fuites d'air comprimé chaque semaine.",
+          "Un cos φ > 0.95 peut réduire la facture de 5%.",
+          "Sécurité avant tout : Portez vos EPI lors des relevés.",
+          "Éteignez les lumières des zones inoccupées (Atelier Midi).",
+          "Nettoyez les filtres des compresseurs pour optimiser le rendement."
+      ];
+      return tips[Math.floor(Math.random() * tips.length)];
+  };
+
+  const [tip] = useState(getRandomTip());
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        {/* En-tête Global */}
+        <div className="z-10 w-full max-w-6xl flex justify-between items-center mb-12 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+            <div className="flex items-center gap-6">
+                <BrandLogo size="h-12"/>
+                <div className="h-10 w-px bg-slate-200"></div>
+                <div>
+                    <h1 className="text-2xl font-black mb-0 tracking-tight text-blue-900">PORTAIL ÉNERGIE</h1>
+                    <p className="text-slate-400 text-sm">{getGreeting()}, <span className="text-slate-800 font-bold">{user.username}</span></p>
+                </div>
             </div>
-            <div className="flex gap-4">
-                {user.role === 'ADMIN' && <button onClick={() => onNavigate('admin')} className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg font-bold flex items-center"><Shield className="mr-2"/> Admin</button>}
-                <button onClick={onLogout} className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-bold flex items-center"><LogOut className="mr-2"/> Déconnexion</button>
+            <div className="flex flex-col items-end gap-2">
+                <HeaderInfoDisplay darkText={true} />
+                <div className="bg-orange-50 text-orange-800 text-[10px] px-3 py-1 rounded-full font-bold border border-orange-100 flex items-center">
+                    <Info size={12} className="mr-2"/> {tip}
+                </div>
             </div>
         </div>
 
         <div className="z-10 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl w-full">
-            <button disabled={!canAccess('steg')} onClick={() => onNavigate('steg')} className={`group relative border-2 rounded-3xl p-6 transition-all text-left ${canAccess('steg') ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 hover:border-blue-500' : 'bg-slate-900 border-slate-800 opacity-50 cursor-not-allowed'}`}>
-                <div className={`absolute top-4 right-4 p-2 rounded-xl ${canAccess('steg') ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-800 text-slate-600'}`}><Zap size={24} /></div>
-                <h2 className="text-xl font-bold mb-2">Énergie & Facturation</h2>
-                <p className="text-slate-400 text-xs mb-4 pr-8">Relevés STEG (MT/BT), Calcul Cos φ.</p>
+            <button disabled={!canAccess('steg')} onClick={() => onNavigate('steg')} className={`group relative border-2 rounded-3xl p-8 transition-all text-left bg-white shadow-sm hover:shadow-xl hover:-translate-y-1 ${canAccess('steg') ? 'border-slate-100 hover:border-blue-900' : 'opacity-50 cursor-not-allowed border-slate-100'}`}>
+                <div className={`mb-6 p-4 rounded-2xl w-fit ${canAccess('steg') ? 'bg-blue-50 text-blue-900 group-hover:bg-blue-900 group-hover:text-white transition-colors' : 'bg-slate-100 text-slate-400'}`}><Zap size={32} /></div>
+                <h2 className="text-xl font-black mb-2 text-slate-800 group-hover:text-blue-900">Énergie & Facturation</h2>
+                <p className="text-slate-500 text-sm leading-relaxed">Suivi des consommations STEG, Factures MT/BT, Analyse Cos φ et dépassements de puissance.</p>
             </button>
 
-            <button disabled={!canAccess('air')} onClick={() => onNavigate('air')} className={`group relative border-2 rounded-3xl p-6 transition-all text-left ${canAccess('air') ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 hover:border-sky-500' : 'bg-slate-900 border-slate-800 opacity-50 cursor-not-allowed'}`}>
-                <div className={`absolute top-4 right-4 p-2 rounded-xl ${canAccess('air') ? 'bg-sky-500/20 text-sky-400' : 'bg-slate-800 text-slate-600'}`}><Wind size={24} /></div>
-                <h2 className="text-xl font-bold mb-2">Air Comprimé</h2>
-                <p className="text-slate-400 text-xs mb-4 pr-8">Suivi Compresseurs, Maintenance.</p>
+            <button disabled={!canAccess('air')} onClick={() => onNavigate('air')} className={`group relative border-2 rounded-3xl p-8 transition-all text-left bg-white shadow-sm hover:shadow-xl hover:-translate-y-1 ${canAccess('air') ? 'border-slate-100 hover:border-blue-900' : 'opacity-50 cursor-not-allowed border-slate-100'}`}>
+                <div className={`mb-6 p-4 rounded-2xl w-fit ${canAccess('air') ? 'bg-blue-50 text-blue-900 group-hover:bg-blue-900 group-hover:text-white transition-colors' : 'bg-slate-100 text-slate-400'}`}><Wind size={32} /></div>
+                <h2 className="text-xl font-black mb-2 text-slate-800 group-hover:text-blue-900">Air Comprimé</h2>
+                <p className="text-slate-500 text-sm leading-relaxed">Relevés hebdomadaires des compresseurs, suivi des heures de charge et planning de maintenance.</p>
             </button>
 
-            <button disabled={!canAccess('sites')} onClick={() => onNavigate('sites')} className={`group relative border-2 rounded-3xl p-6 transition-all text-left ${canAccess('sites') ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 hover:border-emerald-500' : 'bg-slate-900 border-slate-800 opacity-50 cursor-not-allowed'}`}>
-                <div className={`absolute top-4 right-4 p-2 rounded-xl ${canAccess('sites') ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-600'}`}><LayoutGrid size={24} /></div>
-                <h2 className="text-xl font-bold mb-2">Tableau de Bord Sites</h2>
-                <p className="text-slate-400 text-xs mb-4 pr-8">Superficies, Usages, KPIs.</p>
+            <button disabled={!canAccess('sites')} onClick={() => onNavigate('sites')} className={`group relative border-2 rounded-3xl p-8 transition-all text-left bg-white shadow-sm hover:shadow-xl hover:-translate-y-1 ${canAccess('sites') ? 'border-slate-100 hover:border-blue-900' : 'opacity-50 cursor-not-allowed border-slate-100'}`}>
+                <div className={`mb-6 p-4 rounded-2xl w-fit ${canAccess('sites') ? 'bg-blue-50 text-blue-900 group-hover:bg-blue-900 group-hover:text-white transition-colors' : 'bg-slate-100 text-slate-400'}`}><LayoutGrid size={32} /></div>
+                <h2 className="text-xl font-black mb-2 text-slate-800 group-hover:text-blue-900">Tableau de Bord Sites</h2>
+                <p className="text-slate-500 text-sm leading-relaxed">Vision globale des sites ITALCAR : Surfaces, Mix énergétique et Trajectoire Carbone 2030.</p>
             </button>
+        </div>
+        
+        {user.role === 'ADMIN' && (
+            <div className="z-10 mt-8 w-full max-w-6xl flex justify-end">
+                 <button onClick={() => onNavigate('admin')} className="text-slate-400 hover:text-blue-900 text-xs font-bold flex items-center transition-colors">
+                    <Shield size={14} className="mr-1"/> Administration
+                 </button>
+            </div>
+        )}
+        
+        <div className="mt-12 text-center text-slate-400 text-xs font-medium uppercase tracking-widest">
+            © 2024 ITALCAR SA • Département Maintenance & Infrastructure
+        </div>
+        <div className="absolute top-6 right-6">
+             <button onClick={onLogout} className="bg-white hover:bg-red-50 text-slate-400 hover:text-red-600 p-2 rounded-full shadow-sm transition-colors border border-slate-100"><LogOut size={18}/></button>
         </div>
     </div>
   );
