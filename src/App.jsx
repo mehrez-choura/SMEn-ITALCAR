@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
-// On importe auth et db depuis notre fichier de config créé à l'étape 2
-import { auth, db } from './firebase'; 
-import { signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "firebase/auth";
-import { collection, addDoc, doc, setDoc, onSnapshot, query, orderBy, getDocs, deleteDoc, where } from "firebase/firestore";
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { initializeApp } from "firebase/app";
+import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "firebase/auth";
+import { getFirestore, collection, addDoc, doc, setDoc, onSnapshot, query, orderBy, getDocs, deleteDoc, where } from "firebase/firestore";
 import { 
   Zap, Activity, Save, History, TrendingUp, AlertTriangle, Factory, CheckCircle2,
   BarChart3, Settings, Lock, Unlock, Calendar, DollarSign, TrendingDown, HelpCircle,
@@ -10,8 +9,9 @@ import {
   Info, Wind, Gauge, Thermometer, Timer, Wrench, LayoutGrid, ArrowLeft, Clock, Edit2,
   ClipboardList, CheckSquare, PieChart, MapPin, Maximize2, Minimize2, Building2, Leaf,
   Database, User, Users, LogOut, Key, Shield, ChevronRight, X, Flame, Trash2, PlusCircle,
-  Store, Droplets, Filter, Check, Image as ImageIcon, FileCheck
+  Store, Droplets, Filter, Check, Image as ImageIcon, FileCheck, Search as SearchIcon, Minus, Printer, Download
 } from 'lucide-react';
+
 
 
 // --- CONFIGURATION CHARTE GRAPHIQUE ---
