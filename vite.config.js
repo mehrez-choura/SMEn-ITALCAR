@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vitejs.dev/config/
+// Remplacez 'NOM_DU_REPO' par le nom exact de votre dépôt GitHub
 export default defineConfig({
   plugins: [react()],
-  base: './', // <--- L'astuce est ici : un point et un slash. Cela force le chemin relatif.
+  base: '/SMEn-ITALCAR/', 
 })
