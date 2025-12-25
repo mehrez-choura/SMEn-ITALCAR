@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useMemo } from 'react';
-// On importe auth et db depuis notre fichier de config créé à l'étape 2
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { auth, db } from './firebase'; 
-import { signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "firebase/auth";
-import { collection, addDoc, doc, setDoc, onSnapshot, query, orderBy, getDocs, deleteDoc, where } from "firebase/firestore";
+import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "firebase/auth";
+import { getFirestore, collection, addDoc, doc, setDoc, onSnapshot, query, orderBy, getDocs, deleteDoc, where } from "firebase/firestore";
 import { 
   Zap, Activity, Save, History, TrendingUp, AlertTriangle, Factory, CheckCircle2,
-  BarChart3, Settings, Lock, Unlock, Calendar, DollarSign, TrendingDown, HelpCircle, 
-  FileText, Calculator, AlertCircle, Eye, Hash, BookOpen, Sun, Battery, MousePointerClick,
-  Info, Wind, Thermometer, Timer, Wrench, LayoutGrid, ArrowLeft, Clock, Edit2,
-  ClipboardList, CheckSquare, PieChart, MapPin, Maximize2, Minimize2, Building2, Leaf,
-  Database, User, Users, LogOut, Key, Shield, ChevronRight, X, Flame, Trash2, PlusCircle,
-  Store, Droplets, Filter, Check, Image as ImageIcon, FileCheck, Printer, Download, Sliders
+  BarChart3, Settings, Lock, Unlock, Calendar, HelpCircle,
+  FileText, Eye, BookOpen, Sun, MousePointerClick,
+  Info, Wind, Thermometer, Timer, Wrench, LayoutGrid, ArrowLeft, Edit2,
+  PieChart, MapPin, Maximize2, Building2, Leaf, CloudSun, Flag,
+  Database, User, Users, LogOut, Key, Shield, X, Trash2, PlusCircle,
+  Store, Droplets, Filter, Check, Printer, TrendingDown, Download, Sliders,
+  Target, Flame, Lightbulb
 } from 'lucide-react';
 
 // --- CONFIGURATION CHARTE GRAPHIQUE ---
@@ -174,7 +174,7 @@ const LoginScreen = ({ onLogin }) => {
                         <input type="password" className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:border-blue-900 focus:ring-1 focus:ring-blue-900 font-bold text-slate-700 outline-none transition-all" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
                     </div>
                 </div>
-                {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center font-bold flex items-center justify-center border border-red-100"><AlertCircle size={16} className="mr-2"/>{error}</div>}
+                {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center font-bold flex items-center justify-center border border-red-100"><AlertTriangle size={16} className="mr-2"/>{error}</div>}
                 <button type="submit" disabled={loading} className="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold py-3.5 rounded-lg shadow-lg shadow-blue-900/20 transition-all uppercase tracking-wide text-sm">{loading ? "Connexion..." : "Se Connecter"}</button>
             </form>
             <div className="mt-8 text-center text-[10px] text-slate-400 font-mono">v8.2.0 • ITALCAR SA</div>
@@ -454,12 +454,10 @@ const StegModule = ({ onBack, userRole }) => {
                     </div>
 
                     <div className="overflow-y-auto flex-1 space-y-8 pr-2">
-                        {/* Section MT */}
                         <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
                             <h4 className="text-lg font-bold text-blue-900 mb-4 flex items-center"><Factory className="mr-2"/> Compteurs Moyenne Tension (MT)</h4>
                             <p className="text-sm text-slate-600 mb-4">Concerne : Mégrine, El Khadhra, Naassen.</p>
                             <div className="grid grid-cols-1 gap-6">
-                                {/* 2.1 Modif: Texte Complet Guide MT */}
                                 <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-blue-900">
                                     <h5 className="font-bold text-slate-800 mb-2">Procédure de Relevé</h5>
                                     <p className="text-xs text-slate-500 leading-relaxed text-justify">
@@ -482,12 +480,10 @@ const StegModule = ({ onBack, userRole }) => {
                             </div>
                         </div>
 
-                        {/* Section BT / PV */}
                         <div className="bg-orange-50 p-6 rounded-xl border border-orange-200">
                             <h4 className="text-lg font-bold text-orange-800 mb-4 flex items-center"><Sun className="mr-2"/> Photovoltaïque & BT</h4>
                             <p className="text-sm text-slate-600 mb-4">Concerne : Showroom Lac (BT+PV).</p>
                             <div className="space-y-4">
-                                {/* 2.1 Modif: Suppression Onduleur PV, garder seulement STEG Bidirectionnel */}
                                 <div className="bg-white p-4 rounded-lg border border-orange-100">
                                     <h5 className="font-bold text-slate-800 mb-1">Compteur STEG Bidirectionnel</h5>
                                     <p className="text-xs text-slate-500 mb-2">Ce compteur affiche deux sens de flux :</p>
@@ -503,7 +499,6 @@ const StegModule = ({ onBack, userRole }) => {
             </div>
         )}
 
-        {/* 2.2 Modif: HELP MODAL (Cos Phi) Ajusté */}
         {showHelp && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={() => setShowHelp(false)}>
                 <div className="bg-white p-8 rounded-2xl max-w-3xl w-full shadow-2xl relative overflow-hidden" onClick={e => e.stopPropagation()}>
@@ -524,7 +519,6 @@ const StegModule = ({ onBack, userRole }) => {
                             <span className="text-emerald-600">Bonus</span>
                         </div>
                         <div className="h-12 w-full rounded-xl flex overflow-hidden shadow-inner border border-slate-200 relative">
-                            {/* Scale starts at 0.5 effectively for visual */}
                             <div className="w-[40%] bg-red-100 flex items-center justify-center text-red-700 font-bold text-xs border-r border-white" title="< 0.8">
                                 &lt; 0.80
                             </div>
@@ -642,7 +636,6 @@ const StegModule = ({ onBack, userRole }) => {
                     </button>
                 </form>
 
-                {/* Configuration Admin */}
                 <div className="bg-slate-100 rounded-xl border border-slate-200 overflow-hidden">
                     <button onClick={() => setIsConfigUnlocked(!isConfigUnlocked)} className="w-full px-6 py-3 flex justify-between items-center text-xs font-bold text-slate-500 uppercase hover:bg-slate-200">
                         <span><Settings size={14} className="inline mr-2" /> Configuration Avancée ({isBT ? 'BT' : 'MT'})</span>
@@ -728,7 +721,7 @@ const StegModule = ({ onBack, userRole }) => {
                         ) : (
                              <>
                                 <div className="pb-3 border-b border-slate-50 border-dashed">
-                                    <div className="flex justify-between font-bold text-slate-700"><span>Conso ({formatNumber(displayMetrics.consumptionGrid)} kWh)</span><span>{formatMoney(displayMetrics.consoAmountHT)}</span></div>
+                                   <div className="flex justify-between font-bold text-slate-700"><span>Conso ({formatNumber(displayMetrics.consumptionGrid)} kWh)</span><span>{formatMoney(displayMetrics.consoAmountHT)}</span></div>
                                 </div>
                                 <div className="space-y-1 text-xs text-slate-500 pt-2">
                                     <div className="flex justify-between"><span>Redevances (Fixe + Serv)</span><span>{formatMoney(displayMetrics.fixedAmountHT)}</span></div>
@@ -988,7 +981,6 @@ const AirModule = ({ onBack, userRole }) => {
         )}
 
         <main className="p-8 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Colonne Gauche : Saisie */}
             <div className="lg:col-span-7 space-y-6">
                 <div className="flex gap-2">
                     {COMPRESSORS.map(c => (
@@ -1032,7 +1024,6 @@ const AirModule = ({ onBack, userRole }) => {
                 </div>
             </div>
 
-            {/* Colonne Droite : Analyse */}
             <div className="lg:col-span-5 space-y-6">
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
                     <h3 className="font-bold text-slate-700 mb-6 flex items-center border-b pb-2"><Activity className="mr-2 text-blue-900"/> Analyse Performance</h3>
@@ -1213,11 +1204,10 @@ const AdminPanel = ({ onBack }) => {
     const handleDeleteUser = async (id) => {
         if (confirmDelete === id) {
             try {
-                await deleteDoc(doc(getCollection('users'), id));
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', id));
                 setConfirmDelete(null);
             } catch (error) {
                 console.error("Erreur suppression:", error);
-                alert("Erreur lors de la suppression. Vérifiez vos droits.");
             }
         } else {
             setConfirmDelete(id);
@@ -1288,103 +1278,90 @@ const AdminPanel = ({ onBack }) => {
 };
 
 // ==================================================================================
-// 5. MODULE TABLEAU DE BORD SITES (CHARTE ITALCAR) - REFACTORED
+// 5. MODULE TABLEAU DE BORD SITES (PARTIE CORRIGÉE ET AMÉLIORÉE)
 // ==================================================================================
 
 const SitesDashboard = ({ onBack, userRole }) => {
   const [activeSiteTab, setActiveSiteTab] = useState('MEGRINE');
   const [historyData, setHistoryData] = useState({});
   const [showHistoryInput, setShowHistoryInput] = useState(false);
+  const [showUsageConfig, setShowUsageConfig] = useState(false); // Ajout Bouton Config
   const [showReport, setShowReport] = useState(false);
-  // 4.5 Modif: State pour mois du rapport
-  const [reportMonth, setReportMonth] = useState(new Date().toISOString().slice(0, 7));
+  const prevMonth = new Date();
+  prevMonth.setMonth(prevMonth.getMonth() - 1);
+  const [reportMonth, setReportMonth] = useState(prevMonth.toISOString().slice(0, 7));
   const [notif, setNotif] = useState(null);
-  
-  // 4.6 Modif: State pour la configuration des usages (Admin)
-  const [showConfigUsage, setShowConfigUsage] = useState(false);
-  
-  // 4.x Modif: State local pour SITES_DATA afin de permettre l'édition et ajout des sites manquants (Azur, Carthage)
+
   const [sitesDataState, setSitesDataState] = useState({
     MEGRINE: { 
         name: "Mégrine", 
-        area: 32500, covered: 30000, open: 2500, glazed: 365,
-        details: "Showroom 1000m² • Atelier FIAT 10000m² • Atelier IVECO 9000m² • ITALCAR Gros 10000m²", 
+        area: 32500, covered: 30100, open: 2400, glazed: 365,
+        coveredBreakdown: [
+            { label: "Zone A (Atelier FIAT)", value: 10100 },
+            { label: "ITALCAR Gros (Magasin)", value: 10000 },
+            { label: "Zone B (Atelier IVECO)", value: 9000 },
+            { label: "Showroom & Réception", value: 1000 }
+        ],
         energyMix: [{ name: "Électricité", value: 97, color: "bg-blue-900" }, { name: "Gaz", value: 3, color: "bg-orange-500" }], 
         elecUsage: [
-            { name: "Clim/Chauffage", value: 40, kpi: "kWh/m²", significant: true }, 
-            { name: "Éclairage", value: 27, kpi: "kWh/m²", significant: true }, 
-            { name: "Air Comprimé", value: 17, kpi: "kWh/Nm³", significant: true, subDetails: [{n: "Equipements", v: "40%"}, {n: "Récup. Huile", v: "30%"}, {n: "Gonflage", v: "30%"}] }, 
-            { name: "Informatique", value: 8, kpi: "-", significant: false }, 
-            { name: "Services", value: 5, kpi: "-", significant: false }, 
-            { name: "Gaz (Primaire)", value: 3, kpi: "kWh/Véhicule", significant: false } 
+            { name: "Clim/Chauffage", value: 40, ratio: "35 kWh/m²", significant: true }, 
+            { name: "Éclairage", value: 27, ratio: "12 kWh/m²", significant: true }, 
+            { name: "Air Comprimé", value: 17, ratio: "0.12 kWh/Nm³", significant: true }, 
+            { name: "Informatique", value: 8, ratio: "-", significant: false }, 
+            { name: "Services", value: 5, ratio: "-", significant: false }, 
+            { name: "Gaz (Primaire)", value: 3, ratio: "-", significant: false } 
         ] 
     },
     ELKHADHRA: { 
         name: "El Khadhra", area: 9500, covered: 7000, open: 2500, glazed: 40,
-        details: "Réception 1000m² • Atelier FIAT 3000m² • ITALCAR Gros 3000m²", 
+        coveredBreakdown: [{ label: "Atelier FIAT", value: 3000 }, { label: "ITALCAR Gros", value: 3000 }, { label: "Réception", value: 1000 }],
         energyMix: [{ name: "Électricité", value: 100, color: "bg-blue-900" }], 
         elecUsage: [
-            { name: "Clim/Chauffage", value: 61, kpi: "kWh/m²", significant: true }, 
-            { name: "Éclairage", value: 23, kpi: "kWh/m²", significant: true }, 
-            { name: "Air Comprimé", value: 6, kpi: "kWh/Nm³", significant: false }, 
-            { name: "Informatique", value: 5, kpi: "-", significant: false }, 
-            { name: "Services", value: 5, kpi: "-", significant: false }
-        ] 
-    },
-    NAASSEN: { 
-        name: "Naassen", area: 32500, covered: 1820, open: 30680, glazed: 0,
-        details: "Admin 920m² • Atelier 900m² • Parc Neuf 30680m²", 
-        energyMix: [{ name: "Électricité", value: 100, color: "bg-blue-900" }], 
-        elecUsage: [
-            { name: "Éclairage (80% Ext)", value: 78, kpi: "kWh/m²", significant: true }, 
-            { name: "Clim/Chauffage", value: 14, kpi: "kWh/m²", significant: false }, 
-            { name: "Air Comprimé", value: 5, kpi: "kWh/Nm³", significant: false }, 
-            { name: "Services", value: 2, kpi: "-", significant: false }, 
-            { name: "Informatique", value: 1, kpi: "-", significant: false }
+            { name: "Clim/Chauffage", value: 60, ratio: "45 kWh/m²", significant: true }, 
+            { name: "Éclairage", value: 25, ratio: "15 kWh/m²", significant: true }, 
+            { name: "Air Comprimé", value: 5, ratio: "-", significant: false }, 
+            { name: "Divers", value: 10, ratio: "-", significant: false }
         ] 
     },
     LAC: { 
-        name: "Lac", area: 2050, covered: 850, open: 1200, glazed: 116,
-        details: "Showroom 850m² • Espace Ouvert 1200m²", 
+        name: "Lac", area: 2050, covered: 850, open: 1200, glazed: 116, 
+        coveredBreakdown: [{label:"Showroom", value: 850}], 
         energyMix: [], 
         elecUsage: [
-            { name: "Éclairage (60% Int)", value: 58, kpi: "kWh/m²", significant: true }, 
-            { name: "Clim/Chauffage", value: 36, kpi: "kWh/m²", significant: true }, 
-            { name: "Informatique", value: 3, kpi: "-", significant: false }, 
-            { name: "Services", value: 3, kpi: "-", significant: false }
+             { name: "Éclairage", value: 45, ratio: "22 kWh/m²", significant: true }, 
+             { name: "Climatisation", value: 45, ratio: "25 kWh/m²", significant: true },
+             { name: "Informatique", value: 10, ratio: "-", significant: false }
         ] 
     },
-    CARTHAGE: {
-        name: "Rue de Carthage", area: 1200, covered: 1200, open: 0, glazed: 50,
-        details: "Siège Social • Bureaux",
-        energyMix: [{ name: "Électricité", value: 100, color: "bg-blue-900" }],
-        elecUsage: [
-            { name: "Clim/Chauffage", value: 65, kpi: "kWh/m²", significant: true },
-            { name: "Éclairage", value: 25, kpi: "kWh/m²", significant: true },
-            { name: "Informatique", value: 10, kpi: "-", significant: true }
-        ]
+    NAASSEN: { 
+        name: "Naassen", area: 32500, covered: 1850, open: 30680, glazed: 0, 
+        coveredBreakdown: [{label:"Réception", value: 920}, {label:"Atelier FIAT", value: 900}], 
+        energyMix: [{ name: "Élec", value: 100, color: "bg-blue-900" }], elecUsage: [] 
     },
-    AZUR: {
-        name: "Azur City", area: 800, covered: 800, open: 0, glazed: 80,
-        details: "Showroom Commercial",
-        energyMix: [{ name: "Électricité", value: 100, color: "bg-blue-900" }],
-        elecUsage: [
-            { name: "Eclairage", value: 60, kpi: "kWh/m²", significant: true },
-            { name: "Clim", value: 35, kpi: "kWh/m²", significant: true },
-            { name: "Services", value: 5, kpi: "-", significant: false }
-        ]
+    CARTHAGE: { 
+        name: "Rue de Carthage", area: 320, covered: 320, open: 0, glazed: 70, 
+        coveredBreakdown: [{label:"Showroom", value: 320}], 
+        energyMix: [{ name: "Élec", value: 100, color: "bg-blue-900" }], elecUsage: [] 
+    },
+    AZUR: { 
+        name: "Azur City", area: 130, covered: 130, open: 0, glazed: 0, 
+        coveredBreakdown: [{label:"Showroom", value: 130}], 
+        energyMix: [{ name: "Élec", value: 100, color: "bg-blue-900" }], elecUsage: [] 
     }
   });
 
-  const [visionSettings, setVisionSettings] = useState({ reductionRate: 5, greenRate: 2 }); 
+  const handleUsageChange = (index, field, value) => {
+      setSitesDataState(prev => {
+          const newData = { ...prev };
+          const site = newData[activeSiteTab];
+          const newUsages = [...site.elecUsage];
+          newUsages[index] = { ...newUsages[index], [field]: value };
+          site.elecUsage = newUsages;
+          return newData;
+      });
+  };
 
-  const avgTempHistory = [
-      { year: 2018, temp: 19.4 }, { year: 2019, temp: 19.6 }, { year: 2020, temp: 19.9 },
-      { year: 2021, temp: 20.3 }, { year: 2022, temp: 20.8 }, { year: 2023, temp: 21.2 }, 
-      { year: 2024, temp: 21.5 }, { year: 2025, temp: 21.8 }
-  ];
-  
-  const yearsRange = ['REF', 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025];
+  const yearsRange = ['REF', 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]; // Ajout Années Manquantes
   
   useEffect(() => {
     getDocs(getCollection('site_history')).then(snap => {
@@ -1401,43 +1378,27 @@ const SitesDashboard = ({ onBack, userRole }) => {
   const initHistory = (site) => {
       if (!historyData[site]) {
           const newData = {};
-          yearsRange.forEach(y => {
-             if (site === 'LAC') {
-                 newData[y] = { grid: Array(12).fill(''), pv: Array(12).fill(''), export: Array(12).fill('') };
-             } else {
-                 newData[y] = { months: Array(12).fill('') };
-             }
+          yearsRange.forEach(y => { 
+              if(site === 'LAC') newData[y] = { grid: Array(12).fill(''), pvProd: Array(12).fill(''), pvExport: Array(12).fill('') };
+              else newData[y] = { months: Array(12).fill('') }; 
           });
           setHistoryData(prev => ({...prev, [site]: newData}));
       }
   };
-  
-  const currentData = sitesDataState[activeSiteTab] || sitesDataState['MEGRINE'];
 
-  const getMonthsData = (site, year, type = 'grid') => {
-      const yearData = historyData[site]?.[year];
-      if (!yearData) return Array(12).fill('');
-      if (site === 'LAC') {
-          return yearData[type] || Array(12).fill('');
-      }
-      return yearData.months || Array(12).fill('');
+  const getSiteData = (site, year, type = 'months') => {
+      const yData = historyData[site]?.[year];
+      if (!yData) return Array(12).fill('');
+      return yData[type] || Array(12).fill('');
   };
 
   const handleHistoryChange = (year, monthIdx, val, type = 'months') => {
       setHistoryData(prev => {
           const siteData = prev[activeSiteTab] || {};
           const yearData = siteData[year] || {};
-          let updatedYearData;
-          if (activeSiteTab === 'LAC') {
-              const currentArray = yearData[type] ? [...yearData[type]] : Array(12).fill('');
-              currentArray[monthIdx] = val;
-              updatedYearData = { ...yearData, [type]: currentArray };
-          } else {
-              const currentArray = yearData.months ? [...yearData.months] : Array(12).fill('');
-              currentArray[monthIdx] = val;
-              updatedYearData = { ...yearData, months: currentArray };
-          }
-          return { ...prev, [activeSiteTab]: { ...siteData, [year]: updatedYearData } }
+          const currentArray = yearData[type] ? [...yearData[type]] : Array(12).fill('');
+          currentArray[monthIdx] = val;
+          return { ...prev, [activeSiteTab]: { ...siteData, [year]: { ...yearData, [type]: currentArray } } }
       });
   };
 
@@ -1454,197 +1415,256 @@ const SitesDashboard = ({ onBack, userRole }) => {
       setTimeout(() => setNotif(null), 3000);
   };
 
-  // --- LOGIC LAC MIX (Fix: Safe Access) ---
-  const lacEnergyMix = useMemo(() => {
-      if (activeSiteTab !== 'LAC') return currentData.energyMix;
-      const year = new Date().getFullYear() - 1; 
-      const grid = getMonthsData('LAC', year, 'grid').reduce((a,b)=>a+(parseFloat(b)||0),0);
-      const pv = getMonthsData('LAC', year, 'pv').reduce((a,b)=>a+(parseFloat(b)||0),0);
-      const exp = getMonthsData('LAC', year, 'export').reduce((a,b)=>a+(parseFloat(b)||0),0);
-      const selfConsumed = Math.max(0, pv - exp);
-      const totalConsumed = grid + selfConsumed;
-      if (totalConsumed === 0) return [{ name: "Réseau STEG", value: 100, color: "bg-blue-900" }];
-      const pvPercent = Math.round((selfConsumed / totalConsumed) * 100);
-      return [
-          { name: "Réseau STEG", value: 100 - pvPercent, color: "bg-blue-900" },
-          { name: "Solaire PV (Autocons.)", value: pvPercent, color: "bg-orange-500" }
-      ];
-  }, [activeSiteTab, historyData, currentData]);
+  const currentData = sitesDataState[activeSiteTab];
+  const currentYear = new Date().getFullYear(); 
+  const currentMonthIdx = new Date().getMonth() - 1; 
 
-  // --- TRAJECTOIRE CHART CORRIGÉ ---
-  // Dépend directement de historyData pour le re-render
-  const TrajectoryChart = () => {
-      // 1. Get History Totals
-      const historyTotals = yearsRange.filter(y => y !== 'REF').map(y => {
-          const data = getMonthsData(activeSiteTab, y, activeSiteTab === 'LAC' ? 'grid' : 'months');
-          return data.reduce((a,b)=>a+(parseFloat(b)||0),0);
-      });
-
-      // 2. Project Future (from last valid data year)
-      // Find last non-zero total or fallback to last index
-      let lastKnown = 50000;
-      for(let i = historyTotals.length -1; i >= 0; i--) {
-          if (historyTotals[i] > 0) { lastKnown = historyTotals[i]; break; }
-      }
-      
-      const futureYears = [2026, 2027, 2028, 2029, 2030];
-      const futureData = futureYears.map((y, i) => {
-          const reductionFactor = Math.pow(1 - (visionSettings.reductionRate / 100), i + 1);
-          return lastKnown * reductionFactor;
-      });
-
-      const maxVal = Math.max(...historyTotals, ...futureData) * 1.1 || 100000;
-
-      return (
-          <div className="bg-slate-900 rounded-xl shadow-lg p-6 text-white overflow-hidden relative">
-              <div className="flex justify-between items-start mb-6 relative z-10">
-                  <div>
-                      <h3 className="font-bold text-white uppercase tracking-wider text-xs mb-1">Trajectoire & Vision</h3>
-                      <p className="text-slate-400 text-xs">Historique 2018-2025 et Projection 2030</p>
-                  </div>
-                  <div className="flex gap-4 text-right">
-                      <div>
-                          <div className="text-[9px] text-slate-400 uppercase">Obj. Réduction</div>
-                          <div className="font-bold text-emerald-400">-{visionSettings.reductionRate}% / an</div>
-                      </div>
-                      <div>
-                          <div className="text-[9px] text-slate-400 uppercase">Part Verte (Vision)</div>
-                          <div className="font-bold text-emerald-400">+{visionSettings.greenRate}% / an</div>
-                      </div>
-                  </div>
-              </div>
-
-              {/* Chart */}
-              <div className="flex items-end gap-1 h-48 relative z-10">
-                  {/* History Bars */}
-                  {historyTotals.map((val, i) => (
-                      <div key={i} className="flex-1 flex flex-col justify-end group">
-                          <div className="w-full bg-blue-600/80 hover:bg-blue-500 rounded-t relative transition-all" style={{height: `${(val/maxVal)*100}%`}}>
-                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 text-[9px] opacity-0 group-hover:opacity-100 bg-white text-slate-900 px-1 rounded font-bold">{Math.round(val/1000)}k</div>
-                          </div>
-                          <div className="text-[9px] text-slate-500 text-center mt-1 border-t border-slate-700 pt-1">
-                              {yearsRange.filter(y => y !== 'REF')[i]}
-                          </div>
-                      </div>
-                  ))}
-                  {/* Future Bars */}
-                  {futureData.map((val, i) => (
-                      <div key={i} className="flex-1 flex flex-col justify-end group">
-                          <div className="w-full bg-emerald-500/30 hover:bg-emerald-500/60 border-t-2 border-emerald-500 border-dashed rounded-t relative transition-all" style={{height: `${(val/maxVal)*100}%`}}>
-                               {/* Part verte viz */}
-                               <div className="absolute bottom-0 left-0 w-full bg-emerald-500" style={{height: `${Math.min(100, (i+1)*visionSettings.greenRate)}%`}}></div>
-                          </div>
-                          <div className="text-[9px] text-emerald-500/70 text-center mt-1 border-t border-slate-700 pt-1 font-bold">{futureYears[i]}</div>
-                      </div>
-                  ))}
-              </div>
-              
-              {/* Inputs Vision */}
-              {userRole === 'ADMIN' && (
-                  <div className="mt-4 pt-4 border-t border-slate-700 flex gap-4 text-xs">
-                      <label className="flex items-center gap-2">
-                          <span className="text-slate-400">Vision Réduction:</span>
-                          <input type="number" value={visionSettings.reductionRate} onChange={e => setVisionSettings({...visionSettings, reductionRate: e.target.value})} className="bg-slate-800 border border-slate-600 rounded w-12 px-1 text-center text-white font-bold"/>
-                          <span className="text-slate-500">%</span>
-                      </label>
-                      <label className="flex items-center gap-2">
-                          <span className="text-slate-400">Vision Verte:</span>
-                          <input type="number" value={visionSettings.greenRate} onChange={e => setVisionSettings({...visionSettings, greenRate: e.target.value})} className="bg-slate-800 border border-slate-600 rounded w-12 px-1 text-center text-white font-bold"/>
-                          <span className="text-slate-500">%</span>
-                      </label>
-                  </div>
-              )}
-          </div>
-      );
-  };
-
-  // --- WIDGET PERFORMANCE ---
   const PerformanceWidget = () => {
-      // Année de ref = celle de la ligne REF saisie, ou 2023 par défaut si vide
-      const refYearData = getMonthsData(activeSiteTab, 'REF', activeSiteTab === 'LAC' ? 'grid' : 'months');
+      const refMonths = getSiteData(activeSiteTab, 'REF', activeSiteTab === 'LAC' ? 'grid' : 'months');
+      const curMonths = getSiteData(activeSiteTab, currentYear, activeSiteTab === 'LAC' ? 'grid' : 'months');
       
-      const currentYear = 2025; 
-      const currentMonthIndex = 10; // Novembre fixe pour la démo
-      
-      const currentMonthData = getMonthsData(activeSiteTab, currentYear, activeSiteTab === 'LAC' ? 'grid' : 'months')[currentMonthIndex];
-      const refMonthData = refYearData[currentMonthIndex];
-      
-      const currentVal = parseFloat(currentMonthData) || 0;
-      const refVal = parseFloat(refMonthData) || 0;
-      
-      const diff = refVal > 0 ? ((currentVal - refVal) / refVal) * 100 : 0;
-      const isGood = diff <= 0;
+      let valRefMonth = parseFloat(refMonths[currentMonthIdx]) || 0;
+      let valCurMonth = parseFloat(curMonths[currentMonthIdx]) || 0;
+
+      if (activeSiteTab === 'LAC') {
+          const refProd = getSiteData(activeSiteTab, 'REF', 'pvProd')[currentMonthIdx] || 0;
+          const refExp = getSiteData(activeSiteTab, 'REF', 'pvExport')[currentMonthIdx] || 0;
+          const curProd = getSiteData(activeSiteTab, currentYear, 'pvProd')[currentMonthIdx] || 0;
+          const curExp = getSiteData(activeSiteTab, currentYear, 'pvExport')[currentMonthIdx] || 0;
+          
+          valRefMonth += Math.max(0, refProd - refExp);
+          valCurMonth += Math.max(0, curProd - curExp);
+      }
+
+      const diffMonth = valRefMonth > 0 ? ((valCurMonth - valRefMonth) / valRefMonth) * 100 : 0;
+
+      let sumRefYTD = 0;
+      let sumCurYTD = 0;
+
+      for (let i = 0; i <= currentMonthIdx; i++) {
+          let r = parseFloat(refMonths[i]) || 0;
+          let c = parseFloat(curMonths[i]) || 0;
+          
+          if (activeSiteTab === 'LAC') {
+              const rp = parseFloat(getSiteData(activeSiteTab, 'REF', 'pvProd')[i]) || 0;
+              const re = parseFloat(getSiteData(activeSiteTab, 'REF', 'pvExport')[i]) || 0;
+              const cp = parseFloat(getSiteData(activeSiteTab, currentYear, 'pvProd')[i]) || 0;
+              const ce = parseFloat(getSiteData(activeSiteTab, currentYear, 'pvExport')[i]) || 0;
+              r += Math.max(0, rp - re);
+              c += Math.max(0, cp - ce);
+          }
+          sumRefYTD += r;
+          sumCurYTD += c;
+      }
+
+      const diffYTD = sumRefYTD > 0 ? ((sumCurYTD - sumRefYTD) / sumRefYTD) * 100 : 0;
+      const monthName = new Date(currentYear, currentMonthIdx).toLocaleString('fr-FR', { month: 'long' });
 
       return (
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6 flex flex-col md:flex-row items-center justify-between animate-in slide-in-from-top-4">
-              <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-full ${isGood ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
-                      {isGood ? <TrendingDown size={24}/> : <TrendingUp size={24}/>}
-                  </div>
-                  <div>
-                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Performance Dernière Clôture</h3>
-                      <div className="font-black text-slate-800 text-lg">Novembre {currentYear} <span className="text-slate-400 font-normal">vs</span> Réf (Baseline)</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 relative overflow-hidden group">
+                  <div className="absolute right-0 top-0 w-24 h-24 bg-blue-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+                  <div className="relative z-10">
+                      <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Performance Mensuelle</div>
+                      <div className="text-xl font-black text-slate-800 capitalize mb-4">{monthName} {currentYear} <span className="text-sm font-normal text-slate-400">vs Réf.</span></div>
+                      
+                      <div className="flex items-end justify-between">
+                          <div>
+                              <div className="text-3xl font-black text-blue-900">{valCurMonth.toLocaleString()} <span className="text-sm text-slate-400 font-bold">kWh</span></div>
+                              <div className="text-xs text-slate-500 mt-1">Réf: {valRefMonth.toLocaleString()} kWh</div>
+                          </div>
+                          <div className={`px-4 py-2 rounded-xl font-bold text-lg flex items-center ${diffMonth <= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                              {diffMonth > 0 ? <TrendingUp size={20} className="mr-2"/> : <TrendingDown size={20} className="mr-2"/>}
+                              {diffMonth > 0 ? '+' : ''}{diffMonth.toFixed(1)}%
+                          </div>
+                      </div>
                   </div>
               </div>
-              
-              <div className="flex gap-8 mt-4 md:mt-0 text-center md:text-right">
-                  <div>
-                      <div className="text-[10px] font-bold text-slate-400 uppercase">Référence</div>
-                      <div className="font-mono font-bold text-slate-600">{refVal.toLocaleString()} kWh</div>
-                  </div>
-                  <div>
-                      <div className="text-[10px] font-bold text-slate-400 uppercase">Réalisé</div>
-                      <div className="font-mono font-black text-slate-800">{currentVal.toLocaleString()} kWh</div>
-                  </div>
-                  <div className={`flex items-center font-black text-xl ${isGood ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {diff > 0 ? '+' : ''}{diff.toFixed(1)}%
+
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 relative overflow-hidden group">
+                  <div className="absolute right-0 top-0 w-24 h-24 bg-indigo-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+                  <div className="relative z-10">
+                      <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Performance Cumulée (YTD)</div>
+                      <div className="text-xl font-black text-slate-800 capitalize mb-4">Jan - {monthName} <span className="text-sm font-normal text-slate-400">vs Réf.</span></div>
+                      
+                      <div className="flex items-end justify-between">
+                          <div>
+                              <div className="text-3xl font-black text-indigo-900">{sumCurYTD.toLocaleString()} <span className="text-sm text-slate-400 font-bold">kWh</span></div>
+                              <div className="text-xs text-slate-500 mt-1">Réf: {sumRefYTD.toLocaleString()} kWh</div>
+                          </div>
+                          <div className={`px-4 py-2 rounded-xl font-bold text-lg flex items-center ${diffYTD <= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                              {diffYTD > 0 ? <TrendingUp size={20} className="mr-2"/> : <TrendingDown size={20} className="mr-2"/>}
+                              {diffYTD > 0 ? '+' : ''}{diffYTD.toFixed(1)}%
+                          </div>
+                      </div>
                   </div>
               </div>
           </div>
       );
   };
 
-  // --- SVG TEMPERATURE CHART ---
-  const TempChart = () => {
-      const height = 100;
-      const width = 300;
-      const minTemp = 18;
-      const maxTemp = 23;
-      const points = avgTempHistory.map((d, i) => {
-          const x = (i / (avgTempHistory.length - 1)) * width;
-          const y = height - ((d.temp - minTemp) / (maxTemp - minTemp)) * height;
-          return `${x},${y}`;
-      }).join(' ');
+  // --- NOUVEAU WIDGET MIX ÉNERGÉTIQUE (Eco-Jauge) ---
+  const EnergyMixWidget = () => {
+      // Simulé pour démo
+      const pvShare = activeSiteTab === 'LAC' ? 35 : 0; 
+      const gridShare = 100 - pvShare;
 
       return (
-        <div className="relative h-32 w-full">
-            <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
-                <defs>
-                    <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#f97316" stopOpacity="0.4"/>
-                        <stop offset="100%" stopColor="#f97316" stopOpacity="0"/>
-                    </linearGradient>
-                </defs>
-                <path d={`M0,${height} ${points} L${width},${height} Z`} fill="url(#tempGradient)" />
-                <polyline fill="none" stroke="#f97316" strokeWidth="3" points={points} strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-        </div>
+          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm h-full flex flex-col justify-between overflow-hidden relative">
+              <div className="flex items-center gap-2 mb-4 relative z-10">
+                  <Leaf size={20} className="text-emerald-500"/>
+                  <span className="text-xs font-bold uppercase text-slate-500 tracking-wider">Origine Énergie</span>
+              </div>
+              
+              <div className="flex items-center justify-center relative z-10 py-2">
+                  <div className="relative w-32 h-32">
+                      <svg className="w-full h-full" viewBox="0 0 36 36">
+                          <path className="text-slate-100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3.8" />
+                          <path className="text-emerald-500" strokeDasharray={`${pvShare}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3.8" strokeLinecap="round" />
+                      </svg>
+                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+                          <div className="text-2xl font-black text-slate-800">{pvShare}%</div>
+                          <div className="text-[8px] uppercase font-bold text-emerald-600">Renouvelable</div>
+                      </div>
+                  </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-center relative z-10">
+                  <div className="bg-slate-50 p-2 rounded-lg">
+                      <div className="text-[10px] text-slate-400 uppercase font-bold">Réseau</div>
+                      <div className="font-bold text-slate-700">{gridShare}%</div>
+                  </div>
+                  <div className="bg-emerald-50 p-2 rounded-lg">
+                      <div className="text-[10px] text-emerald-600 uppercase font-bold">Solaire</div>
+                      <div className="font-bold text-emerald-800">{pvShare}%</div>
+                  </div>
+              </div>
+          </div>
       );
   };
 
-  // 4.6 Modif: Mise à jour dynamique de la config
-  const handleUpdateUsage = (index, newVal) => {
-      const updatedUsage = [...currentData.elecUsage];
-      updatedUsage[index] = { ...updatedUsage[index], value: parseFloat(newVal) || 0 };
-      
-      setSitesDataState(prev => ({
-          ...prev,
-          [activeSiteTab]: {
-              ...prev[activeSiteTab],
-              elecUsage: updatedUsage
-          }
-      }));
-  };
+  const TechSpecsWidget = () => (
+      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm h-full relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><Building2 size={120}/></div>
+          
+          <div className="flex items-center gap-2 mb-6 border-b border-slate-50 pb-2 relative z-10">
+              <MapPin size={20} className="text-red-600"/>
+              <span className="text-xs font-bold uppercase text-slate-500 tracking-wider">Fiche Technique</span>
+          </div>
+
+          <div className="relative z-10">
+              <div className="flex items-baseline mb-4">
+                  <span className="text-4xl font-black text-slate-800">{currentData.area.toLocaleString()}</span>
+                  <span className="ml-2 text-sm font-bold text-slate-400">m² Totaux</span>
+              </div>
+
+              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-3">
+                  <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+                      <span className="text-xs font-bold text-slate-500 uppercase">Espace Couvert</span>
+                      <span className="font-black text-slate-800">{currentData.covered.toLocaleString()} m²</span>
+                  </div>
+                  <div className="space-y-1 pl-2">
+                      {currentData.coveredBreakdown.map((zone, i) => (
+                          <div key={i} className="flex justify-between text-[11px]">
+                              <span className="text-slate-500">• {zone.label}</span>
+                              <span className="font-bold text-slate-600">{zone.value.toLocaleString()} m²</span>
+                          </div>
+                      ))}
+                  </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div className="text-center p-2 bg-blue-50 rounded-lg">
+                      <div className="text-[9px] font-bold text-blue-400 uppercase">Ouvert</div>
+                      <div className="font-bold text-blue-900">{currentData.open.toLocaleString()} m²</div>
+                  </div>
+                  <div className="text-center p-2 bg-cyan-50 rounded-lg">
+                      <div className="text-[9px] font-bold text-cyan-400 uppercase">Vitrée</div>
+                      <div className="font-bold text-cyan-900">{currentData.glazed.toLocaleString()} m²</div>
+                  </div>
+              </div>
+          </div>
+      </div>
+  );
+
+  // --- NOUVEAU WIDGET SAISONNALITÉ (Barres Simples) ---
+  const ClimateInfoWidget = () => (
+      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm h-full flex flex-col relative overflow-hidden">
+           <div className="flex items-center gap-2 mb-4">
+               <Thermometer size={20} className="text-amber-500"/>
+               <span className="text-xs font-bold uppercase text-slate-500 tracking-wider">Saisonnalité & Impact</span>
+           </div>
+
+           <div className="flex-1 flex items-end justify-between gap-1 pb-2 border-b border-slate-100">
+               {[40, 35, 30, 20, 15, 25, 60, 80, 70, 40, 30, 45].map((h, i) => (
+                   <div key={i} className="w-full bg-slate-100 rounded-t-sm relative group">
+                       <div className={`absolute bottom-0 w-full rounded-t-sm transition-all duration-500 ${h > 50 ? 'bg-orange-400' : 'bg-blue-400'}`} style={{height: `${h}%`}}></div>
+                   </div>
+               ))}
+           </div>
+           <div className="flex justify-between text-[8px] text-slate-400 font-mono mt-1 uppercase">
+               <span>Jan</span><span>Juin</span><span>Déc</span>
+           </div>
+
+           <div className="mt-4 grid grid-cols-2 gap-2">
+                <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg">
+                    <Flame size={14} className="text-orange-500"/>
+                    <div>
+                        <div className="text-[9px] font-bold text-slate-500">Été (Clim)</div>
+                        <div className="text-xs font-black text-slate-800">Haute</div>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg">
+                    <Wind size={14} className="text-blue-500"/>
+                    <div>
+                        <div className="text-[9px] font-bold text-slate-500">Hiver (Chauff)</div>
+                        <div className="text-xs font-black text-slate-800">Moyenne</div>
+                    </div>
+                </div>
+           </div>
+      </div>
+  );
+
+  // --- NOUVEAU WIDGET EMPREINTE CARBONE ---
+  const VisionWidget = () => (
+    <div className="bg-gradient-to-r from-emerald-900 to-emerald-800 p-6 rounded-2xl shadow-lg mt-8 text-white relative overflow-hidden">
+         <div className="absolute right-0 top-0 opacity-10 transform translate-x-10 -translate-y-10">
+             <Leaf size={200} />
+         </div>
+         
+         <div className="flex flex-col md:flex-row justify-between items-center relative z-10">
+            <div className="mb-6 md:mb-0">
+                <div className="flex items-center gap-2 mb-2">
+                    <Target className="text-emerald-400" size={24}/>
+                    <h3 className="font-black text-xl uppercase tracking-tight">Empreinte Carbone & Vision</h3>
+                </div>
+                <p className="text-emerald-200 text-sm max-w-md">Objectif de réduction des émissions de gaz à effet de serre (GES) aligné sur la stratégie RSE 2030.</p>
+                
+                <div className="mt-6 flex gap-8">
+                    <div>
+                        <div className="text-3xl font-black">245 <span className="text-sm font-normal text-emerald-400">tCO2e</span></div>
+                        <div className="text-[10px] uppercase font-bold text-emerald-300">Émissions 2024</div>
+                    </div>
+                    <div>
+                        <div className="text-3xl font-black">170 <span className="text-sm font-normal text-emerald-400">tCO2e</span></div>
+                        <div className="text-[10px] uppercase font-bold text-emerald-300">Cible 2030</div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20 w-full md:w-auto min-w-[200px]">
+                <div className="text-xs font-bold uppercase text-emerald-300 mb-2">Progression Global</div>
+                <div className="w-full bg-black/20 h-3 rounded-full overflow-hidden mb-2">
+                    <div className="bg-emerald-400 h-full rounded-full" style={{width: '35%'}}></div>
+                </div>
+                <div className="flex justify-between text-[10px] font-mono">
+                    <span>Baseline</span>
+                    <span>35% Réalisé</span>
+                </div>
+            </div>
+         </div>
+    </div>
+  );
 
   return (
     <div className="bg-slate-50 min-h-screen pb-20 relative font-sans text-slate-600">
@@ -1659,343 +1679,333 @@ const SitesDashboard = ({ onBack, userRole }) => {
                 </div>
                 <div className="flex bg-white rounded-full shadow-sm border border-slate-200 p-1.5 gap-1 mt-4 md:mt-0 overflow-x-auto max-w-full">
                     {Object.keys(sitesDataState).map(key => (
-                        <button 
-                            key={key} 
-                            onClick={() => setActiveSiteTab(key)} 
-                            className={`px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center whitespace-nowrap
-                            ${activeSiteTab === key 
-                                ? 'bg-blue-900 text-white shadow-md' 
-                                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
-                        >
-                            {activeSiteTab === key && <CheckCircle2 size={12} className="mr-2"/>}
-                            {sitesDataState[key].name}
+                        <button key={key} onClick={() => setActiveSiteTab(key)} 
+                            className={`px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center whitespace-nowrap ${activeSiteTab === key ? 'bg-blue-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}>
+                            {activeSiteTab === key && <CheckCircle2 size={12} className="mr-2"/>} {sitesDataState[key].name}
                         </button>
                     ))}
                 </div>
             </div>
         </header>
 
-        {/* MODAL CONFIG USAGE (ADMIN 4.6) */}
-        {showConfigUsage && (
-            <div className="fixed inset-0 bg-slate-900/60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm">
-                <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-6">
-                    <div className="flex justify-between items-center mb-6 border-b pb-4">
-                        <h3 className="font-bold text-lg text-slate-800">Configuration Répartition (Admin)</h3>
-                        <button onClick={() => setShowConfigUsage(false)}><X className="text-slate-400"/></button>
-                    </div>
-                    <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-                        <p className="text-xs text-slate-500 italic bg-amber-50 p-2 rounded">
-                            <AlertTriangle size={12} className="inline mr-1"/>
-                            Tout changement doit être justifié par un audit ou une campagne de mesure.
-                        </p>
-                        {currentData.elecUsage.map((u, i) => (
-                            <div key={i} className="flex items-center gap-4">
-                                <span className="text-sm font-bold w-1/3">{u.name}</span>
-                                <input 
-                                    type="number" 
-                                    value={u.value} 
-                                    onChange={(e) => handleUpdateUsage(i, e.target.value)}
-                                    className="border p-2 rounded w-20 text-center font-bold"
-                                />
-                                <span className="text-sm">%</span>
-                            </div>
-                        ))}
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 mb-1">Justification du changement *</label>
-                            <textarea className="w-full border p-2 rounded text-sm" placeholder="Ex: Audit bureau d'études Déc. 2025..."></textarea>
-                        </div>
-                    </div>
-                    <div className="mt-6 flex justify-end">
-                        <button onClick={() => setShowConfigUsage(false)} className="bg-blue-900 text-white px-4 py-2 rounded-lg font-bold">Valider</button>
-                    </div>
-                </div>
-            </div>
-        )}
-
-        {/* 4.2 Modif: Input Cases agrandies (w-20) et 4.1 Année REF ajoutée */}
-        {showHistoryInput && (
-            <div className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-                    <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-                        <div>
-                            <h3 className="font-bold text-lg text-slate-800 flex items-center"><Database className="mr-2 text-blue-900"/> Saisie Historique - {currentData.name}</h3>
-                        </div>
-                        <button onClick={() => setShowHistoryInput(false)} className="p-2 hover:bg-slate-200 rounded-full text-slate-500"><X size={20}/></button>
-                    </div>
-                    
-                    <div className="overflow-y-auto flex-1 p-6 space-y-8">
-                        {yearsRange.map(year => (
-                            <div key={year} className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                    <span className={`font-bold text-sm ${year === 'REF' ? 'text-red-600' : 'text-slate-700'}`}>
-                                        {year === 'REF' ? 'ANNÉE DE RÉFÉRENCE (Baseline)' : year}
-                                    </span>
-                                    <div className="h-px bg-slate-100 flex-1"></div>
-                                </div>
-                                <div className="pl-4 border-l-2 border-slate-100 overflow-x-auto">
-                                    <div className="flex items-center gap-2 pb-2 min-w-max">
-                                        <div className="w-32 flex-shrink-0 text-[10px] font-bold uppercase text-slate-600">
-                                            {activeSiteTab === 'LAC' ? 'Grid / PV / Export' : 'Consommation'}
-                                        </div>
-                                        {['JAN','FÉV','MAR','AVR','MAI','JUN','JUL','AOÛ','SEP','OCT','NOV','DÉC'].map((m, i) => (
-                                            <div key={i} className="flex flex-col items-center gap-1">
-                                                <label className="text-[9px] font-bold text-slate-400">{m}</label>
-                                                <input 
-                                                    type="number" 
-                                                    className="w-20 p-2 text-center text-sm border border-slate-300 rounded focus:border-blue-900 outline-none font-mono font-bold" 
-                                                    placeholder="-"
-                                                    value={getMonthsData(activeSiteTab, year, activeSiteTab === 'LAC' && m === 'Grid' ? 'grid' : 'months')[i]}
-                                                    onChange={e => handleHistoryChange(year, i, e.target.value, activeSiteTab === 'LAC' && m === 'Grid' ? 'grid' : 'months')}
-                                                />
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
-                        <button onClick={saveHistory} className="bg-blue-900 hover:bg-blue-800 text-white px-6 py-2 rounded-lg font-bold shadow-lg transition-all flex items-center">
-                            <Save className="mr-2" size={18}/> Enregistrer
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )}
-
-        {/* 4.5 Modif: RAPPORT MENSUEL AMÉLIORÉ */}
-        {showReport && (
-            <div className="fixed inset-0 bg-slate-900/80 z-[60] overflow-auto p-4 md:p-8 flex justify-center">
-                <div className="max-w-[29.7cm] w-full bg-white shadow-2xl min-h-[21cm] relative print:w-full print:absolute print:top-0 print:left-0 print:shadow-none print:m-0">
-                    <button onClick={() => setShowReport(false)} className="absolute top-4 right-4 no-print bg-slate-100 p-2 rounded-full hover:bg-red-50 hover:text-red-600 transition-colors"><X/></button>
-                    <div className="no-print absolute top-4 right-16 flex gap-2">
-                        <input type="month" value={reportMonth} onChange={e => setReportMonth(e.target.value)} className="border rounded p-2 text-sm font-bold text-slate-700"/>
-                        <button onClick={() => window.print()} className="bg-blue-900 text-white p-2 rounded-full flex items-center gap-2 px-4 text-xs font-bold hover:bg-blue-800"><Download size={16}/> Imprimer / PDF</button>
-                    </div>
-
-                    <div className="p-12 h-full flex flex-col">
-                        <div className="flex justify-between items-center mb-8 border-b-4 border-blue-900 pb-4">
-                            <BrandLogo size="h-20"/>
-                            <div className="text-right">
-                                <h1 className="text-4xl font-black text-blue-900 uppercase tracking-tight">Rapport Mensuel Énergie</h1>
-                                <p className="text-slate-500 text-lg font-bold mt-1">Site : {currentData.name} • {new Date(reportMonth).toLocaleDateString('fr-FR', {month: 'long', year: 'numeric'})}</p>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-8 mb-8">
-                            <div className="bg-slate-50 p-6 border-l-4 border-blue-900 rounded-r-xl">
-                                <h3 className="font-bold text-blue-900 mb-2 uppercase text-xs tracking-wider">Conso. Mensuelle</h3>
-                                <div className="text-5xl font-black text-slate-800">45,230 <span className="text-lg font-normal text-slate-500">kWh</span></div>
-                                <div className="text-sm text-emerald-600 font-bold mt-2 flex items-center"><TrendingDown size={16} className="mr-1"/> -4.2% vs N-1</div>
-                            </div>
-                            <div className="bg-slate-50 p-6 border-l-4 border-blue-900 rounded-r-xl">
-                                <h3 className="font-bold text-blue-900 mb-2 uppercase text-xs tracking-wider">Ratio Performance</h3>
-                                <div className="text-5xl font-black text-slate-800">54 <span className="text-lg font-normal text-slate-500">kWh/m²</span></div>
-                                <div className="text-sm text-slate-400 font-bold mt-2">Cible: 50 kWh/m²</div>
-                            </div>
-                            <div className="bg-slate-50 p-6 border-l-4 border-blue-900 rounded-r-xl">
-                                <h3 className="font-bold text-blue-900 mb-2 uppercase text-xs tracking-wider">Coût Estimé</h3>
-                                <div className="text-5xl font-black text-slate-800">13,150 <span className="text-lg font-normal text-slate-500">DT</span></div>
-                                <div className="text-sm text-slate-400 font-bold mt-2">Prix Moy: 0.291 DT/kWh</div>
-                            </div>
-                        </div>
-
-                        <div className="mb-8 flex-1">
-                            <h3 className="font-bold text-slate-800 mb-4 flex items-center text-lg"><BarChart3 className="mr-2"/> 1. Évolution Annuelle {new Date().getFullYear()}</h3>
-                            <div className="border rounded-xl p-6 h-64 flex items-end justify-between px-12 bg-slate-50 gap-4">
-                                {/* Auto-generated Chart Bars for Report */}
-                                {[42, 38, 35, 45, 58, 65, 70, 68, 55, 48, 45, 50].map((h, i) => (
-                                    <div key={i} className="w-full flex flex-col justify-end group h-full">
-                                        <div className="w-full bg-blue-900 rounded-t shadow-sm print:bg-blue-900 print:print-color-adjust-exact" style={{height: `${h}%`}}></div>
-                                        <div className="text-center text-xs font-bold text-slate-500 mt-2 border-t border-slate-300 pt-1">
-                                            {['J','F','M','A','M','J','J','A','S','O','N','D'][i]}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-12 mb-8">
-                            <div>
-                                <h3 className="font-bold text-slate-800 mb-4 flex items-center text-lg"><PieChart className="mr-2"/> 2. Répartition (UES)</h3>
-                                <div className="space-y-4">
-                                    {currentData.elecUsage.map((u, i) => (
-                                        <div key={i} className="flex items-center justify-between border-b border-slate-200 pb-2">
-                                            <div className="flex items-center">
-                                                <div className={`w-3 h-3 rounded-full mr-2 ${u.significant ? 'bg-blue-900' : 'bg-slate-300'} print:print-color-adjust-exact`}></div>
-                                                <span className="font-bold text-slate-700">{u.name}</span>
-                                            </div>
-                                            <span className="font-mono font-black text-slate-900 text-lg">{u.value}%</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                            <div>
-                                <h3 className="font-bold text-slate-800 mb-4 flex items-center text-lg"><CheckCircle2 className="mr-2"/> 3. Actions & Observations</h3>
-                                <div className="border rounded-xl p-6 h-full bg-slate-50 text-slate-600 text-sm leading-relaxed italic print:bg-slate-50 print:print-color-adjust-exact">
-                                    <ul className="list-disc pl-5 space-y-3">
-                                        <li>Analyse approfondie des dépassements de puissance constatés en heures de pointe (11h-14h).</li>
-                                        <li>Campagne de détection de fuites sur le réseau d'air comprimé planifiée pour la Semaine 3.</li>
-                                        <li>Optimisation des horaires de l'éclairage extérieur effectuée suite au changement de saison.</li>
-                                        <li>Maintenance préventive des batteries de condensateurs recommandée pour améliorer le Cos φ.</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="mt-auto pt-8 border-t border-slate-200 text-center">
-                            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">© 2025 ITALCAR SA • Energy Management System • Document Interne</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        )}
-
-        <main className="max-w-7xl mx-auto p-6 space-y-8 animate-in fade-in duration-500">
+        <main className="max-w-7xl mx-auto p-6 animate-in fade-in duration-500">
             <PerformanceWidget />
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                 {/* MIX ÉNERGÉTIQUE */}
-                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center col-span-2">
-                    <div className="flex items-center gap-2 mb-4 text-blue-900 border-b border-slate-50 pb-2">
-                        <Zap size={18}/>
-                        <span className="text-xs font-bold uppercase tracking-wider">Mix Énergétique & PV</span>
-                    </div>
-                    <div className="space-y-4">
-                        {(activeSiteTab === 'LAC' ? lacEnergyMix : currentData.energyMix).map((mix, i) => (
-                            <div key={i}>
-                                <div className="flex justify-between text-sm font-bold text-slate-700 mb-1">
-                                    <span>{mix.name}</span>
-                                    <span>{mix.value}%</span>
-                                </div>
-                                <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
-                                    <div className={`h-full ${mix.color}`} style={{width: `${mix.value}%`}}></div>
-                                </div>
-                            </div>
-                        ))}
-                        {activeSiteTab === 'LAC' && (
-                            <div className="flex justify-between items-center text-xs bg-orange-50 p-2 rounded border border-orange-100 text-orange-800">
-                                <span>Export vers STEG (Excédent)</span>
-                                <span className="font-bold">12% de la Prod.</span>
-                            </div>
-                        )}
-                    </div>
-                 </div>
-
-                 {/* Ratio Global */}
-                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center col-span-2">
-                    <div className="flex items-center gap-2 mb-2 text-red-600">
-                        <Activity size={20}/>
-                        <span className="text-xs font-bold uppercase tracking-wider">Ratio Global 2024</span>
-                    </div>
-                    <div className="text-3xl font-black text-slate-800">
-                        {activeSiteTab === 'MEGRINE' ? '54.2' : activeSiteTab === 'LAC' ? '128.4' : '--'}
-                        <span className="text-sm font-medium text-slate-400 ml-1">kWh/m²</span>
-                    </div>
-                    <div className="text-xs font-bold text-emerald-600 mt-1 flex items-center">
-                        <TrendingDown size={14} className="mr-1"/> Objectif 2025 : -5%
-                    </div>
-                 </div>
-            </div>
-
-            {/* 4.3 Modif: NOUVELLE RÉPARTITION LAYOUT */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                {/* COLONNE GAUCHE: UES */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 h-full">
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="font-bold text-slate-700 uppercase tracking-wider text-xs flex items-center"><PieChart className="mr-2"/> Répartition (UES)</h3>
-                        {userRole === 'ADMIN' && (
-                            <button onClick={() => setShowConfigUsage(true)} className="text-xs bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded flex items-center text-slate-600 transition-colors">
-                                <Edit2 size={12} className="mr-1"/> Config
-                            </button>
-                        )}
-                    </div>
-                    <div className="space-y-6">
-                        {currentData.elecUsage.map((u, i) => (
-                            <div key={i} className="group">
-                                <div className="flex justify-between items-center mb-1">
-                                    <span className={`text-sm ${u.significant ? 'font-bold text-slate-800' : 'text-slate-500'}`}>{u.name}</span>
-                                    <span className="font-bold text-slate-800">{u.value}%</span>
-                                </div>
-                                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mb-2">
-                                    <div className={`h-full ${u.significant ? 'bg-blue-900' : 'bg-slate-300'}`} style={{width: `${u.value}%`}}></div>
-                                </div>
-                                {/* Sous-détails */}
-                                {u.subDetails && (
-                                    <div className="flex flex-wrap gap-2 mt-1 ml-2">
-                                        {u.subDetails.map((sub, idx) => (
-                                            <div key={idx} className="bg-slate-50 px-2 py-1 rounded border border-slate-100 text-[10px] text-slate-500 flex items-center">
-                                                <div className="w-1 h-1 bg-slate-400 rounded-full mr-1"></div>
-                                                {sub.n}: <b>{sub.v}</b>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-8 relative">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center"><PieChart className="mr-2"/> Répartition des Usages (UES)</h3>
+                    {userRole === 'ADMIN' && (
+                        <button onClick={() => setShowUsageConfig(true)} className="p-2 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-400 hover:text-blue-900 transition-colors">
+                            <Settings size={16}/>
+                        </button>
+                    )}
                 </div>
-
-                {/* COLONNE DROITE: SURFACE & TEMP (Empilés) */}
-                <div className="flex flex-col gap-6">
-                    {/* Surface Details */}
-                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex-1">
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="text-xs font-bold text-slate-400 uppercase flex items-center"><FileText size={14} className="mr-1"/> Fiche Technique</div>
-                            <div className="bg-blue-50 text-blue-900 p-2 rounded"><Building2 size={20}/></div>
-                        </div>
-                        <div className="flex items-baseline gap-2 mb-4">
-                            <div className="text-4xl font-black text-slate-800">{currentData.area.toLocaleString()}</div>
-                            <div className="text-sm font-bold text-slate-400">m² Totaux</div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2 pt-4 border-t border-slate-100">
-                            <div className="text-center bg-slate-50 p-2 rounded">
-                                <div className="text-[9px] text-slate-400 uppercase font-bold mb-1">Couverte</div>
-                                <div className="text-sm font-black text-slate-700">{currentData.covered.toLocaleString()}</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {currentData.elecUsage.length > 0 ? currentData.elecUsage.map((u, i) => (
+                        <div key={i} className="border border-slate-100 rounded-xl p-4 bg-slate-50">
+                            <div className="flex justify-between items-start mb-2">
+                                <span className={`text-sm ${u.significant ? 'font-bold text-blue-900' : 'text-slate-500 font-medium'}`}>{u.name}</span>
+                                <span className="bg-white border px-2 py-0.5 rounded text-xs font-black shadow-sm">{u.value}%</span>
                             </div>
-                            <div className="text-center bg-slate-50 p-2 rounded">
-                                <div className="text-[9px] text-slate-400 uppercase font-bold mb-1">Vitrée</div>
-                                <div className="text-sm font-black text-blue-600">{currentData.glazed}</div>
+                            <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mb-3">
+                                <div className={`h-full ${u.significant ? 'bg-blue-900' : 'bg-slate-400'}`} style={{width: `${u.value}%`}}></div>
                             </div>
-                            <div className="text-center bg-slate-50 p-2 rounded">
-                                <div className="text-[9px] text-slate-400 uppercase font-bold mb-1">Ouverte</div>
-                                <div className="text-sm font-black text-slate-500">{currentData.open.toLocaleString()}</div>
+                            <div className="flex justify-between text-[10px] text-slate-500">
+                                <span>Ratio: <b>{u.ratio}</b></span>
+                                {u.significant && <span className="text-orange-600 font-bold flex items-center"><AlertTriangle size={10} className="mr-1"/> Significatif</span>}
                             </div>
                         </div>
-                    </div>
-
-                    {/* Température Details */}
-                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex-1">
-                        <div className="flex justify-between items-start mb-2">
-                            <div className="text-xs font-bold text-slate-400 uppercase flex items-center"><Thermometer size={14} className="mr-1"/> Données Climatiques</div>
-                            <div className="bg-orange-50 text-orange-600 p-2 rounded"><Sun size={20}/></div>
-                        </div>
-                        <TempChart />
-                        <div className="flex justify-between text-xs text-slate-500 mt-4 pt-2 border-t border-slate-100 font-medium px-2">
-                            <span>Min: 9°C (Jan)</span>
-                            <span>Moy: 21.8°C</span>
-                            <span>Max: 34°C (Août)</span>
-                        </div>
-                    </div>
+                    )) : (
+                        <div className="col-span-3 text-center py-8 text-slate-400 italic bg-slate-50 rounded-xl border border-dashed">Données de répartition non disponibles pour ce site.</div>
+                    )}
                 </div>
             </div>
 
-            {/* TRAJECTOIRE */}
-            <TrajectoryChart />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                 <TechSpecsWidget />
+                 <EnergyMixWidget />
+                 <ClimateInfoWidget />
+            </div>
+
+            <VisionWidget />
         </main>
 
-        {/* FABs */}
+        {/* MODAL CONFIGURATION USAGES */}
+        {showUsageConfig && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                <div className="bg-white rounded-xl w-full max-w-2xl p-6 shadow-2xl relative">
+                    <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+                        <h3 className="font-bold text-lg text-slate-800 flex items-center"><Settings className="mr-2 text-blue-900"/> Configuration Répartition - {currentData.name}</h3>
+                        <button onClick={() => setShowUsageConfig(false)}><X size={20} className="text-slate-400 hover:text-slate-600"/></button>
+                    </div>
+                    <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                        {currentData.elecUsage.map((u, i) => (
+                            <div key={i} className="grid grid-cols-12 gap-4 items-center bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                <div className="col-span-4 font-bold text-sm text-slate-700">{u.name}</div>
+                                <div className="col-span-3">
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase block">Part (%)</label>
+                                    <input type="number" value={u.value} onChange={e => handleUsageChange(i, 'value', parseInt(e.target.value))} className="w-full p-1 border rounded text-sm font-bold"/>
+                                </div>
+                                <div className="col-span-3">
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase block">Ratio</label>
+                                    <input type="text" value={u.ratio} onChange={e => handleUsageChange(i, 'ratio', e.target.value)} className="w-full p-1 border rounded text-xs"/>
+                                </div>
+                                <div className="col-span-2 flex justify-center">
+                                    <button onClick={() => handleUsageChange(i, 'significant', !u.significant)} className={`p-2 rounded-full ${u.significant ? 'bg-orange-100 text-orange-600' : 'bg-slate-200 text-slate-400'}`}>
+                                        <AlertTriangle size={16}/>
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="mt-6 flex justify-end">
+                        <button onClick={() => setShowUsageConfig(false)} className="bg-blue-900 text-white px-6 py-2 rounded-lg font-bold">Terminer</button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {showHistoryInput && (
+             <div className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                 <div className="bg-white rounded-2xl w-full max-w-7xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+                     <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                         <h3 className="font-bold text-lg text-slate-800 flex items-center"><Database className="mr-2 text-blue-900"/> Saisie Historique - {currentData.name}</h3>
+                         <button onClick={() => setShowHistoryInput(false)}><X size={20}/></button>
+                     </div>
+                     <div className="overflow-y-auto flex-1 p-6 space-y-8 bg-slate-50/50">
+                         {yearsRange.map(year => (
+                             <div key={year} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                                 <div className="flex items-center gap-2 mb-4">
+                                     <span className={`font-bold text-sm px-3 py-1 rounded-full ${year === 'REF' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+                                         {year === 'REF' ? 'BASELINE (Réf)' : year}
+                                     </span>
+                                     <div className="h-px bg-slate-100 flex-1"></div>
+                                 </div>
+                                 
+                                 <div className="overflow-x-auto">
+                                     <div className="min-w-max">
+                                         <div className="flex gap-2 mb-2 pl-32">
+                                             {['JAN','FÉV','MAR','AVR','MAI','JUN','JUL','AOÛ','SEP','OCT','NOV','DÉC'].map(m => (
+                                                 <div key={m} className="w-20 text-center text-[10px] font-bold text-slate-400">{m}</div>
+                                             ))}
+                                         </div>
+
+                                         {activeSiteTab === 'LAC' ? (
+                                             <>
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <div className="w-32 text-xs font-bold text-blue-900 uppercase">Réseau STEG</div>
+                                                    {getSiteData('LAC', year, 'grid').map((val, i) => (
+                                                        <input key={i} type="number" className="w-20 p-2 text-center text-xs border rounded focus:border-blue-900 outline-none" placeholder="-"
+                                                            value={val} onChange={e => handleHistoryChange(year, i, e.target.value, 'grid')} />
+                                                    ))}
+                                                </div>
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <div className="w-32 text-xs font-bold text-orange-600 uppercase">Prod. PV</div>
+                                                    {getSiteData('LAC', year, 'pvProd').map((val, i) => (
+                                                        <input key={i} type="number" className="w-20 p-2 text-center text-xs border border-orange-200 rounded focus:border-orange-600 outline-none bg-orange-50" placeholder="-"
+                                                            value={val} onChange={e => handleHistoryChange(year, i, e.target.value, 'pvProd')} />
+                                                    ))}
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-32 text-xs font-bold text-green-600 uppercase">Export STEG</div>
+                                                    {getSiteData('LAC', year, 'pvExport').map((val, i) => (
+                                                        <input key={i} type="number" className="w-20 p-2 text-center text-xs border border-green-200 rounded focus:border-green-600 outline-none bg-green-50" placeholder="-"
+                                                            value={val} onChange={e => handleHistoryChange(year, i, e.target.value, 'pvExport')} />
+                                                    ))}
+                                                </div>
+                                             </>
+                                         ) : (
+                                             <div className="flex items-center gap-2">
+                                                 <div className="w-32 text-xs font-bold text-slate-600 uppercase">Consommation</div>
+                                                 {getSiteData(activeSiteTab, year).map((val, i) => (
+                                                     <input key={i} type="number" className="w-20 p-2 text-center text-xs border rounded focus:border-blue-900 outline-none" placeholder="-"
+                                                         value={val} onChange={e => handleHistoryChange(year, i, e.target.value)} />
+                                                 ))}
+                                             </div>
+                                         )}
+                                     </div>
+                                 </div>
+                             </div>
+                         ))}
+                     </div>
+                     <div className="p-4 border-t bg-white flex justify-end gap-2">
+                         <button onClick={saveHistory} className="bg-blue-900 text-white px-6 py-2 rounded-lg font-bold shadow-lg flex items-center"><Save size={18} className="mr-2"/> Enregistrer</button>
+                     </div>
+                 </div>
+             </div>
+        )}
+
+        {showReport && (
+            <div className="fixed inset-0 bg-slate-900/90 z-[70] overflow-auto flex justify-center items-center p-4">
+                <div className="bg-white shadow-2xl relative print:fixed print:inset-0 print:m-0 print:w-full print:h-full overflow-hidden flex flex-col" style={{width: '29.7cm', height: '21cm'}}> 
+                    
+                    {/* Floating Toolbar */}
+                    <div className="absolute top-6 right-6 no-print flex gap-3 z-50 bg-white/90 p-2 rounded-xl shadow-lg border border-slate-200 backdrop-blur-sm">
+                        <div className="flex items-center bg-slate-100 rounded-lg px-3 border border-slate-200">
+                            <Calendar size={16} className="text-slate-500 mr-2"/>
+                            <input type="month" value={reportMonth} onChange={e=>setReportMonth(e.target.value)} className="bg-transparent border-none text-sm font-bold p-2 outline-none text-slate-700"/>
+                        </div>
+                        <div className="h-10 w-px bg-slate-200 mx-1"></div>
+                        <button onClick={() => window.print()} className="bg-blue-900 text-white px-4 py-2 rounded-lg hover:bg-blue-800 font-bold flex items-center shadow-md transition-all active:scale-95"><Printer size={18} className="mr-2"/> Imprimer</button>
+                        <button onClick={() => setShowReport(false)} className="bg-red-50 text-red-600 px-3 py-2 rounded-lg hover:bg-red-100 transition-colors border border-red-100"><X size={20}/></button>
+                    </div>
+
+                    <div className="h-full p-12 flex flex-col bg-white">
+                        {/* Header A4 */}
+                        <div className="flex justify-between items-start border-b-4 border-blue-900 pb-6 mb-8">
+                            <div className="flex items-center gap-6">
+                                <BrandLogo size="h-16"/>
+                                <div>
+                                    <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tight leading-none mb-1">Rapport Mensuel</h1>
+                                    <div className="text-blue-900 font-bold uppercase tracking-widest text-sm">Performance Énergétique & ISO 50001</div>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <div className="text-sm font-bold text-slate-400 uppercase mb-1">Période du Rapport</div>
+                                <div className="text-3xl font-black text-slate-800 capitalize border-2 border-slate-100 px-4 py-1 rounded-lg bg-slate-50">
+                                    {new Date(reportMonth).toLocaleDateString('fr-FR', {month: 'long', year: 'numeric'})}
+                                </div>
+                                <div className="text-xs font-bold text-slate-400 mt-2 flex items-center justify-end"><MapPin size={10} className="mr-1"/> Site : {currentData.name}</div>
+                            </div>
+                        </div>
+
+                        {/* Body Grid Layout */}
+                        <div className="flex-1 grid grid-cols-12 gap-8">
+                            
+                            {/* KPI Column */}
+                            <div className="col-span-4 space-y-6">
+                                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                                    <h3 className="text-xs font-black text-slate-400 uppercase mb-6 flex items-center tracking-widest"><TrendingUp size={14} className="mr-2"/> Indicateurs Clés</h3>
+                                    
+                                    <div className="space-y-6">
+                                        <div>
+                                            <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Consommation Totale</div>
+                                            <div className="flex items-baseline gap-2">
+                                                <span className="text-5xl font-black text-slate-900">45,230</span>
+                                                <span className="text-lg font-bold text-slate-400">kWh</span>
+                                            </div>
+                                        </div>
+                                        <div className="h-px bg-slate-200 w-full"></div>
+                                        <div>
+                                            <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Ratio Performance</div>
+                                            <div className="flex items-baseline gap-2">
+                                                <span className="text-4xl font-black text-blue-900">12.4</span>
+                                                <span className="text-sm font-bold text-slate-400">kWh / m²</span>
+                                            </div>
+                                        </div>
+                                        <div className="h-px bg-slate-200 w-full"></div>
+                                        <div>
+                                            <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Évolution vs Réf (N-1)</div>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-3xl font-black text-emerald-600">-4.5%</span>
+                                                <div className="text-xs font-medium text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full">Objectif atteint</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-blue-900 p-6 rounded-2xl text-white relative overflow-hidden">
+                                    <div className="relative z-10">
+                                        <h3 className="text-xs font-black text-blue-300 uppercase mb-2">Coût Énergétique</h3>
+                                        <div className="text-4xl font-black mb-1">12 450 <span className="text-lg">DT</span></div>
+                                        <div className="text-[10px] text-blue-200">Hors TVA et Redevances</div>
+                                    </div>
+                                    <div className="absolute right-0 bottom-0 opacity-10"><Zap size={100}/></div>
+                                </div>
+                            </div>
+
+                            {/* Main Content Column */}
+                            <div className="col-span-8 flex flex-col gap-6">
+                                {/* Charts Section */}
+                                <div className="grid grid-cols-2 gap-6 h-64">
+                                    <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col">
+                                        <h4 className="text-xs font-bold text-slate-500 uppercase mb-4">Répartition des Usages</h4>
+                                        <div className="flex-1 flex items-center justify-center gap-4">
+                                            {/* Mock Chart */}
+                                            <div className="relative w-32 h-32">
+                                                <svg className="w-full h-full" viewBox="0 0 36 36">
+                                                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#e2e8f0" strokeWidth="4" />
+                                                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#1e3a8a" strokeWidth="4" strokeDasharray="40, 100" />
+                                                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#3b82f6" strokeWidth="4" strokeDasharray="25, 100" strokeDashoffset="-40" />
+                                                </svg>
+                                            </div>
+                                            <div className="text-xs space-y-1">
+                                                <div className="flex items-center"><div className="w-2 h-2 bg-blue-900 rounded-full mr-2"></div>Climatisation</div>
+                                                <div className="flex items-center"><div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>Éclairage</div>
+                                                <div className="flex items-center"><div className="w-2 h-2 bg-slate-200 rounded-full mr-2"></div>Autre</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col">
+                                        <h4 className="text-xs font-bold text-slate-500 uppercase mb-4">Comparatif Hebdomadaire</h4>
+                                        <div className="flex-1 flex items-end justify-between px-2 gap-2">
+                                            <div className="w-full bg-slate-100 rounded-t h-[60%] relative group"><div className="absolute bottom-0 w-full bg-blue-900 h-full opacity-20"></div></div>
+                                            <div className="w-full bg-blue-900 rounded-t h-[80%]"></div>
+                                            <div className="w-full bg-blue-900 rounded-t h-[65%]"></div>
+                                            <div className="w-full bg-blue-900 rounded-t h-[75%]"></div>
+                                        </div>
+                                        <div className="flex justify-between text-[9px] text-slate-400 mt-2 uppercase font-mono">
+                                            <span>Sem 1</span><span>Sem 2</span><span>Sem 3</span><span>Sem 4</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Recommendations Section */}
+                                <div className="flex-1 bg-slate-50 rounded-xl border border-slate-200 p-6">
+                                    <h4 className="text-xs font-black text-slate-700 uppercase mb-4 flex items-center"><CheckCircle2 size={14} className="mr-2 text-emerald-600"/> Plan d'Action & Observations</h4>
+                                    <div className="grid grid-cols-2 gap-8">
+                                        <div>
+                                            <h5 className="text-[10px] font-bold text-blue-900 uppercase mb-2">Actions Correctives</h5>
+                                            <ul className="text-xs text-slate-600 space-y-2 list-disc pl-4">
+                                                <li>Optimisation des horaires d'éclairage Showroom (-1h).</li>
+                                                <li>Réparation fuite d'air comprimé Zone Atelier B.</li>
+                                                <li>Nettoyage filtres CTA Toiture.</li>
+                                            </ul>
+                                        </div>
+                                        <div>
+                                            <h5 className="text-[10px] font-bold text-blue-900 uppercase mb-2">Points de Vigilance</h5>
+                                            <ul className="text-xs text-slate-600 space-y-2 list-disc pl-4">
+                                                <li>Surconsommation détectée le Week-end (Talon).</li>
+                                                <li>Cos Phi limite (0.82) à surveiller.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer A4 */}
+                        <div className="mt-auto pt-8 border-t-2 border-slate-100 flex justify-between items-end">
+                            <div className="text-[10px] text-slate-400 uppercase tracking-widest space-y-1">
+                                <div>ITALCAR SA • Siège Social</div>
+                                <div>Système de Management de l'Énergie ISO 50001</div>
+                            </div>
+                            
+                            <div className="flex gap-16 pr-12">
+                                <div className="text-center">
+                                    <div className="h-16 w-32 border-b border-slate-300 mb-2"></div>
+                                    <div className="text-[10px] font-bold text-slate-500 uppercase">Resp. Technique</div>
+                                </div>
+                                <div className="text-center">
+                                    <div className="h-16 w-32 border-b border-slate-300 mb-2"></div>
+                                    <div className="text-[10px] font-bold text-slate-500 uppercase">Direction Générale</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
+
         <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-50 no-print">
             {userRole === 'ADMIN' && (
-                <button onClick={() => { initHistory(activeSiteTab); setShowHistoryInput(true); }} className="bg-slate-800 hover:bg-slate-700 text-white p-4 rounded-full shadow-lg shadow-slate-400 transition-transform hover:scale-110 group relative">
+                <button onClick={() => { initHistory(activeSiteTab); setShowHistoryInput(true); }} className="bg-slate-800 hover:bg-slate-700 text-white p-4 rounded-full shadow-lg transition-transform hover:scale-110 group relative">
                     <Database size={20} />
-                    <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none">Historique</span>
                 </button>
             )}
-            <button onClick={() => setShowReport(true)} className="bg-blue-900 hover:bg-blue-800 text-white p-4 rounded-full shadow-xl shadow-blue-300 transition-transform hover:scale-110 group relative">
+            <button onClick={() => setShowReport(true)} className="bg-blue-900 hover:bg-blue-800 text-white p-4 rounded-full shadow-xl transition-transform hover:scale-110 group relative">
                 <Printer size={24} />
-                <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-blue-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none">Rapport Mensuel</span>
             </button>
         </div>
 
@@ -2003,32 +2013,6 @@ const SitesDashboard = ({ onBack, userRole }) => {
     </div>
   );
 };
-
-// Sub-component for Tech Card (Used in previous designs, kept for compatibility if needed)
-const TechCard = ({ label, value, icon, color, bg }) => (
-    <div className={`p-4 rounded-xl border border-slate-100 ${bg} bg-opacity-30 flex flex-col items-center text-center transition-transform hover:scale-105`}>
-        <div className={`p-2 rounded-full bg-white shadow-sm mb-2 ${color}`}>{icon}</div>
-        <div className="text-[10px] font-bold text-slate-600 uppercase tracking-wide">{label}</div>
-        <div className="text-xl font-black text-slate-800">{value.toLocaleString()}</div>
-    </div>
-);
-
-// Sub-component for History Row
-const HistoryRow = ({ label, color, data, onChange }) => (
-    <div className="flex items-center gap-2 overflow-x-auto pb-2">
-        <div className={`w-32 flex-shrink-0 text-[10px] font-bold uppercase ${color}`}>{label}</div>
-        {data.map((val, idx) => (
-            <input 
-                key={idx} 
-                type="number" 
-                placeholder={['J','F','M','A','M','J','J','A','S','O','N','D'][idx]}
-                className="w-20 p-2 text-center text-sm border border-slate-200 rounded focus:border-blue-900 outline-none font-mono font-bold"
-                value={val}
-                onChange={(e) => onChange(idx, e.target.value)}
-            />
-        ))}
-    </div>
-);
 
 // ==================================================================================
 // APPLICATION RACINE & NAVIGATION
@@ -2049,22 +2033,8 @@ const MainDashboard = ({ user, onNavigate, onLogout }) => {
       return "Bonsoir";
   };
 
-  const getRandomTip = () => {
-      const tips = [
-          "Pensez à vérifier les fuites d'air comprimé chaque semaine.",
-          "Un cos φ > 0.95 peut réduire la facture de 5%.",
-          "Sécurité avant tout : Portez vos EPI lors des relevés.",
-          "Éteignez les lumières des zones inoccupées (Atelier Midi).",
-          "Nettoyez les filtres des compresseurs pour optimiser le rendement."
-      ];
-      return tips[Math.floor(Math.random() * tips.length)];
-  };
-
-  const [tip] = useState(getRandomTip());
-
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col items-center justify-center p-6 relative overflow-hidden">
-        {/* En-tête Global */}
         <div className="z-10 w-full max-w-6xl flex justify-between items-center mb-12 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
             <div className="flex items-center gap-6">
                 <BrandLogo size="h-12"/>
@@ -2076,7 +2046,6 @@ const MainDashboard = ({ user, onNavigate, onLogout }) => {
             </div>
             <div className="flex flex-col items-end gap-2">
                 <HeaderInfoDisplay darkText={true} />
-                {/* 1.1 Modif : Message Optimiste seulement (pas de message rouge) */}
                 <div className="bg-emerald-50 text-emerald-800 text-[10px] px-3 py-1 rounded-full font-bold border border-emerald-100 flex items-center">
                     <TrendingUp size={12} className="mr-2"/> Performance Globale en hausse
                 </div>
@@ -2111,7 +2080,6 @@ const MainDashboard = ({ user, onNavigate, onLogout }) => {
             </div>
         )}
         
-        {/* 1.2 Modif: Footer 2025 */}
         <div className="mt-12 text-center text-slate-400 text-xs font-medium uppercase tracking-widest">
             © 2025 ITALCAR SA • Energy Management System
         </div>
@@ -2142,6 +2110,11 @@ const App = () => {
         }
     };
     initAuth();
+    
+    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+        // Keep user state in sync if needed
+    });
+    return () => unsubscribe();
   }, []);
 
   const handleLogin = (userData) => {
@@ -2154,7 +2127,7 @@ const App = () => {
       setCurrentModule('dashboard');
   };
 
-  if (!authReady) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Connexion au Cloud...</div>;
+  if (!authReady) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white font-bold uppercase tracking-widest">Connexion au Cloud...</div>;
 
   if (!user) return <LoginScreen onLogin={handleLogin} />;
 
