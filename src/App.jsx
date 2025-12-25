@@ -28,19 +28,27 @@ const BRAND = {
 // Sur ton propre Firebase, utilise des collections simples à la racine.
 const getCollection = (name) => collection(db, name);
 
-// --- COMPOSANT MARQUE (LOGO) ---
+// --- Composant BrandLogo Manquant (Correction) ---
 const BrandLogo = ({ size = "h-10" }) => (
-    <img 
-        src={LOGO_URL} 
-        alt="ITALCAR Logo" 
-        className={`${size} object-contain`} 
-        onError={(e) => {
-            e.target.onerror = null; 
-            e.target.style.display = 'none'; 
-            if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
-        }} 
-    />
+  <div className={`flex items-center gap-1 font-black text-blue-900 tracking-tighter ${size === 'h-14' ? 'text-4xl' : 'text-xl'}`}>
+    <div className="bg-blue-900 text-white px-2 py-0.5 rounded shadow-sm">IT</div>
+    <span>ITALCAR</span>
+  </div>
 );
+
+//// --- COMPOSANT MARQUE (LOGO) ---
+//const BrandLogo = ({ size = "h-10" }) => (
+//    <img 
+//        src={LOGO_URL} 
+//        alt="ITALCAR Logo" 
+//        className={`${size} object-contain`} 
+//        onError={(e) => {
+//            e.target.onerror = null; 
+//            e.target.style.display = 'none'; 
+//            if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+//        }} 
+//    />
+//);
 const FallbackLogo = () => (
     <div className="hidden items-center justify-center bg-blue-900 text-white font-black p-2 rounded text-xs">
         ITALCAR
