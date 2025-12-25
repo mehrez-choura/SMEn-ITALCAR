@@ -1302,6 +1302,28 @@ const AdminPanel = ({ onBack }) => {
 // 5. MODULE TABLEAU DE BORD SITES
 // ==================================================================================
 
+// STYLES D'IMPRESSION INJECTÉS DYNAMIQUEMENT
+const PrintStyles = () => (
+    <style>{`
+      @media print {
+        @page { size: landscape; margin: 0; }
+        body { -webkit-print-color-adjust: exact; margin: 0; padding: 0; background: white; }
+        .no-print { display: none !important; }
+        /* Force container to fill page */
+        .print-container { 
+            position: absolute; top: 0; left: 0; 
+            width: 100vw; height: 100vh; 
+            margin: 0; padding: 0; 
+            overflow: hidden; 
+            z-index: 9999; 
+            background: white;
+        }
+        /* Ajustements pour que tout tienne */
+        .print-scale { transform: scale(0.95); transform-origin: top center; height: 100%; }
+      }
+    `}</style>
+);
+
 const SitesDashboard = ({ onBack, userRole }) => {
   const [activeSiteTab, setActiveSiteTab] = useState('MEGRINE');
   const [historyData, setHistoryData] = useState({});
@@ -1770,6 +1792,7 @@ const SitesDashboard = ({ onBack, userRole }) => {
 
   return (
     <div className="bg-slate-50 min-h-screen pb-20 relative font-sans text-slate-600">
+        <PrintStyles />
         <header className="bg-white/80 backdrop-blur-md sticky top-0 z-40 border-b border-slate-200">
             <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center">
                 <div className="flex items-center gap-4">
@@ -2005,10 +2028,10 @@ const SitesDashboard = ({ onBack, userRole }) => {
         )}
 
         {showReport && (
-            <div className="fixed inset-0 bg-slate-900/90 z-[70] overflow-auto flex justify-center items-center p-4">
-                <div className="bg-white shadow-2xl relative print:fixed print:inset-0 print:m-0 print:w-full print:h-full overflow-hidden flex flex-col" style={{width: '29.7cm', height: '21cm'}}> 
+            <div className="fixed inset-0 bg-slate-900/90 z-[70] overflow-auto flex justify-center items-center p-0 print-container">
+                <div className="bg-white shadow-2xl relative overflow-hidden flex flex-col print-scale" style={{width: '29.7cm', height: '21cm'}}> 
                     
-                    {/* Floating Toolbar - Déplacée à droite hors page */}
+                    {/* Floating Toolbar - Cachée à l'impression grâce à "no-print" */}
                     <div className="absolute top-1/2 right-[-80px] -translate-y-1/2 no-print flex flex-col gap-3 z-50 bg-white/90 p-2 rounded-l-xl shadow-lg border border-slate-200 backdrop-blur-sm transform hover:translate-x-[-10px] transition-transform">
                         <div className="flex flex-col items-center gap-2">
                             <input type="month" value={reportMonth} onChange={e=>setReportMonth(e.target.value)} className="bg-transparent border border-slate-200 rounded text-xs font-bold p-1 outline-none text-slate-700 w-24"/>
@@ -2017,14 +2040,14 @@ const SitesDashboard = ({ onBack, userRole }) => {
                         </div>
                     </div>
 
-                    <div className="h-full p-12 flex flex-col bg-white">
-                        {/* Header A4 - Réorganisé */}
-                        <div className="flex justify-between items-center border-b-4 border-blue-900 pb-6 mb-8">
+                    <div className="h-full p-8 flex flex-col bg-white">
+                        {/* Header A4 */}
+                        <div className="flex justify-between items-center border-b-4 border-blue-900 pb-4 mb-6">
                             <div className="flex items-center gap-6">
                                 <BrandLogo size="h-16"/>
                                 <div className="h-12 w-px bg-slate-200"></div>
                                 <div>
-                                    <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tight leading-none mb-1">Rapport Mensuel</h1>
+                                    <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tight leading-none mb-1">Rapport Mensuel</h1>
                                     <div className="text-blue-900 font-bold uppercase tracking-widest text-sm">Performance Énergétique & ISO 50001</div>
                                 </div>
                             </div>
@@ -2040,68 +2063,68 @@ const SitesDashboard = ({ onBack, userRole }) => {
                         </div>
 
                         {/* Body Grid Layout */}
-                        <div className="flex-1 grid grid-cols-12 gap-8">
+                        <div className="flex-1 grid grid-cols-12 gap-6">
                             
                             {/* KPI Column */}
-                            <div className="col-span-4 space-y-6">
-                                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                                    <h3 className="text-xs font-black text-slate-400 uppercase mb-6 flex items-center tracking-widest"><TrendingUp size={14} className="mr-2"/> Indicateurs Clés</h3>
+                            <div className="col-span-4 space-y-4">
+                                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                                    <h3 className="text-xs font-black text-slate-400 uppercase mb-4 flex items-center tracking-widest"><TrendingUp size={14} className="mr-2"/> Indicateurs Clés</h3>
                                     
-                                    <div className="space-y-6">
+                                    <div className="space-y-4">
                                         <div>
                                             <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Consommation Totale</div>
                                             <div className="flex items-baseline gap-2">
-                                                <span className="text-5xl font-black text-slate-900">--</span>
-                                                <span className="text-lg font-bold text-slate-400">kWh</span>
+                                                <span className="text-4xl font-black text-slate-900">--</span>
+                                                <span className="text-sm font-bold text-slate-400">kWh</span>
                                             </div>
                                         </div>
                                         <div className="h-px bg-slate-200 w-full"></div>
                                         <div>
                                             <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Ratio Performance</div>
                                             <div className="flex items-baseline gap-2">
-                                                <span className="text-4xl font-black text-blue-900">--</span>
-                                                <span className="text-sm font-bold text-slate-400">kWh / m²</span>
+                                                <span className="text-3xl font-black text-blue-900">--</span>
+                                                <span className="text-xs font-bold text-slate-400">kWh / m²</span>
                                             </div>
                                         </div>
                                         <div className="h-px bg-slate-200 w-full"></div>
                                         <div>
                                             <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Évolution vs Réf (N-1)</div>
                                             <div className="flex items-center gap-3">
-                                                <span className="text-3xl font-black text-emerald-600">--%</span>
-                                                <div className="text-xs font-medium text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full">Objectif atteint</div>
+                                                <span className="text-2xl font-black text-emerald-600">--%</span>
+                                                <div className="text-[10px] font-medium text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">Objectif atteint</div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="bg-blue-900 p-6 rounded-2xl text-white relative overflow-hidden">
+                                <div className="bg-blue-900 p-5 rounded-2xl text-white relative overflow-hidden">
                                     <div className="relative z-10">
                                         <h3 className="text-xs font-black text-blue-300 uppercase mb-2">Coût Énergétique</h3>
-                                        <div className="text-4xl font-black mb-1">-- <span className="text-lg">DT</span></div>
+                                        <div className="text-3xl font-black mb-1">-- <span className="text-sm">DT</span></div>
                                         <div className="text-[10px] text-blue-200">Hors TVA et Redevances</div>
                                     </div>
-                                    <div className="absolute right-0 bottom-0 opacity-10"><Zap size={100}/></div>
+                                    <div className="absolute right-0 bottom-0 opacity-10"><Zap size={80}/></div>
                                 </div>
                             </div>
 
                             {/* Main Content Column */}
-                            <div className="col-span-8 flex flex-col gap-6">
+                            <div className="col-span-8 flex flex-col gap-4">
                                 {/* Charts Section */}
-                                <div className="grid grid-cols-2 gap-6 h-auto">
-                                    <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col">
-                                        <h4 className="text-xs font-bold text-slate-500 uppercase mb-4">Répartition Détaillée (UES)</h4>
-                                        <div className="flex-1 space-y-3">
+                                <div className="grid grid-cols-2 gap-4 h-auto">
+                                    <div className="bg-white border border-slate-200 rounded-xl p-3 flex flex-col">
+                                        <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Répartition Détaillée (UES)</h4>
+                                        <div className="flex-1 space-y-2">
                                             {currentData.elecUsage.map((u, i) => (
-                                                <div key={i} className="text-xs">
-                                                    <div className="flex justify-between font-bold text-slate-700 mb-1">
+                                                <div key={i} className="text-[10px]">
+                                                    <div className="flex justify-between font-bold text-slate-700 mb-0.5">
                                                         <span>{u.name}</span>
                                                         <span>{u.value}%</span>
                                                     </div>
-                                                    <div className="w-full bg-slate-100 h-1.5 rounded-full mb-1">
+                                                    <div className="w-full bg-slate-100 h-1 rounded-full mb-0.5">
                                                         <div className="bg-blue-900 h-full rounded-full" style={{width: `${u.value}%`}}></div>
                                                     </div>
                                                     {/* Sous usages dans le rapport */}
-                                                    <div className="pl-2 flex gap-2 flex-wrap text-[9px] text-slate-500">
+                                                    <div className="pl-2 flex gap-2 flex-wrap text-[8px] text-slate-500">
                                                         {u.subUsages && u.subUsages.map((s, idx) => (
                                                             <span key={idx}>• {s.name} ({s.value}%)</span>
                                                         ))}
@@ -2111,12 +2134,12 @@ const SitesDashboard = ({ onBack, userRole }) => {
                                         </div>
                                     </div>
 
-                                    <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col">
-                                        <h4 className="text-xs font-bold text-slate-500 uppercase mb-4">Comparatif Température (N vs N-1)</h4>
+                                    <div className="bg-white border border-slate-200 rounded-xl p-3 flex flex-col">
+                                        <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Comparatif Température (N vs N-1)</h4>
                                         <div className="flex-1 flex flex-col justify-center items-center text-center p-4 bg-slate-50 rounded-lg">
-                                            <ThermometerSun size={40} className="text-amber-500 mb-2"/>
-                                            <div className="font-bold text-slate-700 text-sm">Analyse Saisonnière</div>
-                                            <p className="text-xs text-slate-500 mt-2">
+                                            <ThermometerSun size={32} className="text-amber-500 mb-2"/>
+                                            <div className="font-bold text-slate-700 text-xs">Analyse Saisonnière</div>
+                                            <p className="text-[10px] text-slate-500 mt-1">
                                                 Comparaison des degrés-jours et impact thermique sur la consommation CVC.
                                                 <br/>
                                                 <span className="italic">(Voir détail widget dashboard)</span>
@@ -2126,24 +2149,24 @@ const SitesDashboard = ({ onBack, userRole }) => {
                                 </div>
 
                                 {/* Vision 2030 & Bonnes Pratiques */}
-                                <div className="flex-1 bg-slate-50 rounded-xl border border-slate-200 p-6">
-                                    <div className="grid grid-cols-2 gap-8 h-full">
+                                <div className="flex-1 bg-slate-50 rounded-xl border border-slate-200 p-4">
+                                    <div className="grid grid-cols-2 gap-6 h-full">
                                         <div>
-                                            <h4 className="text-xs font-black text-emerald-800 uppercase mb-4 flex items-center"><Target size={14} className="mr-2 text-emerald-600"/> Vision 2030</h4>
-                                            <div className="bg-white p-4 rounded-lg border border-emerald-100 shadow-sm space-y-3">
+                                            <h4 className="text-xs font-black text-emerald-800 uppercase mb-3 flex items-center"><Target size={12} className="mr-2 text-emerald-600"/> Vision 2030</h4>
+                                            <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-sm space-y-2">
                                                 <div>
-                                                    <div className="text-[10px] uppercase font-bold text-slate-400">Objectif Réduction</div>
-                                                    <div className="text-xl font-black text-emerald-800">-{currentData.targets?.reduction2030 || 10}% <span className="text-xs font-normal text-slate-500">Conso</span></div>
+                                                    <div className="text-[9px] uppercase font-bold text-slate-400">Objectif Réduction</div>
+                                                    <div className="text-lg font-black text-emerald-800">-{currentData.targets?.reduction2030 || 10}% <span className="text-[10px] font-normal text-slate-500">Conso</span></div>
                                                 </div>
                                                 <div>
-                                                    <div className="text-[10px] uppercase font-bold text-slate-400">Objectif Renouvelable</div>
-                                                    <div className="text-xl font-black text-emerald-800">{currentData.targets?.renewable2030 || 20}% <span className="text-xs font-normal text-slate-500">Mix</span></div>
+                                                    <div className="text-[9px] uppercase font-bold text-slate-400">Objectif Renouvelable</div>
+                                                    <div className="text-lg font-black text-emerald-800">{currentData.targets?.renewable2030 || 20}% <span className="text-[10px] font-normal text-slate-500">Mix</span></div>
                                                 </div>
                                             </div>
                                         </div>
                                         <div>
-                                            <h4 className="text-xs font-black text-blue-900 uppercase mb-4 flex items-center"><Lightbulb size={14} className="mr-2 text-amber-500"/> Bonnes Pratiques</h4>
-                                            <ul className="text-xs text-slate-600 space-y-2 list-disc pl-4 leading-relaxed">
+                                            <h4 className="text-xs font-black text-blue-900 uppercase mb-3 flex items-center"><Lightbulb size={12} className="mr-2 text-amber-500"/> Bonnes Pratiques</h4>
+                                            <ul className="text-[10px] text-slate-600 space-y-1.5 list-disc pl-3 leading-relaxed">
                                                 <li>Éteindre les équipements CVC en zone inoccupée (Bureaux vides).</li>
                                                 <li>Maintenir la consigne clim à 26°C en été.</li>
                                                 <li>Vérifier l'étanchéité du réseau air comprimé chaque semaine.</li>
@@ -2155,21 +2178,23 @@ const SitesDashboard = ({ onBack, userRole }) => {
                             </div>
                         </div>
 
-                        {/* Footer A4 */}
-                        <div className="mt-auto pt-8 border-t-2 border-slate-100 flex justify-between items-end">
-                            <div className="text-[10px] text-slate-400 uppercase tracking-widest space-y-1">
+                        {/* Footer A4 - Validation et Signature */}
+                        <div className="mt-auto pt-6 border-t-2 border-slate-100 flex justify-between items-end">
+                            <div className="text-[9px] text-slate-400 uppercase tracking-widest space-y-1">
                                 <div>ITALCAR SA • Siège Social</div>
                                 <div>Système de Management de l'Énergie ISO 50001</div>
                             </div>
                             
-                            <div className="flex gap-16 pr-12">
-                                <div className="text-center">
-                                    <div className="h-16 w-32 border-b border-slate-300 mb-2"></div>
-                                    <div className="text-[10px] font-bold text-slate-500 uppercase">Resp. Technique</div>
+                            <div className="flex flex-col items-end text-right">
+                                <div className="text-[10px] font-bold text-slate-800 uppercase mb-4 leading-tight">
+                                    ITALCAR S.A.<br/>
+                                    Responsable Système Management Intégrés
                                 </div>
-                                <div className="text-center">
-                                    <div className="h-16 w-32 border-b border-slate-300 mb-2"></div>
-                                    <div className="text-[10px] font-bold text-slate-500 uppercase">Direction Générale</div>
+                                <div className="text-[10px] text-slate-500 mb-6 italic">
+                                    Fait à Tunis, le {new Date().toLocaleDateString('fr-FR')}
+                                </div>
+                                <div className="h-20 w-48 border border-slate-300 rounded bg-slate-50 flex items-center justify-center">
+                                    <span className="text-[9px] text-slate-300 font-bold uppercase tracking-widest">Signature & Cachet</span>
                                 </div>
                             </div>
                         </div>
@@ -2193,10 +2218,6 @@ const SitesDashboard = ({ onBack, userRole }) => {
     </div>
   );
 };
-
-// ==================================================================================
-// APPLICATION RACINE & NAVIGATION
-// ==================================================================================
 
 const MainDashboard = ({ user, onNavigate, onLogout }) => {
   const canAccess = (module) => {
