@@ -7,7 +7,7 @@ import {
   PieChart, MapPin, Maximize2, Building2, Leaf, CloudSun, Flag,
   Database, User, Users, LogOut, Key, Shield, X, Trash2, PlusCircle,
   Store, Droplets, Filter, Check, Printer, TrendingDown, Download, Sliders,
-  Target, Flame, Lightbulb
+  Target, Flame, Lightbulb, ThermometerSun
 } from 'lucide-react';
 
 // --- CONFIGURATION DU SERVEUR LOCAL (VOTRE TUNNEL) ---
@@ -1328,49 +1328,55 @@ const SitesDashboard = ({ onBack, userRole }) => {
         ],
         energyMix: [{ name: "Électricité", value: 97, color: "bg-blue-900" }, { name: "Gaz", value: 3, color: "bg-orange-500" }], 
         elecUsage: [
-            { name: "Clim/Chauffage", value: 40, ratio: "35 kWh/m²", significant: true }, 
-            { name: "Éclairage", value: 27, ratio: "12 kWh/m²", significant: true }, 
-            { name: "Air Comprimé", value: 17, ratio: "0.12 kWh/Nm³", significant: true }, 
-            { name: "Informatique", value: 8, ratio: "-", significant: false }, 
-            { name: "Services", value: 5, ratio: "-", significant: false }, 
-            { name: "Gaz (Primaire)", value: 3, ratio: "-", significant: false } 
-        ] 
+            { name: "Clim/Chauffage", value: 40, ratio: "35 kWh/m²", significant: true, subUsages: [{name: "CTA", value: 60}, {name: "Split", value: 40}] }, 
+            { name: "Éclairage", value: 27, ratio: "12 kWh/m²", significant: true, subUsages: [{name: "Atelier", value: 70}, {name: "Admin", value: 30}] }, 
+            { name: "Air Comprimé", value: 17, ratio: "0.12 kWh/Nm³", significant: true, subUsages: [{name: "Comp 1", value: 50}, {name: "Comp 2", value: 50}] }, 
+            { name: "Informatique", value: 8, ratio: "-", significant: false, subUsages: [] }, 
+            { name: "Services", value: 5, ratio: "-", significant: false, subUsages: [] }, 
+            { name: "Gaz (Primaire)", value: 3, ratio: "-", significant: false, subUsages: [] } 
+        ],
+        targets: { reduction2030: 20, renewable2030: 30 }
     },
     ELKHADHRA: { 
         name: "El Khadhra", area: 9500, covered: 7000, open: 2500, glazed: 40,
         coveredBreakdown: [{ label: "Atelier FIAT", value: 3000 }, { label: "ITALCAR Gros", value: 3000 }, { label: "Réception", value: 1000 }],
         energyMix: [{ name: "Électricité", value: 100, color: "bg-blue-900" }], 
         elecUsage: [
-            { name: "Clim/Chauffage", value: 60, ratio: "45 kWh/m²", significant: true }, 
-            { name: "Éclairage", value: 25, ratio: "15 kWh/m²", significant: true }, 
-            { name: "Air Comprimé", value: 5, ratio: "-", significant: false }, 
-            { name: "Divers", value: 10, ratio: "-", significant: false }
-        ] 
+            { name: "Clim/Chauffage", value: 60, ratio: "45 kWh/m²", significant: true, subUsages: [] }, 
+            { name: "Éclairage", value: 25, ratio: "15 kWh/m²", significant: true, subUsages: [] }, 
+            { name: "Air Comprimé", value: 5, ratio: "-", significant: false, subUsages: [] }, 
+            { name: "Divers", value: 10, ratio: "-", significant: false, subUsages: [] }
+        ],
+        targets: { reduction2030: 15, renewable2030: 20 }
     },
     LAC: { 
         name: "Lac", area: 2050, covered: 850, open: 1200, glazed: 116, 
         coveredBreakdown: [{label:"Showroom", value: 850}], 
         energyMix: [], 
         elecUsage: [
-             { name: "Éclairage", value: 45, ratio: "22 kWh/m²", significant: true }, 
-             { name: "Climatisation", value: 45, ratio: "25 kWh/m²", significant: true },
-             { name: "Informatique", value: 10, ratio: "-", significant: false }
-        ] 
+             { name: "Éclairage", value: 45, ratio: "22 kWh/m²", significant: true, subUsages: [] }, 
+             { name: "Climatisation", value: 45, ratio: "25 kWh/m²", significant: true, subUsages: [] },
+             { name: "Informatique", value: 10, ratio: "-", significant: false, subUsages: [] }
+        ],
+        targets: { reduction2030: 10, renewable2030: 50 }
     },
     NAASSEN: { 
         name: "Naassen", area: 32500, covered: 1850, open: 30680, glazed: 0, 
         coveredBreakdown: [{label:"Réception", value: 920}, {label:"Atelier FIAT", value: 900}], 
-        energyMix: [{ name: "Élec", value: 100, color: "bg-blue-900" }], elecUsage: [] 
+        energyMix: [{ name: "Élec", value: 100, color: "bg-blue-900" }], elecUsage: [],
+        targets: { reduction2030: 10, renewable2030: 10 }
     },
     CARTHAGE: { 
         name: "Rue de Carthage", area: 320, covered: 320, open: 0, glazed: 70, 
         coveredBreakdown: [{label:"Showroom", value: 320}], 
-        energyMix: [{ name: "Élec", value: 100, color: "bg-blue-900" }], elecUsage: [] 
+        energyMix: [{ name: "Élec", value: 100, color: "bg-blue-900" }], elecUsage: [],
+        targets: { reduction2030: 5, renewable2030: 0 }
     },
     AZUR: { 
         name: "Azur City", area: 130, covered: 130, open: 0, glazed: 0, 
         coveredBreakdown: [{label:"Showroom", value: 130}], 
-        energyMix: [{ name: "Élec", value: 100, color: "bg-blue-900" }], elecUsage: [] 
+        energyMix: [{ name: "Élec", value: 100, color: "bg-blue-900" }], elecUsage: [],
+        targets: { reduction2030: 5, renewable2030: 0 }
     }
   });
 
@@ -1385,6 +1391,30 @@ const SitesDashboard = ({ onBack, userRole }) => {
       });
   };
 
+  const handleSubUsageAdd = (index) => {
+    setSitesDataState(prev => {
+        const newData = { ...prev };
+        const site = newData[activeSiteTab];
+        const newUsages = [...site.elecUsage];
+        if(!newUsages[index].subUsages) newUsages[index].subUsages = [];
+        newUsages[index].subUsages.push({name: "Nouveau", value: 0});
+        return newData;
+    });
+  };
+
+  const handleSubUsageChange = (usageIndex, subIndex, field, value) => {
+    setSitesDataState(prev => {
+        const newData = { ...prev };
+        const site = newData[activeSiteTab];
+        const newUsages = [...site.elecUsage];
+        const subUsages = [...newUsages[usageIndex].subUsages];
+        subUsages[subIndex] = { ...subUsages[subIndex], [field]: value };
+        newUsages[usageIndex].subUsages = subUsages;
+        site.elecUsage = newUsages;
+        return newData;
+    });
+  };
+
   const yearsRange = ['REF', 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]; 
   
   // Reconstitution de l'historique depuis les données "plates" du serveur
@@ -1392,7 +1422,6 @@ const SitesDashboard = ({ onBack, userRole }) => {
     if(allHistory.length > 0) {
         const constructed = {};
         allHistory.forEach(item => {
-            // item.historyId serait "MEGRINE_2023" par exemple
             if(item.historyId) {
                 const [site, year] = item.historyId.split('_');
                 if(!constructed[site]) constructed[site] = {};
@@ -1400,6 +1429,9 @@ const SitesDashboard = ({ onBack, userRole }) => {
             }
         });
         setHistoryData(constructed);
+        
+        // Mettre à jour les cibles si elles existent dans l'historique (stocké dans un "year" spécial ou config)
+        // Ici on simplifie en assumant que c'est sauvegardé dans la config locale pour l'instant
     }
   }, [allHistory]);
 
@@ -1407,8 +1439,8 @@ const SitesDashboard = ({ onBack, userRole }) => {
       if (!historyData[site]) {
           const newData = {};
           yearsRange.forEach(y => { 
-              if(site === 'LAC') newData[y] = { grid: Array(12).fill(''), pvProd: Array(12).fill(''), pvExport: Array(12).fill('') };
-              else newData[y] = { months: Array(12).fill('') }; 
+              if(site === 'LAC') newData[y] = { grid: Array(12).fill(''), pvProd: Array(12).fill(''), pvExport: Array(12).fill(''), temperature: Array(12).fill('') };
+              else newData[y] = { months: Array(12).fill(''), temperature: Array(12).fill('') }; 
           });
           setHistoryData(prev => ({...prev, [site]: newData}));
       }
@@ -1436,7 +1468,7 @@ const SitesDashboard = ({ onBack, userRole }) => {
       try {
         for (const year of Object.keys(historyData[site])) {
             const dataToSave = {
-                historyId: `${site}_${year}`, // Clé unique pour le filtre
+                historyId: `${site}_${year}`, 
                 ...historyData[site][year]
             };
             await saveData('site_history', dataToSave);
@@ -1463,20 +1495,16 @@ const SitesDashboard = ({ onBack, userRole }) => {
           const refExp = getSiteData(activeSiteTab, 'REF', 'pvExport')[currentMonthIdx] || 0;
           const curProd = getSiteData(activeSiteTab, currentYear, 'pvProd')[currentMonthIdx] || 0;
           const curExp = getSiteData(activeSiteTab, currentYear, 'pvExport')[currentMonthIdx] || 0;
-          
           valRefMonth += Math.max(0, refProd - refExp);
           valCurMonth += Math.max(0, curProd - curExp);
       }
 
       const diffMonth = valRefMonth > 0 ? ((valCurMonth - valRefMonth) / valRefMonth) * 100 : 0;
-
-      let sumRefYTD = 0;
-      let sumCurYTD = 0;
+      let sumRefYTD = 0, sumCurYTD = 0;
 
       for (let i = 0; i <= currentMonthIdx; i++) {
           let r = parseFloat(refMonths[i]) || 0;
           let c = parseFloat(curMonths[i]) || 0;
-          
           if (activeSiteTab === 'LAC') {
               const rp = parseFloat(getSiteData(activeSiteTab, 'REF', 'pvProd')[i]) || 0;
               const re = parseFloat(getSiteData(activeSiteTab, 'REF', 'pvExport')[i]) || 0;
@@ -1573,18 +1601,15 @@ const SitesDashboard = ({ onBack, userRole }) => {
   const TechSpecsWidget = () => (
       <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm h-full relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><Building2 size={120}/></div>
-          
           <div className="flex items-center gap-2 mb-6 border-b border-slate-50 pb-2 relative z-10">
               <MapPin size={20} className="text-red-600"/>
               <span className="text-xs font-bold uppercase text-slate-500 tracking-wider">Fiche Technique</span>
           </div>
-
           <div className="relative z-10">
               <div className="flex items-baseline mb-4">
                   <span className="text-4xl font-black text-slate-800">{currentData.area.toLocaleString()}</span>
                   <span className="ml-2 text-sm font-bold text-slate-400">m² Totaux</span>
               </div>
-
               <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-3">
                   <div className="flex justify-between items-center pb-2 border-b border-slate-200">
                       <span className="text-xs font-bold text-slate-500 uppercase">Espace Couvert</span>
@@ -1599,97 +1624,149 @@ const SitesDashboard = ({ onBack, userRole }) => {
                       ))}
                   </div>
               </div>
-
-              <div className="grid grid-cols-2 gap-4 mt-4">
-                  <div className="text-center p-2 bg-blue-50 rounded-lg">
-                      <div className="text-[9px] font-bold text-blue-400 uppercase">Ouvert</div>
-                      <div className="font-bold text-blue-900">{currentData.open.toLocaleString()} m²</div>
-                  </div>
-                  <div className="text-center p-2 bg-cyan-50 rounded-lg">
-                      <div className="text-[9px] font-bold text-cyan-400 uppercase">Vitrée</div>
-                      <div className="font-bold text-cyan-900">{currentData.glazed.toLocaleString()} m²</div>
-                  </div>
-              </div>
           </div>
       </div>
   );
 
-  const ClimateInfoWidget = () => (
+  // --- WIDGET SAISONNALITÉ MODIFIÉ (Temp N vs N-1) ---
+  const ClimateInfoWidget = () => {
+    const tempsCurrent = getSiteData(activeSiteTab, currentYear, 'temperature');
+    const tempsPrev = getSiteData(activeSiteTab, currentYear - 1, 'temperature');
+    
+    // Mois actuel pour l'affichage (défaut Janvier si pas de données)
+    const displayMonthIdx = currentMonthIdx >= 0 ? currentMonthIdx : 0;
+    
+    const tCurr = parseFloat(tempsCurrent[displayMonthIdx]) || 0;
+    const tPrev = parseFloat(tempsPrev[displayMonthIdx]) || 0;
+    const diff = tCurr - tPrev;
+    const monthName = new Date(currentYear, displayMonthIdx).toLocaleString('fr-FR', { month: 'long' });
+
+    // Interprétation automatique
+    let constat = "Températures similaires à N-1.";
+    let impact = "Impact neutre sur CVC.";
+    if (diff > 1.5) {
+        const isSummer = [5,6,7,8].includes(displayMonthIdx);
+        constat = `Mois de ${monthName} plus chaud (+${diff.toFixed(1)}°C)`;
+        impact = isSummer ? "Surconsommation Climatisation probable." : "Baisse besoins Chauffage.";
+    } else if (diff < -1.5) {
+        const isWinter = [0,1,2,10,11].includes(displayMonthIdx);
+        constat = `Mois de ${monthName} plus froid (${diff.toFixed(1)}°C)`;
+        impact = isWinter ? "Surconsommation Chauffage probable." : "Baisse besoins Climatisation.";
+    }
+
+    return (
       <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm h-full flex flex-col relative overflow-hidden">
            <div className="flex items-center gap-2 mb-4">
-               <Thermometer size={20} className="text-amber-500"/>
+               <ThermometerSun size={20} className="text-amber-500"/>
                <span className="text-xs font-bold uppercase text-slate-500 tracking-wider">Saisonnalité & Impact</span>
            </div>
 
-           <div className="flex-1 flex items-end justify-between gap-1 pb-2 border-b border-slate-100">
-               {[40, 35, 30, 20, 15, 25, 60, 80, 70, 40, 30, 45].map((h, i) => (
-                   <div key={i} className="w-full bg-slate-100 rounded-t-sm relative group">
-                       <div className={`absolute bottom-0 w-full rounded-t-sm transition-all duration-500 ${h > 50 ? 'bg-orange-400' : 'bg-blue-400'}`} style={{height: `${h}%`}}></div>
-                   </div>
-               ))}
-           </div>
-           <div className="flex justify-between text-[8px] text-slate-400 font-mono mt-1 uppercase">
-               <span>Jan</span><span>Juin</span><span>Déc</span>
+           <div className="flex items-end gap-4 mb-4">
+                <div>
+                    <div className="text-[10px] uppercase font-bold text-slate-400">Temp. {monthName} {currentYear}</div>
+                    <div className="text-3xl font-black text-slate-800">{tCurr > 0 ? tCurr : '--'} <span className="text-sm font-normal text-slate-400">°C</span></div>
+                </div>
+                <div className="mb-1 text-xs font-bold text-slate-400">vs</div>
+                <div>
+                    <div className="text-[10px] uppercase font-bold text-slate-400">Temp. N-1</div>
+                    <div className="text-xl font-bold text-slate-500">{tPrev > 0 ? tPrev : '--'} <span className="text-xs font-normal text-slate-400">°C</span></div>
+                </div>
            </div>
 
-           <div className="mt-4 grid grid-cols-2 gap-2">
-                <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg">
-                    <Flame size={14} className="text-orange-500"/>
+           <div className={`mt-auto p-3 rounded-xl border ${diff > 1.5 ? 'bg-orange-50 border-orange-100' : diff < -1.5 ? 'bg-blue-50 border-blue-100' : 'bg-slate-50 border-slate-100'}`}>
+                <div className="flex items-start gap-2">
+                    <Info size={16} className={diff > 1.5 ? 'text-orange-500' : diff < -1.5 ? 'text-blue-500' : 'text-slate-400'}/>
                     <div>
-                        <div className="text-[9px] font-bold text-slate-500">Été (Clim)</div>
-                        <div className="text-xs font-black text-slate-800">Haute</div>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg">
-                    <Wind size={14} className="text-blue-500"/>
-                    <div>
-                        <div className="text-[9px] font-bold text-slate-500">Hiver (Chauff)</div>
-                        <div className="text-xs font-black text-slate-800">Moyenne</div>
+                        <div className="text-[10px] font-bold uppercase mb-1 opacity-70">Constat & Interprétation</div>
+                        <div className="text-xs font-bold text-slate-700">{constat}</div>
+                        <div className="text-xs text-slate-500">{impact}</div>
                     </div>
                 </div>
            </div>
       </div>
-  );
+    );
+  };
 
-  const VisionWidget = () => (
+  // --- WIDGET VISION 2030 (Ex-VisionWidget) ---
+  const VisionWidget = () => {
+    // Calcul de la conso 2024 (Basé sur l'historique dispo)
+    const months2024 = getSiteData(activeSiteTab, 2024, activeSiteTab === 'LAC' ? 'grid' : 'months');
+    const total2024 = months2024.reduce((acc, val) => acc + (parseFloat(val) || 0), 0);
+    
+    // Projection 2025 (Basé sur 2024 pour l'instant ou partiel 2025)
+    const months2025 = getSiteData(activeSiteTab, 2025, activeSiteTab === 'LAC' ? 'grid' : 'months');
+    const total2025 = months2025.reduce((acc, val) => acc + (parseFloat(val) || 0), 0);
+    const display2025 = total2025 > 0 ? total2025 : total2024; // Si 2025 vide, on affiche prévision basée sur 2024
+
+    // Cibles
+    const reductionTarget = currentData.targets?.reduction2030 || 10;
+    const renewableTarget = currentData.targets?.renewable2030 || 20;
+    
+    // Baseline (Ref)
+    const monthsRef = getSiteData(activeSiteTab, 'REF', activeSiteTab === 'LAC' ? 'grid' : 'months');
+    const totalRef = monthsRef.reduce((acc, val) => acc + (parseFloat(val) || 0), 0);
+    
+    const targetConso2030 = totalRef * (1 - (reductionTarget / 100));
+
+    return (
     <div className="bg-gradient-to-r from-emerald-900 to-emerald-800 p-6 rounded-2xl shadow-lg mt-8 text-white relative overflow-hidden">
          <div className="absolute right-0 top-0 opacity-10 transform translate-x-10 -translate-y-10">
              <Leaf size={200} />
          </div>
          
-         <div className="flex flex-col md:flex-row justify-between items-center relative z-10">
-            <div className="mb-6 md:mb-0">
+         <div className="flex flex-col md:flex-row justify-between items-start relative z-10 gap-8">
+            <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
                     <Target className="text-emerald-400" size={24}/>
-                    <h3 className="font-black text-xl uppercase tracking-tight">Empreinte Carbone & Vision</h3>
+                    <h3 className="font-black text-xl uppercase tracking-tight">Vision 2030</h3>
                 </div>
-                <p className="text-emerald-200 text-sm max-w-md">Objectif de réduction des émissions de gaz à effet de serre (GES) aligné sur la stratégie RSE 2030.</p>
+                <div className="text-emerald-200 text-sm space-y-1 mb-6">
+                    <p>🎯 Réduire la consommation énergétique de <strong>{reductionTarget}%</strong> d'ici 2030.</p>
+                    <p>☀️ Atteindre <strong>{renewableTarget}%</strong> d'approvisionnement en énergie renouvelable.</p>
+                </div>
                 
-                <div className="mt-6 flex gap-8">
+                <div className="flex gap-8">
                     <div>
-                        <div className="text-3xl font-black">245 <span className="text-sm font-normal text-emerald-400">tCO2e</span></div>
-                        <div className="text-[10px] uppercase font-bold text-emerald-300">Émissions 2024</div>
+                        <div className="text-3xl font-black">{total2024 > 0 ? total2024.toLocaleString() : '--'} <span className="text-sm font-normal text-emerald-400">kWh</span></div>
+                        <div className="text-[10px] uppercase font-bold text-emerald-300">Conso 2024</div>
+                    </div>
+                     <div>
+                        <div className="text-3xl font-black">{display2025.toLocaleString()} <span className="text-sm font-normal text-emerald-400">kWh</span></div>
+                        <div className="text-[10px] uppercase font-bold text-emerald-300">Conso 2025 (Est.)</div>
                     </div>
                     <div>
-                        <div className="text-3xl font-black">170 <span className="text-sm font-normal text-emerald-400">tCO2e</span></div>
-                        <div className="text-[10px] uppercase font-bold text-emerald-300">Cible 2030</div>
+                        <div className="text-3xl font-black text-emerald-300 border-b-2 border-emerald-400 inline-block">{targetConso2030.toLocaleString()} <span className="text-sm font-normal text-emerald-400">kWh</span></div>
+                        <div className="text-[10px] uppercase font-bold text-emerald-300 mt-1">Cible 2030</div>
                     </div>
                 </div>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20 w-full md:w-auto min-w-[200px]">
-                <div className="text-xs font-bold uppercase text-emerald-300 mb-2">Progression Global</div>
-                <div className="w-full bg-black/20 h-3 rounded-full overflow-hidden mb-2">
-                    <div className="bg-emerald-400 h-full rounded-full" style={{width: '35%'}}></div>
+            <div className="w-full md:w-1/3 bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20">
+                <div className="mb-4">
+                    <div className="flex justify-between text-xs font-bold uppercase text-emerald-300 mb-1">
+                        <span>Trajectoire Efficacité</span>
+                        <span>Obj: -{reductionTarget}%</span>
+                    </div>
+                    <div className="w-full bg-black/20 h-2 rounded-full overflow-hidden">
+                        {/* Barre inversée: plus on est proche de la cible, plus c'est rempli */}
+                        <div className="bg-emerald-400 h-full rounded-full" style={{width: '45%'}}></div> 
+                    </div>
                 </div>
-                <div className="flex justify-between text-[10px] font-mono">
-                    <span>Baseline</span>
-                    <span>35% Réalisé</span>
+                <div>
+                    <div className="flex justify-between text-xs font-bold uppercase text-emerald-300 mb-1">
+                        <span>Part Renouvelable</span>
+                        <span>Obj: {renewableTarget}%</span>
+                    </div>
+                    <div className="w-full bg-black/20 h-2 rounded-full overflow-hidden">
+                        <div className="bg-emerald-400 h-full rounded-full" style={{width: `${activeSiteTab === 'LAC' ? 35 : 0}%`}}></div>
+                    </div>
+                    <div className="text-[10px] text-emerald-200 mt-1 text-right">Actuel: {activeSiteTab === 'LAC' ? '35%' : '0%'}</div>
                 </div>
             </div>
          </div>
     </div>
-  );
+    );
+  };
 
   return (
     <div className="bg-slate-50 min-h-screen pb-20 relative font-sans text-slate-600">
@@ -1735,7 +1812,18 @@ const SitesDashboard = ({ onBack, userRole }) => {
                             <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mb-3">
                                 <div className={`h-full ${u.significant ? 'bg-blue-900' : 'bg-slate-400'}`} style={{width: `${u.value}%`}}></div>
                             </div>
-                            <div className="flex justify-between text-[10px] text-slate-500">
+                            {/* Affichage des sous-usages */}
+                            {u.subUsages && u.subUsages.length > 0 && (
+                                <div className="mt-3 pt-2 border-t border-slate-200 space-y-1">
+                                    {u.subUsages.map((sub, idx) => (
+                                        <div key={idx} className="flex justify-between text-[10px] text-slate-500">
+                                            <span>• {sub.name}</span>
+                                            <span className="font-mono font-bold text-slate-600">{sub.value}% <span className="text-[8px] text-slate-400">(cat)</span></span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            <div className="flex justify-between text-[10px] text-slate-500 mt-2">
                                 <span>Ratio: <b>{u.ratio}</b></span>
                                 {u.significant && <span className="text-orange-600 font-bold flex items-center"><AlertTriangle size={10} className="mr-1"/> Significatif</span>}
                             </div>
@@ -1755,35 +1843,55 @@ const SitesDashboard = ({ onBack, userRole }) => {
             <VisionWidget />
         </main>
 
-        {/* MODAL CONFIGURATION USAGES */}
+        {/* MODAL CONFIGURATION USAGES AVEC SOUS-USAGES */}
         {showUsageConfig && (
             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                <div className="bg-white rounded-xl w-full max-w-2xl p-6 shadow-2xl relative">
+                <div className="bg-white rounded-xl w-full max-w-3xl p-6 shadow-2xl relative">
                     <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
                         <h3 className="font-bold text-lg text-slate-800 flex items-center"><Settings className="mr-2 text-blue-900"/> Configuration Répartition - {currentData.name}</h3>
                         <button onClick={() => setShowUsageConfig(false)}><X size={20} className="text-slate-400 hover:text-slate-600"/></button>
                     </div>
-                    <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                    <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2">
                         {currentData.elecUsage.map((u, i) => (
-                            <div key={i} className="grid grid-cols-12 gap-4 items-center bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                <div className="col-span-4 font-bold text-sm text-slate-700">{u.name}</div>
-                                <div className="col-span-3">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase block">Part (%)</label>
-                                    <input type="number" value={u.value} onChange={e => handleUsageChange(i, 'value', parseInt(e.target.value))} className="w-full p-1 border rounded text-sm font-bold"/>
+                            <div key={i} className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                                <div className="grid grid-cols-12 gap-4 items-center mb-4">
+                                    <div className="col-span-4 font-bold text-sm text-slate-700">{u.name}</div>
+                                    <div className="col-span-3">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase block">Part Globale (%)</label>
+                                        <input type="number" value={u.value} onChange={e => handleUsageChange(i, 'value', parseInt(e.target.value))} className="w-full p-1 border rounded text-sm font-bold"/>
+                                    </div>
+                                    <div className="col-span-3">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase block">Ratio</label>
+                                        <input type="text" value={u.ratio} onChange={e => handleUsageChange(i, 'ratio', e.target.value)} className="w-full p-1 border rounded text-xs"/>
+                                    </div>
+                                    <div className="col-span-2 flex justify-center">
+                                        <button onClick={() => handleUsageChange(i, 'significant', !u.significant)} className={`p-2 rounded-full ${u.significant ? 'bg-orange-100 text-orange-600' : 'bg-slate-200 text-slate-400'}`}>
+                                            <AlertTriangle size={16}/>
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="col-span-3">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase block">Ratio</label>
-                                    <input type="text" value={u.ratio} onChange={e => handleUsageChange(i, 'ratio', e.target.value)} className="w-full p-1 border rounded text-xs"/>
-                                </div>
-                                <div className="col-span-2 flex justify-center">
-                                    <button onClick={() => handleUsageChange(i, 'significant', !u.significant)} className={`p-2 rounded-full ${u.significant ? 'bg-orange-100 text-orange-600' : 'bg-slate-200 text-slate-400'}`}>
-                                        <AlertTriangle size={16}/>
-                                    </button>
+                                
+                                {/* Section Sous-usages */}
+                                <div className="pl-4 border-l-2 border-slate-200 ml-2">
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase mb-2 flex justify-between items-center">
+                                        <span>Sous-Usages (Total doit faire 100%)</span>
+                                        <button onClick={() => handleSubUsageAdd(i)} className="text-blue-600 hover:underline flex items-center"><PlusCircle size={10} className="mr-1"/> Ajouter</button>
+                                    </div>
+                                    {u.subUsages && u.subUsages.map((sub, idx) => (
+                                        <div key={idx} className="flex gap-2 mb-2">
+                                            <input type="text" value={sub.name} onChange={e => handleSubUsageChange(i, idx, 'name', e.target.value)} className="flex-1 p-1 text-xs border rounded" placeholder="Nom"/>
+                                            <div className="relative w-20">
+                                                <input type="number" value={sub.value} onChange={e => handleSubUsageChange(i, idx, 'value', parseInt(e.target.value))} className="w-full p-1 text-xs border rounded font-mono"/>
+                                                <span className="absolute right-4 top-1 text-[10px] text-slate-400">%</span>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         ))}
                     </div>
-                    <div className="mt-6 flex justify-end">
+                    <div className="mt-6 flex justify-between items-center">
+                        <div className="text-xs text-slate-400 italic">La somme des parts globales doit être égale à 100%.</div>
                         <button onClick={() => setShowUsageConfig(false)} className="bg-blue-900 text-white px-6 py-2 rounded-lg font-bold">Terminer</button>
                     </div>
                 </div>
@@ -1797,7 +1905,34 @@ const SitesDashboard = ({ onBack, userRole }) => {
                          <h3 className="font-bold text-lg text-slate-800 flex items-center"><Database className="mr-2 text-blue-900"/> Saisie Historique - {currentData.name}</h3>
                          <button onClick={() => setShowHistoryInput(false)}><X size={20}/></button>
                      </div>
+                     
                      <div className="overflow-y-auto flex-1 p-6 space-y-8 bg-slate-50/50">
+                         {/* NOUVEAU: Saisie des objectifs Vision 2030 */}
+                         <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 mb-6">
+                             <h4 className="font-bold text-emerald-800 mb-4 flex items-center text-sm uppercase"><Target size={16} className="mr-2"/> Objectifs Vision 2030 (Admin)</h4>
+                             <div className="grid grid-cols-2 gap-8 max-w-2xl">
+                                 <div>
+                                     <label className="block text-xs font-bold text-emerald-700 mb-1">Cible Réduction Consommation (%)</label>
+                                     <input type="number" 
+                                        defaultValue={currentData.targets?.reduction2030} 
+                                        onChange={(e) => {
+                                            // Mise à jour locale temporaire pour la démo (idéalement via un handler global)
+                                            currentData.targets = { ...currentData.targets, reduction2030: parseInt(e.target.value) };
+                                        }}
+                                        className="border border-emerald-200 rounded p-2 w-full font-bold text-emerald-900" />
+                                 </div>
+                                 <div>
+                                     <label className="block text-xs font-bold text-emerald-700 mb-1">Cible Énergie Renouvelable (%)</label>
+                                     <input type="number" 
+                                        defaultValue={currentData.targets?.renewable2030} 
+                                        onChange={(e) => {
+                                             currentData.targets = { ...currentData.targets, renewable2030: parseInt(e.target.value) };
+                                        }}
+                                        className="border border-emerald-200 rounded p-2 w-full font-bold text-emerald-900" />
+                                 </div>
+                             </div>
+                         </div>
+
                          {yearsRange.map(year => (
                              <div key={year} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                                  <div className="flex items-center gap-2 mb-4">
@@ -1831,7 +1966,7 @@ const SitesDashboard = ({ onBack, userRole }) => {
                                                             value={val} onChange={e => handleHistoryChange(year, i, e.target.value, 'pvProd')} />
                                                     ))}
                                                 </div>
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-2 mb-2">
                                                     <div className="w-32 text-xs font-bold text-green-600 uppercase">Export STEG</div>
                                                     {getSiteData('LAC', year, 'pvExport').map((val, i) => (
                                                         <input key={i} type="number" className="w-20 p-2 text-center text-xs border border-green-200 rounded focus:border-green-600 outline-none bg-green-50" placeholder="-"
@@ -1840,7 +1975,7 @@ const SitesDashboard = ({ onBack, userRole }) => {
                                                 </div>
                                              </>
                                          ) : (
-                                             <div className="flex items-center gap-2">
+                                             <div className="flex items-center gap-2 mb-2">
                                                  <div className="w-32 text-xs font-bold text-slate-600 uppercase">Consommation</div>
                                                  {getSiteData(activeSiteTab, year).map((val, i) => (
                                                      <input key={i} type="number" className="w-20 p-2 text-center text-xs border rounded focus:border-blue-900 outline-none" placeholder="-"
@@ -1848,6 +1983,15 @@ const SitesDashboard = ({ onBack, userRole }) => {
                                                  ))}
                                              </div>
                                          )}
+                                         
+                                         {/* LIGNE TEMPÉRATURE AJOUTÉE */}
+                                         <div className="flex items-center gap-2 mt-2 border-t border-slate-50 pt-2">
+                                             <div className="w-32 text-xs font-bold text-amber-500 uppercase flex items-center"><Thermometer size={12} className="mr-1"/> Temp. Moy (°C)</div>
+                                             {getSiteData(activeSiteTab, year, 'temperature').map((val, i) => (
+                                                 <input key={i} type="number" className="w-20 p-2 text-center text-xs border border-amber-100 bg-amber-50/30 rounded focus:border-amber-500 outline-none" placeholder="°C"
+                                                     value={val} onChange={e => handleHistoryChange(year, i, e.target.value, 'temperature')} />
+                                             ))}
+                                         </div>
                                      </div>
                                  </div>
                              </div>
@@ -1864,33 +2008,34 @@ const SitesDashboard = ({ onBack, userRole }) => {
             <div className="fixed inset-0 bg-slate-900/90 z-[70] overflow-auto flex justify-center items-center p-4">
                 <div className="bg-white shadow-2xl relative print:fixed print:inset-0 print:m-0 print:w-full print:h-full overflow-hidden flex flex-col" style={{width: '29.7cm', height: '21cm'}}> 
                     
-                    {/* Floating Toolbar */}
-                    <div className="absolute top-6 right-6 no-print flex gap-3 z-50 bg-white/90 p-2 rounded-xl shadow-lg border border-slate-200 backdrop-blur-sm">
-                        <div className="flex items-center bg-slate-100 rounded-lg px-3 border border-slate-200">
-                            <Calendar size={16} className="text-slate-500 mr-2"/>
-                            <input type="month" value={reportMonth} onChange={e=>setReportMonth(e.target.value)} className="bg-transparent border-none text-sm font-bold p-2 outline-none text-slate-700"/>
+                    {/* Floating Toolbar - Déplacée à droite hors page */}
+                    <div className="absolute top-1/2 right-[-80px] -translate-y-1/2 no-print flex flex-col gap-3 z-50 bg-white/90 p-2 rounded-l-xl shadow-lg border border-slate-200 backdrop-blur-sm transform hover:translate-x-[-10px] transition-transform">
+                        <div className="flex flex-col items-center gap-2">
+                            <input type="month" value={reportMonth} onChange={e=>setReportMonth(e.target.value)} className="bg-transparent border border-slate-200 rounded text-xs font-bold p-1 outline-none text-slate-700 w-24"/>
+                            <button onClick={() => window.print()} className="bg-blue-900 text-white p-3 rounded-full hover:bg-blue-800 shadow-md transition-all active:scale-95" title="Imprimer"><Printer size={20}/></button>
+                            <button onClick={() => setShowReport(false)} className="bg-red-50 text-red-600 p-3 rounded-full hover:bg-red-100 border border-red-100" title="Fermer"><X size={20}/></button>
                         </div>
-                        <div className="h-10 w-px bg-slate-200 mx-1"></div>
-                        <button onClick={() => window.print()} className="bg-blue-900 text-white px-4 py-2 rounded-lg hover:bg-blue-800 font-bold flex items-center shadow-md transition-all active:scale-95"><Printer size={18} className="mr-2"/> Imprimer</button>
-                        <button onClick={() => setShowReport(false)} className="bg-red-50 text-red-600 px-3 py-2 rounded-lg hover:bg-red-100 transition-colors border border-red-100"><X size={20}/></button>
                     </div>
 
                     <div className="h-full p-12 flex flex-col bg-white">
-                        {/* Header A4 */}
-                        <div className="flex justify-between items-start border-b-4 border-blue-900 pb-6 mb-8">
+                        {/* Header A4 - Réorganisé */}
+                        <div className="flex justify-between items-center border-b-4 border-blue-900 pb-6 mb-8">
                             <div className="flex items-center gap-6">
                                 <BrandLogo size="h-16"/>
+                                <div className="h-12 w-px bg-slate-200"></div>
                                 <div>
-                                    <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tight leading-none mb-1">Rapport Mensuel</h1>
+                                    <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tight leading-none mb-1">Rapport Mensuel</h1>
                                     <div className="text-blue-900 font-bold uppercase tracking-widest text-sm">Performance Énergétique & ISO 50001</div>
                                 </div>
                             </div>
-                            <div className="text-right">
-                                <div className="text-sm font-bold text-slate-400 uppercase mb-1">Période du Rapport</div>
-                                <div className="text-3xl font-black text-slate-800 capitalize border-2 border-slate-100 px-4 py-1 rounded-lg bg-slate-50">
+                            <div className="text-right bg-slate-50 px-6 py-3 rounded-xl border border-slate-100">
+                                <div className="text-xs font-bold text-slate-400 uppercase mb-1">Période concernée</div>
+                                <div className="text-2xl font-black text-slate-800 capitalize">
                                     {new Date(reportMonth).toLocaleDateString('fr-FR', {month: 'long', year: 'numeric'})}
                                 </div>
-                                <div className="text-xs font-bold text-slate-400 mt-2 flex items-center justify-end"><MapPin size={10} className="mr-1"/> Site : {currentData.name}</div>
+                                <div className="text-xs font-bold text-slate-500 mt-1 flex items-center justify-end bg-white px-2 py-1 rounded border border-slate-200 w-fit ml-auto">
+                                    <MapPin size={10} className="mr-1"/> {currentData.name}
+                                </div>
                             </div>
                         </div>
 
@@ -1906,7 +2051,7 @@ const SitesDashboard = ({ onBack, userRole }) => {
                                         <div>
                                             <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Consommation Totale</div>
                                             <div className="flex items-baseline gap-2">
-                                                <span className="text-5xl font-black text-slate-900">45,230</span>
+                                                <span className="text-5xl font-black text-slate-900">--</span>
                                                 <span className="text-lg font-bold text-slate-400">kWh</span>
                                             </div>
                                         </div>
@@ -1914,7 +2059,7 @@ const SitesDashboard = ({ onBack, userRole }) => {
                                         <div>
                                             <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Ratio Performance</div>
                                             <div className="flex items-baseline gap-2">
-                                                <span className="text-4xl font-black text-blue-900">12.4</span>
+                                                <span className="text-4xl font-black text-blue-900">--</span>
                                                 <span className="text-sm font-bold text-slate-400">kWh / m²</span>
                                             </div>
                                         </div>
@@ -1922,7 +2067,7 @@ const SitesDashboard = ({ onBack, userRole }) => {
                                         <div>
                                             <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Évolution vs Réf (N-1)</div>
                                             <div className="flex items-center gap-3">
-                                                <span className="text-3xl font-black text-emerald-600">-4.5%</span>
+                                                <span className="text-3xl font-black text-emerald-600">--%</span>
                                                 <div className="text-xs font-medium text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full">Objectif atteint</div>
                                             </div>
                                         </div>
@@ -1932,7 +2077,7 @@ const SitesDashboard = ({ onBack, userRole }) => {
                                 <div className="bg-blue-900 p-6 rounded-2xl text-white relative overflow-hidden">
                                     <div className="relative z-10">
                                         <h3 className="text-xs font-black text-blue-300 uppercase mb-2">Coût Énergétique</h3>
-                                        <div className="text-4xl font-black mb-1">12 450 <span className="text-lg">DT</span></div>
+                                        <div className="text-4xl font-black mb-1">-- <span className="text-lg">DT</span></div>
                                         <div className="text-[10px] text-blue-200">Hors TVA et Redevances</div>
                                     </div>
                                     <div className="absolute right-0 bottom-0 opacity-10"><Zap size={100}/></div>
@@ -1942,57 +2087,67 @@ const SitesDashboard = ({ onBack, userRole }) => {
                             {/* Main Content Column */}
                             <div className="col-span-8 flex flex-col gap-6">
                                 {/* Charts Section */}
-                                <div className="grid grid-cols-2 gap-6 h-64">
+                                <div className="grid grid-cols-2 gap-6 h-auto">
                                     <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col">
-                                        <h4 className="text-xs font-bold text-slate-500 uppercase mb-4">Répartition des Usages</h4>
-                                        <div className="flex-1 flex items-center justify-center gap-4">
-                                            {/* Mock Chart */}
-                                            <div className="relative w-32 h-32">
-                                                <svg className="w-full h-full" viewBox="0 0 36 36">
-                                                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#e2e8f0" strokeWidth="4" />
-                                                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#1e3a8a" strokeWidth="4" strokeDasharray="40, 100" />
-                                                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#3b82f6" strokeWidth="4" strokeDasharray="25, 100" strokeDashoffset="-40" />
-                                                </svg>
-                                            </div>
-                                            <div className="text-xs space-y-1">
-                                                <div className="flex items-center"><div className="w-2 h-2 bg-blue-900 rounded-full mr-2"></div>Climatisation</div>
-                                                <div className="flex items-center"><div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>Éclairage</div>
-                                                <div className="flex items-center"><div className="w-2 h-2 bg-slate-200 rounded-full mr-2"></div>Autre</div>
-                                            </div>
+                                        <h4 className="text-xs font-bold text-slate-500 uppercase mb-4">Répartition Détaillée (UES)</h4>
+                                        <div className="flex-1 space-y-3">
+                                            {currentData.elecUsage.map((u, i) => (
+                                                <div key={i} className="text-xs">
+                                                    <div className="flex justify-between font-bold text-slate-700 mb-1">
+                                                        <span>{u.name}</span>
+                                                        <span>{u.value}%</span>
+                                                    </div>
+                                                    <div className="w-full bg-slate-100 h-1.5 rounded-full mb-1">
+                                                        <div className="bg-blue-900 h-full rounded-full" style={{width: `${u.value}%`}}></div>
+                                                    </div>
+                                                    {/* Sous usages dans le rapport */}
+                                                    <div className="pl-2 flex gap-2 flex-wrap text-[9px] text-slate-500">
+                                                        {u.subUsages && u.subUsages.map((s, idx) => (
+                                                            <span key={idx}>• {s.name} ({s.value}%)</span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
 
                                     <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col">
-                                        <h4 className="text-xs font-bold text-slate-500 uppercase mb-4">Comparatif Hebdomadaire</h4>
-                                        <div className="flex-1 flex items-end justify-between px-2 gap-2">
-                                            <div className="w-full bg-slate-100 rounded-t h-[60%] relative group"><div className="absolute bottom-0 w-full bg-blue-900 h-full opacity-20"></div></div>
-                                            <div className="w-full bg-blue-900 rounded-t h-[80%]"></div>
-                                            <div className="w-full bg-blue-900 rounded-t h-[65%]"></div>
-                                            <div className="w-full bg-blue-900 rounded-t h-[75%]"></div>
-                                        </div>
-                                        <div className="flex justify-between text-[9px] text-slate-400 mt-2 uppercase font-mono">
-                                            <span>Sem 1</span><span>Sem 2</span><span>Sem 3</span><span>Sem 4</span>
+                                        <h4 className="text-xs font-bold text-slate-500 uppercase mb-4">Comparatif Température (N vs N-1)</h4>
+                                        <div className="flex-1 flex flex-col justify-center items-center text-center p-4 bg-slate-50 rounded-lg">
+                                            <ThermometerSun size={40} className="text-amber-500 mb-2"/>
+                                            <div className="font-bold text-slate-700 text-sm">Analyse Saisonnière</div>
+                                            <p className="text-xs text-slate-500 mt-2">
+                                                Comparaison des degrés-jours et impact thermique sur la consommation CVC.
+                                                <br/>
+                                                <span className="italic">(Voir détail widget dashboard)</span>
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Recommendations Section */}
+                                {/* Vision 2030 & Bonnes Pratiques */}
                                 <div className="flex-1 bg-slate-50 rounded-xl border border-slate-200 p-6">
-                                    <h4 className="text-xs font-black text-slate-700 uppercase mb-4 flex items-center"><CheckCircle2 size={14} className="mr-2 text-emerald-600"/> Plan d'Action & Observations</h4>
-                                    <div className="grid grid-cols-2 gap-8">
+                                    <div className="grid grid-cols-2 gap-8 h-full">
                                         <div>
-                                            <h5 className="text-[10px] font-bold text-blue-900 uppercase mb-2">Actions Correctives</h5>
-                                            <ul className="text-xs text-slate-600 space-y-2 list-disc pl-4">
-                                                <li>Optimisation des horaires d'éclairage Showroom (-1h).</li>
-                                                <li>Réparation fuite d'air comprimé Zone Atelier B.</li>
-                                                <li>Nettoyage filtres CTA Toiture.</li>
-                                            </ul>
+                                            <h4 className="text-xs font-black text-emerald-800 uppercase mb-4 flex items-center"><Target size={14} className="mr-2 text-emerald-600"/> Vision 2030</h4>
+                                            <div className="bg-white p-4 rounded-lg border border-emerald-100 shadow-sm space-y-3">
+                                                <div>
+                                                    <div className="text-[10px] uppercase font-bold text-slate-400">Objectif Réduction</div>
+                                                    <div className="text-xl font-black text-emerald-800">-{currentData.targets?.reduction2030 || 10}% <span className="text-xs font-normal text-slate-500">Conso</span></div>
+                                                </div>
+                                                <div>
+                                                    <div className="text-[10px] uppercase font-bold text-slate-400">Objectif Renouvelable</div>
+                                                    <div className="text-xl font-black text-emerald-800">{currentData.targets?.renewable2030 || 20}% <span className="text-xs font-normal text-slate-500">Mix</span></div>
+                                                </div>
+                                            </div>
                                         </div>
                                         <div>
-                                            <h5 className="text-[10px] font-bold text-blue-900 uppercase mb-2">Points de Vigilance</h5>
-                                            <ul className="text-xs text-slate-600 space-y-2 list-disc pl-4">
-                                                <li>Surconsommation détectée le Week-end (Talon).</li>
-                                                <li>Cos Phi limite (0.82) à surveiller.</li>
+                                            <h4 className="text-xs font-black text-blue-900 uppercase mb-4 flex items-center"><Lightbulb size={14} className="mr-2 text-amber-500"/> Bonnes Pratiques</h4>
+                                            <ul className="text-xs text-slate-600 space-y-2 list-disc pl-4 leading-relaxed">
+                                                <li>Éteindre les équipements CVC en zone inoccupée (Bureaux vides).</li>
+                                                <li>Maintenir la consigne clim à 26°C en été.</li>
+                                                <li>Vérifier l'étanchéité du réseau air comprimé chaque semaine.</li>
+                                                <li>Favoriser l'éclairage naturel dans les zones vitrées.</li>
                                             </ul>
                                         </div>
                                     </div>
