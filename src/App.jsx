@@ -1820,8 +1820,6 @@ const SitesDashboard = ({ onBack, userRole }) => {
     );
   };
 
-  const currentData = sitesDataState[activeSiteTab];
-
   return (
     <div className="bg-slate-50 min-h-screen font-sans">
         <header className="bg-white/80 backdrop-blur-md sticky top-0 z-40 border-b p-4 flex justify-between items-center">
