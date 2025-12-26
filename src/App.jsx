@@ -1402,7 +1402,6 @@ const SitesDashboard = ({ onBack, userRole }) => {
     }
   });
 
-
   // --- GESTION DES USAGES PRINCIPAUX ---
   const handleUsageAdd = () => {
     setSitesDataState(prev => {
@@ -1434,7 +1433,6 @@ const SitesDashboard = ({ onBack, userRole }) => {
   };
 
   // --- GESTION DES SOUS-USAGES ---
-  
   const handleSubUsageAdd = (usageIndex) => {
     setSitesDataState(prev => {
         const newData = { ...prev };
@@ -1900,54 +1898,71 @@ const SitesDashboard = ({ onBack, userRole }) => {
 
         {/* MODAL CONFIGURATION USAGES AVEC SOUS-USAGES */}
         {showUsageConfig && (
-            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                <div className="bg-white rounded-xl w-full max-w-3xl p-6 shadow-2xl relative">
-                    <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
-                        <h3 className="font-bold text-lg text-slate-800 flex items-center"><Settings className="mr-2 text-blue-900"/> Configuration Répartition - {currentData.name}</h3>
-                        <button onClick={() => setShowUsageConfig(false)}><X size={20} className="text-slate-400 hover:text-slate-600"/></button>
+            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                <div className="bg-white rounded-2xl w-full max-w-3xl p-6 shadow-2xl relative flex flex-col h-[85vh]">
+                    <div className="flex justify-between items-center mb-6 border-b pb-4">
+                        <div>
+                            <h3 className="font-bold text-lg text-slate-800">Configuration Répartition - {currentData.name}</h3>
+                            <p className="text-xs text-slate-400">Gérez les catégories d'usages principaux et secondaires.</p>
+                        </div>
+                        <button onClick={() => setShowUsageConfig(false)} className="p-2 hover:bg-slate-100 rounded-full"><X size={20}/></button>
                     </div>
-                    <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2">
+
+                    <div className="flex-1 overflow-y-auto pr-2 space-y-6">
+                        {/* BOUTON AJOUT USAGE PRINCIPAL */}
+                        <button onClick={handleUsageAdd} className="w-full py-3 border-2 border-dashed border-blue-200 rounded-xl text-blue-600 font-bold flex items-center justify-center hover:bg-blue-50 transition-colors text-sm">
+                            <PlusCircle size={18} className="mr-2"/> Ajouter un Usage Principal
+                        </button>
+
                         {currentData.elecUsage.map((u, i) => (
-                            <div key={i} className="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                                <div className="grid grid-cols-12 gap-4 items-center mb-4">
-                                    <div className="col-span-4 font-bold text-sm text-slate-700">{u.name}</div>
-                                    <div className="col-span-3">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase block">Part Globale (%)</label>
-                                        <input type="number" value={u.value} onChange={e => handleUsageChange(i, 'value', parseInt(e.target.value))} className="w-full p-1 border rounded text-sm font-bold"/>
+                            <div key={i} className="bg-slate-50 p-5 rounded-xl border border-slate-200 group relative">
+                                {/* BOUTON SUPPRESSION USAGE PRINCIPAL */}
+                                <button onClick={() => handleUsageDelete(i)} className="absolute top-4 right-4 text-slate-300 hover:text-red-600 transition-colors">
+                                    <Trash2 size={16}/>
+                                </button>
+
+                                <div className="grid grid-cols-12 gap-4 items-end mb-6">
+                                    <div className="col-span-6">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Nom Usage</label>
+                                        <input type="text" value={u.name} onChange={e => handleUsageChange(i, 'name', e.target.value)} className="w-full p-2 border rounded font-bold text-sm"/>
                                     </div>
                                     <div className="col-span-3">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase block">Ratio</label>
-                                        <input type="text" value={u.ratio} onChange={e => handleUsageChange(i, 'ratio', e.target.value)} className="w-full p-1 border rounded text-xs"/>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Part (%)</label>
+                                        <input type="number" value={u.value} onChange={e => handleUsageChange(i, 'value', parseInt(e.target.value))} className="w-full p-2 border rounded font-mono text-sm"/>
                                     </div>
-                                    <div className="col-span-2 flex justify-center">
-                                        <button onClick={() => handleUsageChange(i, 'significant', !u.significant)} className={`p-2 rounded-full ${u.significant ? 'bg-orange-100 text-orange-600' : 'bg-slate-200 text-slate-400'}`}>
-                                            <AlertTriangle size={16}/>
+                                    <div className="col-span-3 flex items-center justify-center gap-4">
+                                        <button onClick={() => handleUsageChange(i, 'significant', !u.significant)} className={`p-2 rounded-lg ${u.significant ? 'bg-orange-100 text-orange-600' : 'bg-white text-slate-300 border'}`} title="Significatif">
+                                            <AlertTriangle size={18}/>
                                         </button>
                                     </div>
                                 </div>
                                 
-                                {/* Section Sous-usages */}
-                                <div className="pl-4 border-l-2 border-slate-200 ml-2">
-                                    <div className="text-[10px] font-bold text-slate-400 uppercase mb-2 flex justify-between items-center">
-                                        <span>Sous-Usages (Total doit faire 100%)</span>
-                                        <button onClick={() => handleSubUsageAdd(i)} className="text-blue-600 hover:underline flex items-center"><PlusCircle size={10} className="mr-1"/> Ajouter</button>
+                                {/* SECTION SOUS-USAGES */}
+                                <div className="pl-6 border-l-2 border-blue-100 ml-2 space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <h4 className="text-[10px] font-black text-blue-900 uppercase tracking-widest">Sous-Usages</h4>
+                                        <button onClick={() => handleSubUsageAdd(i)} className="text-[10px] bg-blue-900 text-white px-2 py-1 rounded font-bold flex items-center">
+                                            <PlusCircle size={10} className="mr-1"/> Ajouter
+                                        </button>
                                     </div>
-                                    {u.subUsages && u.subUsages.map((sub, idx) => (
-                                        <div key={idx} className="flex gap-2 mb-2">
-                                            <input type="text" value={sub.name} onChange={e => handleSubUsageChange(i, idx, 'name', e.target.value)} className="flex-1 p-1 text-xs border rounded" placeholder="Nom"/>
-                                            <div className="relative w-20">
-                                                <input type="number" value={sub.value} onChange={e => handleSubUsageChange(i, idx, 'value', parseInt(e.target.value))} className="w-full p-1 text-xs border rounded font-mono"/>
-                                                <span className="absolute right-4 top-1 text-[10px] text-slate-400">%</span>
-                                            </div>
+                                    
+                                    {u.subUsages?.map((sub, idx) => (
+                                        <div key={idx} className="flex gap-2 items-center">
+                                            <input type="text" value={sub.name} onChange={e => handleSubUsageChange(i, idx, 'name', e.target.value)} className="flex-1 p-1.5 text-xs border rounded bg-white" placeholder="Nom"/>
+                                            <input type="number" value={sub.value} onChange={e => handleSubUsageChange(i, idx, 'value', parseInt(e.target.value))} className="w-16 p-1.5 text-xs border rounded bg-white font-mono" placeholder="%"/>
+                                            {/* BOUTON SUPPRESSION SOUS-USAGE */}
+                                            <button onClick={() => handleSubUsageDelete(i, idx)} className="p-1.5 text-slate-300 hover:text-red-500">
+                                                <X size={14}/>
+                                            </button>
                                         </div>
                                     ))}
+                                    {(!u.subUsages || u.subUsages.length === 0) && <div className="text-[10px] text-slate-400 italic">Aucun sous-usage configuré.</div>}
                                 </div>
                             </div>
                         ))}
                     </div>
-                    <div className="mt-6 flex justify-between items-center">
-                        <div className="text-xs text-slate-400 italic">La somme des parts globales doit être égale à 100%.</div>
-                        <button onClick={() => setShowUsageConfig(false)} className="bg-blue-900 text-white px-6 py-2 rounded-lg font-bold">Terminer</button>
+                    <div className="mt-6 pt-4 border-t flex justify-end">
+                        <button onClick={() => setShowUsageConfig(false)} className="bg-blue-900 text-white px-8 py-2 rounded-lg font-bold shadow-lg hover:bg-blue-800">Enregistrer les modifications</button>
                     </div>
                 </div>
             </div>
