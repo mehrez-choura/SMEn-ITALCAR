@@ -192,10 +192,10 @@ const LoginScreen = ({ onLogin }) => {
                     <BrandLogo size="h-16" />
                     <FallbackLogo />
                 </div>
-                <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Portail Énergie</h1>
-                <p className="text-slate-400 text-sm mt-1 font-medium">Système de Management de l'Énergie</p>
+                <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Système de Management de l'Énergie</h1>
+                <p className="text-slate-400 text-sm mt-1 font-medium">Certifié ISO 50001</p>
                 <div className="mt-2 text-xs text-green-600 bg-green-50 inline-block px-2 py-1 rounded font-bold border border-green-200">
-                    ● Mode Serveur Local
+                    ● Connecté au Serveur
                 </div>
             </div>
             <form onSubmit={handleLogin} className="space-y-5">
@@ -216,7 +216,7 @@ const LoginScreen = ({ onLogin }) => {
                 {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center font-bold flex items-center justify-center border border-red-100"><AlertTriangle size={16} className="mr-2"/>{error}</div>}
                 <button type="submit" disabled={loading} className="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold py-3.5 rounded-lg shadow-lg shadow-blue-900/20 transition-all uppercase tracking-wide text-sm">{loading ? "Connexion..." : "Se Connecter"}</button>
             </form>
-            <div className="mt-8 text-center text-[10px] text-slate-400 font-mono">v9.2.0 (Local) • ITALCAR SA</div>
+            <div className="mt-8 text-center text-[10px] text-slate-400 font-mono">v1.2.1 (BETA) • ITALCAR S.A.</div>
         </div>
     </div>
   );
@@ -239,7 +239,7 @@ const StegModule = ({ onBack, userRole }) => {
     { id: 1, name: "MT 1 - Mégrine", code: "MEG-001", type: "MT", icon: Factory },
     { id: 2, name: "MT 2 - El Khadhra", code: "ELK-002", type: "MT", icon: Building2 },
     { id: 3, name: "MT 3 - Naassen", code: "NAS-003", type: "MT", icon: Building2 },
-    { id: 4, name: "BT 1 - Showroom Lac", code: "SHR-001", type: "BT_PV", icon: Store }, 
+    { id: 4, name: "BT 1 - Showroom Lac", code: "LAC-001", type: "BT_PV", icon: Store }, 
     { id: 5, name: "BT 2 - Azur City", code: "AZU-002", type: "BT", icon: Store },
     { id: 6, name: "BT 3 - Rue de Carthage", code: "CAR-003", type: "BT", icon: Store }
   ];
@@ -821,7 +821,7 @@ const AirModule = ({ onBack, userRole }) => {
   const [notif, setNotif] = useState(null);
   const [week, setWeek] = useState(getWeekNumber(new Date()));
   const [editingPrev, setEditingPrev] = useState(false);
-  const [config, setConfig] = useState({ elecPrice: 0.291, offLoadFactor: 0.3 });
+  const [config, setConfig] = useState({ elecPrice: 0.291, offLoadFactor: 0.4 });
     
   // Chargement logs PC
   const logs = useData('air_logs');
@@ -1357,7 +1357,7 @@ const SitesDashboard = ({ onBack, userRole }) => {
             { name: "Services", value: 5, ratio: "-", significant: false, subUsages: [] }, 
             { name: "Gaz (Primaire)", value: 3, ratio: "-", significant: false, subUsages: [] } 
         ],
-        targets: { reduction2030: 20, renewable2030: 30 }
+        targets: { reduction2030: 10, renewable2030: 40 }
     },
     ELKHADHRA: { 
         name: "El Khadhra", area: 9500, covered: 7000, open: 2500, glazed: 40,
@@ -1380,7 +1380,7 @@ const SitesDashboard = ({ onBack, userRole }) => {
              { name: "Climatisation", value: 45, ratio: "25 kWh/m²", significant: true, subUsages: [] },
              { name: "Informatique", value: 10, ratio: "-", significant: false, subUsages: [] }
         ],
-        targets: { reduction2030: 10, renewable2030: 50 }
+        targets: { reduction2030: 30, renewable2030: 50 }
     },
     NAASSEN: { 
         name: "Naassen", area: 32500, covered: 1850, open: 30680, glazed: 0, 
@@ -1690,7 +1690,7 @@ const SitesDashboard = ({ onBack, userRole }) => {
                 </div>
                 <div className="mb-1 text-xs font-bold text-slate-400">vs</div>
                 <div>
-                    <div className="text-[10px] uppercase font-bold text-slate-400">Temp. N-1</div>
+                    <div className="text-[10px] uppercase font-bold text-slate-400">Temp. REF</div>
                     <div className="text-xl font-bold text-slate-500">{tPrev > 0 ? tPrev : '--'} <span className="text-xs font-normal text-slate-400">°C</span></div>
                 </div>
            </div>
