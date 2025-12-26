@@ -1938,9 +1938,6 @@ const SitesDashboard = ({ onBack, userRole }) => {
                 </div>
             </div>
         )}
-    </div>
-  );
-};
 
         {showHistoryInput && (
              <div className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
