@@ -1531,7 +1531,6 @@ const SitesDashboard = ({ onBack, userRole }) => {
       setTimeout(() => setNotif(null), 3000);
   };
 
-  const currentData = sitesDataState[activeSiteTab];
   const currentYear = new Date().getFullYear(); 
   const currentMonthIdx = new Date().getMonth() - 1; 
 
@@ -1819,6 +1818,8 @@ const SitesDashboard = ({ onBack, userRole }) => {
     </div>
     );
   };
+
+    const currentData = sitesDataState[activeSiteTab];
 
   return (
     <div className="bg-slate-50 min-h-screen font-sans">
