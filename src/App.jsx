@@ -2167,9 +2167,9 @@ const SitesDashboard = ({ onBack, userRole }) => {
                                         <div>
                                             <h4 className="text-xs font-black text-blue-900 uppercase mb-3 flex items-center"><Lightbulb size={12} className="mr-2 text-amber-500"/> Bonnes Pratiques</h4>
                                             <ul className="text-[10px] text-slate-600 space-y-1.5 list-disc pl-3 leading-relaxed">
-                                                <li>Éteindre les équipements CVC en zone inoccupée (Bureaux vides).</li>
+                                                <li>Éteindre les climatiseur et l'éclairage en zone inoccupée (Bureaux vides).</li>
                                                 <li>Maintenir la consigne clim à 26°C en été.</li>
-                                                <li>Vérifier l'étanchéité du réseau air comprimé chaque semaine.</li>
+                                                <li>Vérifier les fuites du réseau air comprimé chaque semaine.</li>
                                                 <li>Favoriser l'éclairage naturel dans les zones vitrées.</li>
                                             </ul>
                                         </div>
@@ -2181,7 +2181,7 @@ const SitesDashboard = ({ onBack, userRole }) => {
                         {/* Footer A4 - Validation et Signature */}
                         <div className="mt-auto pt-6 border-t-2 border-slate-100 flex justify-between items-end">
                             <div className="text-[9px] text-slate-400 uppercase tracking-widest space-y-1">
-                                <div>ITALCAR SA • Siège Social</div>
+                                <div>ITALCAR S.A. • Siège Social</div>
                                 <div>Système de Management de l'Énergie ISO 50001</div>
                             </div>
                             
@@ -2241,7 +2241,7 @@ const MainDashboard = ({ user, onNavigate, onLogout }) => {
                 <BrandLogo size="h-12"/>
                 <div className="h-10 w-px bg-slate-200"></div>
                 <div>
-                    <h1 className="text-2xl font-black mb-0 tracking-tight text-blue-900">PORTAIL ÉNERGIE</h1>
+                    <h1 className="text-2xl font-black mb-0 tracking-tight text-blue-900">Système de Management de l'Énergie</h1>
                     <p className="text-slate-400 text-sm">{getGreeting()}, <span className="text-slate-800 font-bold">{user.username}</span></p>
                 </div>
             </div>
@@ -2282,7 +2282,7 @@ const MainDashboard = ({ user, onNavigate, onLogout }) => {
         )}
         
         <div className="mt-12 text-center text-slate-400 text-xs font-medium uppercase tracking-widest">
-            © 2025 ITALCAR SA • Energy Management System (Local)
+            © 2025 ITALCAR SA • Energy Management System (BETA)
         </div>
         <div className="absolute top-6 right-6">
              <button onClick={onLogout} className="bg-white hover:bg-red-50 text-slate-400 hover:text-red-600 p-2 rounded-full shadow-sm transition-colors border border-slate-100"><LogOut size={18}/></button>
