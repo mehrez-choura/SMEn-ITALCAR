@@ -1587,9 +1587,6 @@ const SitesDashboard = ({ onBack, userRole }) => {
                 </div>
             </div>
         )}
-    </div>
-  );
-};
 
   const yearsRange = ['REF', 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]; 
   
