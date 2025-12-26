@@ -1402,6 +1402,26 @@ const SitesDashboard = ({ onBack, userRole }) => {
     }
   });
 
+
+  // --- GESTION DES USAGES PRINCIPAUX ---
+  const handleUsageAdd = () => {
+    setSitesDataState(prev => {
+        const newData = { ...prev };
+        const site = newData[activeSiteTab];
+        site.elecUsage = [...site.elecUsage, { name: "Nouvel Usage", value: 0, ratio: "-", significant: false, subUsages: [] }];
+        return newData;
+    });
+  };
+
+  const handleUsageDelete = (usageIndex) => {
+    setSitesDataState(prev => {
+        const newData = { ...prev };
+        const site = newData[activeSiteTab];
+        site.elecUsage = site.elecUsage.filter((_, i) => i !== usageIndex);
+        return newData;
+    });
+  };
+
   const handleUsageChange = (index, field, value) => {
       setSitesDataState(prev => {
           const newData = { ...prev };
@@ -1413,13 +1433,24 @@ const SitesDashboard = ({ onBack, userRole }) => {
       });
   };
 
-  const handleSubUsageAdd = (index) => {
+  // --- GESTION DES SOUS-USAGES ---
+  const handleSubUsageAdd = (usageIndex) => {
     setSitesDataState(prev => {
         const newData = { ...prev };
         const site = newData[activeSiteTab];
         const newUsages = [...site.elecUsage];
-        if(!newUsages[index].subUsages) newUsages[index].subUsages = [];
-        newUsages[index].subUsages.push({name: "Nouveau", value: 0});
+        if(!newUsages[usageIndex].subUsages) newUsages[usageIndex].subUsages = [];
+        newUsages[usageIndex].subUsages.push({name: "Nouveau", value: 0});
+        return newData;
+    });
+  };
+
+  const handleSubUsageDelete = (usageIndex, subIndex) => {
+    setSitesDataState(prev => {
+        const newData = { ...prev };
+        const site = newData[activeSiteTab];
+        const newUsages = [...site.elecUsage];
+        newUsages[usageIndex].subUsages = newUsages[usageIndex].subUsages.filter((_, i) => i !== subIndex);
         return newData;
     });
   };
@@ -1436,6 +1467,129 @@ const SitesDashboard = ({ onBack, userRole }) => {
         return newData;
     });
   };
+
+  const currentData = sitesDataState[activeSiteTab];
+
+  return (
+    <div className="bg-slate-50 min-h-screen font-sans">
+        <header className="bg-white/80 backdrop-blur-md sticky top-0 z-40 border-b p-4 flex justify-between items-center">
+            <div className="flex items-center gap-4">
+                <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full"><ArrowLeft size={20}/></button>
+                <h1 className="font-bold text-xl text-slate-800 uppercase">Dashboard Sites</h1>
+            </div>
+            <div className="flex bg-white rounded-full border p-1 gap-1 overflow-x-auto">
+                {Object.keys(sitesDataState).map(key => (
+                    <button key={key} onClick={() => setActiveSiteTab(key)} 
+                        className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${activeSiteTab === key ? 'bg-blue-900 text-white' : 'text-slate-500'}`}>
+                        {sitesDataState[key].name}
+                    </button>
+                ))}
+            </div>
+        </header>
+
+        <main className="max-w-7xl mx-auto p-6">
+            <div className="bg-white rounded-2xl border p-6 mb-8 relative">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center"><PieChart className="mr-2"/> Répartition des Usages (UES)</h3>
+                    {userRole === 'ADMIN' && (
+                        <button onClick={() => setShowUsageConfig(true)} className="p-2 bg-slate-50 hover:bg-slate-100 rounded-full text-blue-900 transition-colors">
+                            <Settings size={18}/>
+                        </button>
+                    )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {currentData.elecUsage.map((u, i) => (
+                        <div key={i} className="border rounded-xl p-4 bg-slate-50">
+                            <div className="flex justify-between items-start mb-2">
+                                <span className={`text-sm font-bold ${u.significant ? 'text-blue-900' : 'text-slate-500'}`}>{u.name}</span>
+                                <span className="font-black text-xs">{u.value}%</span>
+                            </div>
+                            <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mb-3">
+                                <div className="bg-blue-900 h-full" style={{width: `${u.value}%`}}></div>
+                            </div>
+                            {u.subUsages?.map((sub, idx) => (
+                                <div key={idx} className="flex justify-between text-[10px] text-slate-500">• {sub.name} <span className="font-bold">{sub.value}%</span></div>
+                            ))}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </main>
+
+        {/* MODAL CONFIGURATION USAGES AVEC AJOUT/SUPPRESSION */}
+        {showUsageConfig && (
+            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                <div className="bg-white rounded-2xl w-full max-w-3xl p-6 shadow-2xl relative flex flex-col h-[85vh]">
+                    <div className="flex justify-between items-center mb-6 border-b pb-4">
+                        <div>
+                            <h3 className="font-bold text-lg text-slate-800">Configuration Répartition - {currentData.name}</h3>
+                            <p className="text-xs text-slate-400">Gérez les catégories d'usages principaux et secondaires.</p>
+                        </div>
+                        <button onClick={() => setShowUsageConfig(false)} className="p-2 hover:bg-slate-100 rounded-full"><X size={20}/></button>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto pr-2 space-y-6">
+                        {/* BOUTON AJOUT USAGE PRINCIPAL */}
+                        <button onClick={handleUsageAdd} className="w-full py-3 border-2 border-dashed border-blue-200 rounded-xl text-blue-600 font-bold flex items-center justify-center hover:bg-blue-50 transition-colors text-sm">
+                            <PlusCircle size={18} className="mr-2"/> Ajouter un Usage Principal
+                        </button>
+
+                        {currentData.elecUsage.map((u, i) => (
+                            <div key={i} className="bg-slate-50 p-5 rounded-xl border border-slate-200 group relative">
+                                {/* BOUTON SUPPRESSION USAGE PRINCIPAL */}
+                                <button onClick={() => handleUsageDelete(i)} className="absolute top-4 right-4 text-slate-300 hover:text-red-600 transition-colors">
+                                    <Trash2 size={16}/>
+                                </button>
+
+                                <div className="grid grid-cols-12 gap-4 items-end mb-6">
+                                    <div className="col-span-6">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Nom Usage</label>
+                                        <input type="text" value={u.name} onChange={e => handleUsageChange(i, 'name', e.target.value)} className="w-full p-2 border rounded font-bold text-sm"/>
+                                    </div>
+                                    <div className="col-span-3">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Part (%)</label>
+                                        <input type="number" value={u.value} onChange={e => handleUsageChange(i, 'value', parseInt(e.target.value))} className="w-full p-2 border rounded font-mono text-sm"/>
+                                    </div>
+                                    <div className="col-span-3 flex items-center justify-center gap-4">
+                                        <button onClick={() => handleUsageChange(i, 'significant', !u.significant)} className={`p-2 rounded-lg ${u.significant ? 'bg-orange-100 text-orange-600' : 'bg-white text-slate-300 border'}`} title="Significatif">
+                                            <AlertTriangle size={18}/>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                {/* SECTION SOUS-USAGES */}
+                                <div className="pl-6 border-l-2 border-blue-100 ml-2 space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <h4 className="text-[10px] font-black text-blue-900 uppercase tracking-widest">Sous-Usages</h4>
+                                        <button onClick={() => handleSubUsageAdd(i)} className="text-[10px] bg-blue-900 text-white px-2 py-1 rounded font-bold flex items-center">
+                                            <PlusCircle size={10} className="mr-1"/> Ajouter
+                                        </button>
+                                    </div>
+                                    
+                                    {u.subUsages?.map((sub, idx) => (
+                                        <div key={idx} className="flex gap-2 items-center">
+                                            <input type="text" value={sub.name} onChange={e => handleSubUsageChange(i, idx, 'name', e.target.value)} className="flex-1 p-1.5 text-xs border rounded bg-white" placeholder="Nom"/>
+                                            <input type="number" value={sub.value} onChange={e => handleSubUsageChange(i, idx, 'value', parseInt(e.target.value))} className="w-16 p-1.5 text-xs border rounded bg-white font-mono" placeholder="%"/>
+                                            {/* BOUTON SUPPRESSION SOUS-USAGE */}
+                                            <button onClick={() => handleSubUsageDelete(i, idx)} className="p-1.5 text-slate-300 hover:text-red-500">
+                                                <X size={14}/>
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {(!u.subUsages || u.subUsages.length === 0) && <div className="text-[10px] text-slate-400 italic">Aucun sous-usage configuré.</div>}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="mt-6 pt-4 border-t flex justify-end">
+                        <button onClick={() => setShowUsageConfig(false)} className="bg-blue-900 text-white px-8 py-2 rounded-lg font-bold shadow-lg hover:bg-blue-800">Enregistrer les modifications</button>
+                    </div>
+                </div>
+            </div>
+        )}
+    </div>
+  );
+};
 
   const yearsRange = ['REF', 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]; 
   
@@ -1501,7 +1655,6 @@ const SitesDashboard = ({ onBack, userRole }) => {
       setTimeout(() => setNotif(null), 3000);
   };
 
-  const currentData = sitesDataState[activeSiteTab];
   const currentYear = new Date().getFullYear(); 
   const currentMonthIdx = new Date().getMonth() - 1; 
 
